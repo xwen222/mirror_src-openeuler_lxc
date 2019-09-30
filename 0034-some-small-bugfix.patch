@@ -1,0 +1,155 @@
+From 8e7742314071cbb163c1fc6ab4eb96bffd6bc64a Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Tue, 15 Jan 2019 20:39:11 +0800
+Subject: [PATCH 034/122] some small bugfix
+
+1. support new container without load config to save time
+2. try to create workdir if not exist
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c       | 16 ++++++++++++++++
+ src/lxc/lxc.h          |  5 +++++
+ src/lxc/lxccontainer.c | 21 +++++++++++++++++----
+ src/lxc/lxccontainer.h | 12 ++++++++++++
+ src/lxc/start.c        | 12 ++++++++----
+ 5 files changed, 58 insertions(+), 8 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index e6e4b0d..8cbbf96 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -806,6 +806,22 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 		TRACE("Dropped capabilities");
+ 	}
+ 
++	/* isulad: set workdir */
++	if (init_ctx && init_ctx->container && init_ctx->container->lxc_conf && init_ctx->container->lxc_conf->init_cwd) {
++		char *init_cwd;
++		init_cwd = init_ctx->container->lxc_conf->init_cwd;
++	        /* try to create workdir if not exist */
++	        struct stat st;
++	        if (stat(init_cwd, &st) < 0 && mkdir_p(init_cwd, 0750) < 0) {
++			SYSERROR("Try to create directory \"%s\" as workdir failed when attach", init_cwd);
++			goto on_error;
++	        }
++	        if (chdir(init_cwd)) {
++			SYSERROR("Could not change directory to \"%s\" when attach", init_cwd);
++			goto on_error;
++	        }
++	}
++
+ 	/* Always set the environment (specify (LXC_ATTACH_KEEP_ENV, NULL, NULL)
+ 	 * if you want this to be a no-op).
+ 	 */
+diff --git a/src/lxc/lxc.h b/src/lxc/lxc.h
+index 687b4b2..5df5080 100644
+--- a/src/lxc/lxc.h
++++ b/src/lxc/lxc.h
+@@ -104,6 +104,11 @@ extern lxc_state_t lxc_state(const char *name, const char *lxcpath);
+ extern struct lxc_container *lxc_container_new(const char *name, const char *configpath);
+ 
+ /*
++ * Create a new container without loading config.
++ */
++extern struct lxc_container *lxc_container_without_config_new(const char *name, const char *configpath);
++
++/*
+  * Returns 1 on success, 0 on failure.
+  */
+ extern int lxc_container_get(struct lxc_container *c);
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 38059fa..e99c41c 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -5133,7 +5133,7 @@ static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pi
+ 
+ WRAP_API_1(bool, lxcapi_clean_container_resource, pid_t)
+ 
+-struct lxc_container *lxc_container_new(const char *name, const char *configpath)
++static struct lxc_container *do_lxc_container_new(const char *name, const char *configpath, bool load_config)
+ {
+ 	struct lxc_container *c;
+ 	size_t len;
+@@ -5190,9 +5190,11 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
+ 		goto err;
+ 	}
+ 
+-	if (file_exists(c->configfile) && !lxcapi_load_config(c, NULL)) {
+-		fprintf(stderr, "Failed to load config for %s\n", name);
+-		goto err;
++	if (load_config) {
++		if (file_exists(c->configfile) && !lxcapi_load_config(c, NULL)) {
++			fprintf(stderr, "Failed to load config for %s\n", name);
++			goto err;
++		}
+ 	}
+ 
+ 	if (ongoing_create(c) == 2) {
+@@ -5274,6 +5276,17 @@ err:
+ 	return NULL;
+ }
+ 
++// isulad: new container without load config to save time
++struct lxc_container *lxc_container_without_config_new(const char *name, const char *configpath)
++{
++	return do_lxc_container_new(name, configpath, false);
++}
++
++struct lxc_container *lxc_container_new(const char *name, const char *configpath)
++{
++	return do_lxc_container_new(name, configpath, true);
++}
++
+ int lxc_get_wait_states(const char **states)
+ {
+ 	int i;
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index 679ca42..a00e0ec 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -1040,6 +1040,18 @@ struct lxc_console_log {
+ struct lxc_container *lxc_container_new(const char *name, const char *configpath);
+ 
+ /*!
++ * \brief Create a new container without loading config.
++ *
++ * \param name Name to use for container.
++ * \param configpath Full path to configuration file to use.
++ *
++ * \return Newly-allocated container, or \c NULL on error.
++ *
++ * \note This function can only used for listing container.
++ */
++struct lxc_container *lxc_container_without_config_new(const char *name, const char *configpath);
++
++/*!
+  * \brief Add a reference to the specified container.
+  *
+  * \param c Container.
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 08d753a..040909c 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1364,10 +1364,14 @@ static int do_start(void *data)
+ 	setsid();
+ 
+ 	if (handler->conf->init_cwd) {
+-		ret = chdir(handler->conf->init_cwd);
+-		if (ret < 0) {
+-			SYSERROR("Could not change directory to \"%s\"",
+-				 handler->conf->init_cwd);
++		/* isulad: try to craete workdir if not exist */
++		struct stat st;
++		if (stat(handler->conf->init_cwd, &st) < 0 && mkdir_p(handler->conf->init_cwd, 0755) < 0) {
++			SYSERROR("Try to create directory \"%s\" as workdir failed", handler->conf->init_cwd);
++			goto out_warn_father;
++		}
++		if (chdir(handler->conf->init_cwd)) {
++			SYSERROR("Could not change directory to \"%s\"", handler->conf->init_cwd);
+ 			goto out_warn_father;
+ 		}
+ 	}
+-- 
+1.8.3.1
+

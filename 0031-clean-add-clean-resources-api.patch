@@ -1,0 +1,488 @@
+From 37d787b93122a6b61d99a3d71f6101f405031a95 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Tue, 15 Jan 2019 04:20:57 -0500
+Subject: [PATCH 031/122] clean: add clean resources api
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 124 +++++++++++++++++------------------------
+ src/lxc/cgroups/cgroup.c |   2 +-
+ src/lxc/cgroups/cgroup.h |   4 +-
+ src/lxc/lxccontainer.c   |  18 ++++++
+ src/lxc/lxccontainer.h   |  10 ++++
+ src/lxc/start.c          | 141 +++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/start.h          |   4 ++
+ 7 files changed, 228 insertions(+), 75 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 7f2a200..8b913a6 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1050,12 +1050,15 @@ static int cgroup_rmdir(struct hierarchy **hierarchies,
+ 		int ret;
+ 		struct hierarchy *h = hierarchies[i];
+ 
+-		if (!h->container_full_path)
+-			continue;
++		if (!h->container_full_path) {
++			h->container_full_path = must_make_path(h->mountpoint, h->container_base_path, container_cgroup, NULL);
++		}
+ 
+ 		ret = recursive_destroy(h->container_full_path);
+-		if (ret < 0)
+-			WARN("Failed to destroy \"%s\"", h->container_full_path);
++		if (ret < 0) {
++			ERROR("Failed to destroy \"%s\"", h->container_full_path);
++			return -1;
++		}
+ 
+ 		free(h->container_full_path);
+ 		h->container_full_path = NULL;
+@@ -1102,7 +1105,8 @@ static int cgroup_rmdir_wrapper(void *data)
+ 	return cgroup_rmdir(arg->hierarchies, arg->container_cgroup);
+ }
+ 
+-__cgfsng_ops static void cgfsng_payload_destroy(struct cgroup_ops *ops,
++/* isulad: fix return bool instead of void*/
++__cgfsng_ops static bool cgfsng_payload_destroy(struct cgroup_ops *ops,
+ 						struct lxc_handler *handler)
+ {
+ 	int ret;
+@@ -1113,6 +1117,8 @@ __cgfsng_ops static void cgfsng_payload_destroy(struct cgroup_ops *ops,
+ 	wrap.hierarchies = ops->hierarchies;
+ 	wrap.conf = handler->conf;
+ 
++	INFO("cgfsng_payload_destroy.%p, %s", ops->hierarchies, ops->container_cgroup);
++
+ 	if (handler->conf && !lxc_list_empty(&handler->conf->id_map))
+ 		ret = userns_exec_1(handler->conf, cgroup_rmdir_wrapper, &wrap,
+ 				    "cgroup_rmdir_wrapper");
+@@ -1120,8 +1126,10 @@ __cgfsng_ops static void cgfsng_payload_destroy(struct cgroup_ops *ops,
+ 		ret = cgroup_rmdir(ops->hierarchies, ops->container_cgroup);
+ 	if (ret < 0) {
+ 		WARN("Failed to destroy cgroups");
+-		return;
++		return false;
+ 	}
++
++	return true;
+ }
+ 
+ static bool cg_unified_create_cgroup(struct hierarchy *h, char *cgname)
+@@ -1232,12 +1240,20 @@ static bool create_path_for_hierarchy(struct hierarchy *h, char *cgname)
+ {
+ 	int ret;
+ 
++	h->container_full_path = must_make_path(h->mountpoint, h->container_base_path, cgname, NULL);
++
++	if (file_exists(h->container_full_path)) { // it must not already exist
++		ERROR("Cgroup path \"%s\" already exist.", h->container_full_path);
++		//lxc_write_error_message(errfd, "%s:%d: Cgroup path \"%s\" already exist.",
++		//	__FILE__, __LINE__, h->fullcgpath);
++		return false;
++	}
++
+ 	if (!cg_legacy_handle_cpuset_hierarchy(h, cgname)) {
+ 		ERROR("Failed to handle legacy cpuset controller");
+ 		return false;
+ 	}
+ 
+-	h->container_full_path = must_make_path(h->mountpoint, h->container_base_path, cgname, NULL);
+ 	ret = mkdir_eexist_on_last(h->container_full_path, 0755);
+ 	if (ret < 0) {
+ 		ERROR("Failed to create cgroup \"%s\"", h->container_full_path);
+@@ -1259,83 +1275,26 @@ static void remove_path_for_hierarchy(struct hierarchy *h, char *cgname)
+ 	h->container_full_path = NULL;
+ }
+ 
+-/* Try to create the same cgroup in all hierarchies. Start with cgroup_pattern;
+- * next cgroup_pattern-1, -2, ..., -999.
+- */
++/* isulad: create hierarchies path, if fail, return the error */
+ __cgfsng_ops static bool cgfsng_payload_create(struct cgroup_ops *ops,
+ 					       struct lxc_handler *handler)
+ {
+ 	int i;
+-	size_t len;
+-	char *container_cgroup, *offset, *tmp;
+-	int idx = 0;
+-	struct lxc_conf *conf = handler->conf;
+-
+-	if (ops->container_cgroup) {
+-		WARN("cgfsng_create called a second time: %s", ops->container_cgroup);
+-		return false;
+-	}
++	char *container_cgroup = ops->container_cgroup;
+ 
+-	if (!conf)
+-		return false;
+-
+-	if (conf->cgroup_meta.dir)
+-		tmp = lxc_string_join("/", (const char *[]){conf->cgroup_meta.dir, handler->name, NULL}, false);
+-	else
+-		tmp = lxc_string_replace("%n", handler->name, ops->cgroup_pattern);
+-	if (!tmp) {
+-		ERROR("Failed expanding cgroup name pattern");
++	if (!container_cgroup) {
++		ERROR("cgfsng_create container_cgroup is invalid");
+ 		return false;
+ 	}
+ 
+-	len = strlen(tmp) + 5; /* leave room for -NNN\0 */
+-	container_cgroup = must_realloc(NULL, len);
+-	(void)strlcpy(container_cgroup, tmp, len);
+-	free(tmp);
+-	offset = container_cgroup + len - 5;
+-
+-again:
+-	if (idx == 1000) {
+-		ERROR("Too many conflicting cgroup names");
+-		goto out_free;
+-	}
+-
+-	if (idx) {
+-		int ret;
+-
+-		ret = snprintf(offset, 5, "-%d", idx);
+-		if (ret < 0 || (size_t)ret >= 5) {
+-			FILE *f = fopen("/dev/null", "w");
+-			if (f) {
+-				fprintf(f, "Workaround for GCC7 bug: "
+-					   "https://gcc.gnu.org/bugzilla/"
+-					   "show_bug.cgi?id=78969");
+-				fclose(f);
+-			}
+-		}
+-	}
+-
+ 	for (i = 0; ops->hierarchies[i]; i++) {
+ 		if (!create_path_for_hierarchy(ops->hierarchies[i], container_cgroup)) {
+-			int j;
+-			ERROR("Failed to create cgroup \"%s\"", ops->hierarchies[i]->container_full_path);
+-			free(ops->hierarchies[i]->container_full_path);
+-			ops->hierarchies[i]->container_full_path = NULL;
+-			for (j = 0; j < i; j++)
+-				remove_path_for_hierarchy(ops->hierarchies[j], container_cgroup);
+-			idx++;
+-			goto again;
++			SYSERROR("Failed to create %s", ops->hierarchies[i]->container_full_path);
++			return false;
+ 		}
+ 	}
+ 
+-	ops->container_cgroup = container_cgroup;
+-
+ 	return true;
+-
+-out_free:
+-	free(container_cgroup);
+-
+-	return false;
+ }
+ 
+ __cgfsng_ops static bool cgfsng_payload_enter(struct cgroup_ops *ops, pid_t pid)
+@@ -2701,9 +2660,15 @@ static bool cg_init(struct cgroup_ops *ops)
+ 	return cg_hybrid_init(ops);
+ }
+ 
+-__cgfsng_ops static bool cgfsng_data_init(struct cgroup_ops *ops)
++__cgfsng_ops static bool cgfsng_data_init(struct cgroup_ops *ops, struct lxc_handler *handler)
+ {
+ 	const char *cgroup_pattern;
++	char *container_cgroup, *tmp;
++	struct lxc_conf *conf = handler->conf;
++	size_t len;
++
++	if (!conf)
++		return false;
+ 
+ 	/* copy system-wide cgroup information */
+ 	cgroup_pattern = lxc_global_config_value("lxc.cgroup.pattern");
+@@ -2714,6 +2679,22 @@ __cgfsng_ops static bool cgfsng_data_init(struct cgroup_ops *ops)
+ 	}
+ 	ops->cgroup_pattern = must_copy_string(cgroup_pattern);
+ 
++	/* isulad: init ops->container_cgroup here instead of in cgfsng_payload_create*/
++	if (conf->cgroup_meta.dir)
++		tmp = lxc_string_join("/", (const char *[]){conf->cgroup_meta.dir, handler->name, NULL}, false);
++	else
++		tmp = lxc_string_replace("%n", handler->name, ops->cgroup_pattern);
++	if (!tmp) {
++		ERROR("Failed expanding cgroup name pattern");
++		return false;
++	}
++
++	len = strlen(tmp) + 1;
++	container_cgroup = must_realloc(NULL, len);
++	(void)strlcpy(container_cgroup, tmp, len);
++	free(tmp);
++	ops->container_cgroup = container_cgroup;
++
+ 	return true;
+ }
+ 
+@@ -2735,7 +2716,6 @@ struct cgroup_ops *cgfsng_ops_init(void)
+ 
+ 	cgfsng_ops->data_init = cgfsng_data_init;
+ 	cgfsng_ops->destroy = cgfsng_payload_destroy;
+-	cgfsng_ops->destroy = cgfsng_payload_destroy;
+ 	cgfsng_ops->payload_create = cgfsng_payload_create;
+ 	cgfsng_ops->payload_enter = cgfsng_payload_enter;
+ 	cgfsng_ops->escape = cgfsng_escape;
+diff --git a/src/lxc/cgroups/cgroup.c b/src/lxc/cgroups/cgroup.c
+index 04e0311..8e7aef9 100644
+--- a/src/lxc/cgroups/cgroup.c
++++ b/src/lxc/cgroups/cgroup.c
+@@ -50,7 +50,7 @@ struct cgroup_ops *cgroup_init(struct lxc_handler *handler)
+ 		return NULL;
+ 	}
+ 
+-	if (!cgroup_ops->data_init(cgroup_ops))
++	if (!cgroup_ops->data_init(cgroup_ops, handler))
+ 		return NULL;
+ 
+ 	TRACE("Initialized cgroup driver %s", cgroup_ops->driver);
+diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
+index ba4c153..fa4871e 100644
+--- a/src/lxc/cgroups/cgroup.h
++++ b/src/lxc/cgroups/cgroup.h
+@@ -123,8 +123,8 @@ struct cgroup_ops {
+ 	 */
+ 	cgroup_layout_t cgroup_layout;
+ 
+-	bool (*data_init)(struct cgroup_ops *ops);
+-	void (*destroy)(struct cgroup_ops *ops, struct lxc_handler *handler);
++	bool (*data_init)(struct cgroup_ops *ops, struct lxc_handler *handler);
++	bool (*destroy)(struct cgroup_ops *ops, struct lxc_handler *handler);
+ 	bool (*payload_create)(struct cgroup_ops *ops, struct lxc_handler *handler);
+ 	bool (*payload_enter)(struct cgroup_ops *ops, pid_t pid);
+ 	const char *(*get_cgroup)(struct cgroup_ops *ops, const char *controller);
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index beae459..38059fa 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -5116,6 +5116,23 @@ static bool do_lxcapi_set_start_timeout(struct lxc_container *c,  unsigned int s
+ 
+ WRAP_API_1(bool, lxcapi_set_start_timeout, unsigned int)
+ 
++/* isulad add clean resources */
++static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pid)
++{
++	int ret;
++
++	if (!c)
++		return false;
++
++	ret = do_lxcapi_clean_resource(c->name, c->config_path, c->lxc_conf, pid);
++	if (ret)
++		ERROR("Failed to clean container %s resource", c->name);
++	return ret == 0;
++
++}
++
++WRAP_API_1(bool, lxcapi_clean_container_resource, pid_t)
++
+ struct lxc_container *lxc_container_new(const char *name, const char *configpath)
+ {
+ 	struct lxc_container *c;
+@@ -5248,6 +5265,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
+ 	c->set_terminal_init_fifos = lxcapi_set_terminal_default_fifos;
+ 	c->set_container_info_file = lxcapi_set_container_info_file;
+ 	c->set_start_timeout = lxcapi_set_start_timeout;
++	c->clean_container_resource = lxcapi_clean_container_resource;
+ 	/* isulad add end */
+ 	return c;
+ 
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index 77de704..679ca42 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -896,6 +896,16 @@ struct lxc_container {
+ 	 * \return \c true on success, else \c false.
+ 	 */
+ 	bool (*set_start_timeout)(struct lxc_container *c, unsigned int start_timeout);
++
++	/*! isulad add
++	 * \brief An API call to clean resources of container
++	 *
++	 * \param c Container.
++	 * \param pid Value of container process.
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*clean_container_resource) (struct lxc_container *c, pid_t pid);
+ };
+ 
+ /*!
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index f7be9e4..08d753a 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1895,6 +1895,11 @@ static int lxc_spawn(struct lxc_handler *handler)
+ 	if (ret < 0)
+ 		SYSERROR("Failed to set environment variable: LXC_PID=%s", pidstr);
+ 
++	if (handler->cgroup_ops->container_cgroup) {
++		if (setenv("LXC_CGROUP_PATH", handler->cgroup_ops->container_cgroup, 1))
++			SYSERROR("Failed to set environment variable: LXC_CGROUP_PATH=%s.", handler->cgroup_ops->container_cgroup);
++	}
++
+ 	/* Run any host-side start hooks */
+ 	ret = run_lxc_hooks(name, "start-host", conf, NULL);
+ 	if (ret < 0) {
+@@ -2289,3 +2294,139 @@ static bool do_destroy_container(struct lxc_handler *handler)
+ 
+ 	return storage_destroy(handler->conf);
+ }
++
++/*isulad: init handler for clean */
++static struct lxc_handler *lxc_init_clean_handler(char *name, char *lxcpath, struct lxc_conf *conf, pid_t pid)
++{
++	int i;
++	struct lxc_handler *handler;
++
++	handler = malloc(sizeof(*handler));
++	if (!handler)
++		return NULL;
++
++	memset(handler, 0, sizeof(*handler));
++
++	/* Note that am_guest_unpriv() checks the effective uid. We
++	 * probably don't care if we are real root only if we are running
++	 * as root so this should be fine.
++	 */
++	handler->am_root = !am_guest_unpriv();
++	handler->data_sock[0] = handler->data_sock[1] = -1;
++	handler->conf = conf;
++	handler->lxcpath = lxcpath;
++	handler->pinfd = -1;
++	handler->sigfd = -EBADF;
++	handler->init_died = false;
++	handler->pid = pid;
++	handler->state_socket_pair[0] = handler->state_socket_pair[1] = -1;
++	if (handler->conf->reboot == REBOOT_NONE)
++		lxc_list_init(&handler->conf->state_clients);
++
++	for (i = 0; i < LXC_NS_MAX; i++)
++		handler->nsfd[i] = -1;
++
++	handler->name = name;
++	handler->exit_code = -1; /* isulad: record exit code of container */
++
++	handler->cgroup_ops = cgroup_init(handler);
++	if (!handler->cgroup_ops) {
++		ERROR("Failed to initialize cgroup driver");
++		goto on_error;
++	}
++
++	INFO("Container \"%s\" 's clean handler is initialized.", name);
++
++	return handler;
++
++on_error:
++	lxc_free_handler(handler);
++
++	return NULL;
++}
++
++/*isulad: set env for clean resources */
++static void clean_resource_set_env(struct lxc_handler *handler)
++{
++	const char *name = handler->name;
++	struct lxc_conf *conf = handler->conf;
++	char pidstr[20];
++
++	/* Start of environment variable setup for hooks. */
++	if (name && setenv("LXC_NAME", name, 1))
++		SYSERROR("Failed to set environment variable: LXC_NAME=%s.", name);
++
++	if (conf->rcfile && setenv("LXC_CONFIG_FILE", conf->rcfile, 1))
++		SYSERROR("Failed to set environment variable: LXC_CONFIG_FILE=%s.", conf->rcfile);
++
++	if (conf->rootfs.mount && setenv("LXC_ROOTFS_MOUNT", conf->rootfs.mount, 1))
++		SYSERROR("Failed to set environment variable: LXC_ROOTFS_MOUNT=%s.", conf->rootfs.mount);
++
++	if (conf->rootfs.path && setenv("LXC_ROOTFS_PATH", conf->rootfs.path, 1))
++		SYSERROR("Failed to set environment variable: LXC_ROOTFS_PATH=%s.", conf->rootfs.path);
++
++	if (conf->console.path && setenv("LXC_CONSOLE", conf->console.path, 1))
++		SYSERROR("Failed to set environment variable: LXC_CONSOLE=%s.", conf->console.path);
++
++	if (conf->console.log_path && setenv("LXC_CONSOLE_LOGPATH", conf->console.log_path, 1))
++		SYSERROR("Failed to set environment variable: LXC_CONSOLE_LOGPATH=%s.", conf->console.log_path);
++
++	if (setenv("LXC_CGNS_AWARE", "1", 1))
++		SYSERROR("Failed to set environment variable LXC_CGNS_AWARE=1.");
++
++
++	snprintf(pidstr, 20, "%d", handler->pid);
++	if (setenv("LXC_PID", pidstr, 1))
++		SYSERROR("Failed to set environment variable: LXC_PID=%s.", pidstr);
++
++	if (handler->cgroup_ops->container_cgroup) {
++		if (setenv("LXC_CGROUP_PATH", handler->cgroup_ops->container_cgroup, 1))
++			SYSERROR("Failed to set environment variable: LXC_CGROUP_PATH=%s.", handler->cgroup_ops->container_cgroup);
++	}
++	/* End of environment variable setup for hooks. */
++}
++
++/*isulad: do_lxcapi_clean_resource */
++int do_lxcapi_clean_resource(char *name, char *lxcpath, struct lxc_conf *conf, pid_t pid)
++{
++	int ret = 0;
++	struct lxc_handler *handler = NULL;
++	int retry_count = 0;
++	int max_retry = 10;
++
++	handler = lxc_init_clean_handler(name, lxcpath, conf, pid);
++	if (!handler) {
++		ERROR("Failed to init container %s clean handler", name);
++		ret = -1;
++		goto out;
++	}
++
++	clean_resource_set_env(handler);
++
++	char* oci_hook_args[1];
++	oci_hook_args[0] = alloca(strlen(handler->lxcpath) + 1);
++	(void)strlcpy(oci_hook_args[0], handler->lxcpath, strlen(handler->lxcpath));
++
++	if (run_lxc_hooks(handler->name, "oci-poststop", handler->conf, oci_hook_args)) {
++		ERROR("Failed to run lxc.hook.post-stop for container \"%s\".", handler->name);
++		ret = -1;
++	}
++
++retry:
++	if (!handler->cgroup_ops->destroy(handler->cgroup_ops, handler)) {
++		if (retry_count < max_retry) {
++			usleep(100 * 1000); /* 100 millisecond */
++			retry_count++;
++			goto retry;
++		}
++		ERROR("Failed to destroy cgroup for container \"%s\".", handler->name);
++		ret = -1;
++	}
++
++
++out_fini_handler:
++	lxc_free_handler(handler);
++out:
++	return ret;
++}
++
+diff --git a/src/lxc/start.h b/src/lxc/start.h
+index a96f2ae..1d84325 100644
+--- a/src/lxc/start.h
++++ b/src/lxc/start.h
+@@ -180,4 +180,8 @@ extern int __lxc_start(const char *name, struct lxc_handler *handler,
+ 
+ extern int resolve_clone_flags(struct lxc_handler *handler);
+ 
++/*isulad: do_lxcapi_clean_resource */
++extern int do_lxcapi_clean_resource(char *name, char *lxcpath, struct lxc_conf *conf, pid_t pid);
++
++
+ #endif
+-- 
+1.8.3.1
+

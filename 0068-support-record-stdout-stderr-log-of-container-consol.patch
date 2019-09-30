@@ -1,0 +1,1244 @@
+From a31be51b99331c80b66f587245cae0ca5d84d4fa Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Thu, 21 Feb 2019 20:27:47 +0800
+Subject: [PATCH 068/122] support record stdout, stderr log of container
+ console
+
+Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c           |  15 +-
+ src/lxc/attach_options.h   |   2 +-
+ src/lxc/commands.c         |  15 +-
+ src/lxc/commands.h         |   2 +-
+ src/lxc/conf.c             |  33 +++--
+ src/lxc/lxccontainer.c     |  79 +++++++---
+ src/lxc/lxccontainer.h     |  35 ++++-
+ src/lxc/start.c            |  67 ++++++++-
+ src/lxc/start.h            |   5 +
+ src/lxc/terminal.c         | 351 ++++++++++++++++++++++++++++++++-------------
+ src/lxc/terminal.h         |   7 +-
+ src/lxc/tools/arguments.h  |  14 +-
+ src/lxc/tools/lxc_attach.c |   7 +-
+ src/lxc/tools/lxc_start.c  |  22 ++-
+ 14 files changed, 502 insertions(+), 152 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 9768897..c979c85 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -1052,15 +1052,18 @@ static int lxc_attach_terminal(struct lxc_conf *conf,
+ 	lxc_terminal_init(terminal);
+ 
+ 	/* isulad: if we pass fifo in option, use them as init fifos */
+-	if (options->init_fifo[0] && options->init_fifo[1]) {
+-		if (terminal->init_fifo[0])
+-			free(terminal->init_fifo[0]);
++	if (options->init_fifo[0]) {
++		free(terminal->init_fifo[0]);
+ 		terminal->init_fifo[0] = strdup(options->init_fifo[0]);
+-
+-		if (terminal->init_fifo[1])
+-			free(terminal->init_fifo[1]);
++	}
++	if (options->init_fifo[1]) {
++		free(terminal->init_fifo[1]);
+ 		terminal->init_fifo[1] = strdup(options->init_fifo[1]);
+ 	}
++	if (options->init_fifo[2]) {
++		free(terminal->init_fifo[2]);
++		terminal->init_fifo[2] = strdup(options->init_fifo[2]);
++	}
+ 
+ 	ret = lxc_terminal_create(terminal);
+ 	if (ret < 0) {
+diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
+index 7b0a8cb..71c1739 100644
+--- a/src/lxc/attach_options.h
++++ b/src/lxc/attach_options.h
+@@ -136,7 +136,7 @@ typedef struct lxc_attach_options_t {
+ 	/*! File descriptor to log output. */
+ 	int log_fd;
+ 
+-	char *init_fifo[2]; /* isulad: default fifos for the start */
++	char *init_fifo[3]; /* isulad: default fifos for the start */
+ } lxc_attach_options_t;
+ 
+ /*! Default attach options to use */
+diff --git a/src/lxc/commands.c b/src/lxc/commands.c
+index 46b2805..f0c95df 100644
+--- a/src/lxc/commands.c
++++ b/src/lxc/commands.c
+@@ -1064,21 +1064,22 @@ reap_client_fd:
+  *
+  * Returns 0 when success, else when fail.
+  */
+-int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath, const char *in_fifo, const char *out_fifo)
++int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath, const char *in_fifo,
++				const char *out_fifo, const char *err_fifo)
+ {
+ 	int ret = 0, stopped = 0;
+ 	int len = 0;
+ 	char *tmp = NULL;
++	const char *split = "&&&&", *none_fifo_name = "none";
++	const char *cmd_in_fifo = in_fifo ? in_fifo : none_fifo_name;
++	const char *cmd_out_fifo = out_fifo ? out_fifo : none_fifo_name;
++	const char *cmd_err_fifo = err_fifo ? err_fifo : none_fifo_name;
+ 
+-	if (!in_fifo || !out_fifo) {
+-		return -1;
+-	}
+-
+-	len = strlen(in_fifo) + strlen("&&&&") + strlen(out_fifo) + 1;
++	len += strlen(cmd_in_fifo) + strlen(split) + strlen(cmd_out_fifo) + strlen(split) + strlen(cmd_err_fifo) + 1;
+ 	tmp = malloc(len);
+ 	if (!tmp)
+ 		return -1;
+-	snprintf(tmp, len, "%s%s%s", in_fifo, "&&&&", out_fifo);
++	snprintf(tmp, len, "%s%s%s%s%s", cmd_in_fifo, split, cmd_out_fifo, split, cmd_err_fifo);
+ 
+ 	struct lxc_cmd_rr cmd = {
+ 		.req = {
+diff --git a/src/lxc/commands.h b/src/lxc/commands.h
+index 0c64544..6b64849 100644
+--- a/src/lxc/commands.h
++++ b/src/lxc/commands.h
+@@ -127,6 +127,6 @@ extern int lxc_cmd_console_log(const char *name, const char *lxcpath,
+ 			       struct lxc_console_log *log);
+ 
+ extern int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath,
+-				const char *in_fifo, const char *out_fifo);
++				const char *in_fifo, const char *out_fifo, const char *err_fifo);
+ 
+ #endif /* __commands_h */
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index e139dff..a6b9797 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -2067,20 +2067,22 @@ static int lxc_setup_ttydir_console(const struct lxc_rootfs *rootfs,
+ 		return -errno;
+ 	}
+ 
+-	ret = fchmod(console->slave, S_IXUSR | S_IXGRP);
+-	if (ret < 0) {
+-		SYSERROR("Failed to set mode \"0%o\" to \"%s\"",
+-			 S_IXUSR | S_IXGRP, console->name);
+-		return -errno;
+-	}
++	if (console->slave > 0) {
++		ret = fchmod(console->slave, S_IXUSR | S_IXGRP);
++		if (ret < 0) {
++			SYSERROR("Failed to set mode \"0%o\" to \"%s\"",
++				 S_IXUSR | S_IXGRP, console->name);
++			return -errno;
++		}
+ 
+-	/* bind mount console->name to '/dev/<ttydir>/console' */
+-	ret = safe_mount(console->name, lxcpath, "none", MS_BIND, 0, rootfs_path);
+-	if (ret < 0) {
+-		ERROR("Failed to mount \"%s\" on \"%s\"", console->name, lxcpath);
+-		return -1;
++		/* bind mount console->name to '/dev/<ttydir>/console' */
++		ret = safe_mount(console->name, lxcpath, "none", MS_BIND, 0, rootfs_path);
++		if (ret < 0) {
++			ERROR("Failed to mount \"%s\" on \"%s\"", console->name, lxcpath);
++			return -1;
++		}
++		DEBUG("Mounted \"%s\" onto \"%s\"", console->name, lxcpath);
+ 	}
+-	DEBUG("Mounted \"%s\" onto \"%s\"", console->name, lxcpath);
+ 
+ 	/* bind mount '/dev/<ttydir>/console'  to '/dev/console'  */
+ 	ret = safe_mount(lxcpath, path, "none", MS_BIND, 0, rootfs_path);
+@@ -3158,6 +3160,13 @@ struct lxc_conf *lxc_conf_init(void)
+ 	/* isulad init console fifos */
+ 	new->console.init_fifo[0] = NULL;
+ 	new->console.init_fifo[1] = NULL;
++	new->console.init_fifo[2] = NULL;
++	new->console.pipes[0][0] = -1;
++	new->console.pipes[0][1] = -1;
++	new->console.pipes[1][0] = -1;
++	new->console.pipes[1][1] = -1;
++	new->console.pipes[2][0] = -1;
++	new->console.pipes[2][1] = -1;
+ 	lxc_list_init(&new->console.fifos);
+ 
+ 	new->errmsg = NULL;
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 3fd1a66..8a3724c 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -702,6 +702,40 @@ static bool do_lxcapi_want_daemonize(struct lxc_container *c, bool state)
+ 
+ WRAP_API_1(bool, lxcapi_want_daemonize, bool)
+ 
++static bool do_lxcapi_want_disable_pty(struct lxc_container *c, bool state)
++{
++	if (!c || !c->lxc_conf)
++		return false;
++
++	if (container_mem_lock(c))
++		return false;
++
++	c->disable_pty = state;
++
++	container_mem_unlock(c);
++
++	return true;
++}
++
++WRAP_API_1(bool, lxcapi_want_disable_pty, bool)
++
++static bool do_lxcapi_want_open_stdin(struct lxc_container *c, bool state)
++{
++	if (!c || !c->lxc_conf)
++		return false;
++
++	if (container_mem_lock(c))
++		return false;
++
++	c->open_stdin = state;
++
++	container_mem_unlock(c);
++
++	return true;
++}
++
++WRAP_API_1(bool, lxcapi_want_open_stdin, bool)
++
+ static bool do_lxcapi_want_close_all_fds(struct lxc_container *c, bool state)
+ {
+ 	if (!c || !c->lxc_conf)
+@@ -1198,12 +1232,15 @@ reboot:
+ 		goto on_error;
+ 	}
+ 
+-	if (useinit)
++	if (useinit) {
+ 		ret = lxc_execute(c->name, argv, 1, handler, c->config_path,
+ 				  c->daemonize, &c->error_num, c->start_timeout);
+-	else
++	} else {
++		handler->disable_pty = c->disable_pty;
++		handler->open_stdin = c->open_stdin;
+ 		ret = lxc_start(c->name, argv, handler, c->config_path,
+ 				c->daemonize, &c->error_num, c->start_timeout);
++	}
+ 
+ 	if (conf->reboot == REBOOT_REQ) {
+ 		INFO("Container requested reboot");
+@@ -5085,11 +5122,11 @@ out:
+ }
+ 
+ /* isulad add set console fifos*/
+-static bool do_lxcapi_set_terminal_default_fifos(struct lxc_container *c, const char *in, const char *out)
++static bool do_lxcapi_set_terminal_default_fifos(struct lxc_container *c, const char *in, const char *out, const char *err)
+ {
+ 	struct lxc_conf *conf;
+ 
+-	if (!c || !c->lxc_conf || !in || !out)
++	if (!c || !c->lxc_conf)
+ 		return false;
+ 	if (container_mem_lock(c)) {
+ 		ERROR("Error getting mem lock");
+@@ -5097,19 +5134,27 @@ static bool do_lxcapi_set_terminal_default_fifos(struct lxc_container *c, const
+ 	}
+ 
+ 	conf = c->lxc_conf;
+-	if (conf->console.init_fifo[0])
+-		free(conf->console.init_fifo[0]);
+-	conf->console.init_fifo[0] = strdup(in);
+-
+-	if (conf->console.init_fifo[1])
+-		free(conf->console.init_fifo[1]);
+-	conf->console.init_fifo[1] = strdup(out);
++	if (in) {
++		if (conf->console.init_fifo[0])
++			free(conf->console.init_fifo[0]);
++		conf->console.init_fifo[0] = strdup(in);
++	}
++	if (out) {
++		if (conf->console.init_fifo[1])
++			free(conf->console.init_fifo[1]);
++		conf->console.init_fifo[1] = strdup(out);
++	}
++	if (err) {
++		if (conf->console.init_fifo[2])
++			free(conf->console.init_fifo[2]);
++		conf->console.init_fifo[2] = strdup(err);
++	}
+ 
+ 	container_mem_unlock(c);
+ 	return true;
+ }
+ 
+-WRAP_API_2(bool, lxcapi_set_terminal_default_fifos, const char *, const char *)
++WRAP_API_3(bool, lxcapi_set_terminal_default_fifos, const char *, const char *, const char *)
+ 
+ /* isulad add set info file path */
+ static bool do_lxcapi_set_container_info_file(struct lxc_container *c, const char *info_file)
+@@ -5168,18 +5213,18 @@ static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pi
+ WRAP_API_1(bool, lxcapi_clean_container_resource, pid_t)
+ 
+ /* isulad add clean resources */
+-static bool do_lxcapi_add_terminal_fifo(struct lxc_container *c, const char *in_fifo, const char *out_fifo)
++static bool do_lxcapi_add_terminal_fifo(struct lxc_container *c, const char *in_fifo, const char *out_fifo, const char *err_fifo)
+ {
+ 	bool ret = true;
+ 
+-	if (!c || !c->lxc_conf || !in_fifo || !out_fifo)
++	if (!c || !c->lxc_conf)
+ 		return false;
+ 	if (container_mem_lock(c)) {
+ 		ERROR("Error getting mem lock");
+ 		return false;
+ 	}
+ 
+-	if (lxc_cmd_set_terminal_fifos(c->name, c->config_path, in_fifo, out_fifo)) {
++	if (lxc_cmd_set_terminal_fifos(c->name, c->config_path, in_fifo, out_fifo, err_fifo)) {
+ 		ERROR("Error set console fifos");
+ 		ret = false;
+ 	}
+@@ -5188,7 +5233,7 @@ static bool do_lxcapi_add_terminal_fifo(struct lxc_container *c, const char *in_
+ 	return ret;
+ }
+ 
+-WRAP_API_2(bool, lxcapi_add_terminal_fifo, const char *, const char *)
++WRAP_API_3(bool, lxcapi_add_terminal_fifo, const char *, const char *, const char *)
+ 
+ static struct lxc_container *do_lxc_container_new(const char *name, const char *configpath, bool load_config)
+ {
+@@ -5274,6 +5319,8 @@ static struct lxc_container *do_lxc_container_new(const char *name, const char *
+ 	c->init_pid = lxcapi_init_pid;
+ 	c->load_config = lxcapi_load_config;
+ 	c->want_daemonize = lxcapi_want_daemonize;
++	c->want_disable_pty = lxcapi_want_disable_pty;
++	c->want_open_stdin = lxcapi_want_open_stdin;
+ 	c->want_close_all_fds = lxcapi_want_close_all_fds;
+ 	c->start = lxcapi_start;
+ 	c->startl = lxcapi_startl;
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index c1d83ba..c3368e4 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -137,6 +137,15 @@ struct lxc_container {
+ 	/*! Whether container wishes to be daemonized */
+ 	bool daemonize;
+ 
++	/*! Whether container wishes to create pty or pipes for console log */
++	bool disable_pty;
++
++	/*! Whether container wishes to keep stdin active */
++	bool open_stdin;
++
++	/*! Whether container wishes to detach from container stdio */
++	bool detach;
++
+ 	/*! Full path to configuration file */
+ 	char *config_path;
+ 
+@@ -244,6 +253,28 @@ struct lxc_container {
+ 	bool (*stop)(struct lxc_container *c);
+ 
+ 	/*!
++	 * \brief Change whether the container wants to create pty or pipes
++	 * from the console log.
++	 *
++	 * \param c Container.
++	 * \param state Value for the disable pty bit (0 or 1).
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*want_disable_pty)(struct lxc_container *c, bool state);
++
++	/*!
++	 * \brief Change whether the container wants to keep stdin active
++	 * for parent process of container
++	 *
++	 * \param c Container.
++	 * \param state Value for the open_stdin bit (0 or 1).
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*want_open_stdin)(struct lxc_container *c, bool state);
++
++	/*!
+ 	 * \brief Change whether the container wants to run disconnected
+ 	 * from the terminal.
+ 	 *
+@@ -875,7 +906,7 @@ struct lxc_container {
+ 	 *
+ 	 * \return \c true on success, else \c false.
+ 	 */
+-	bool (*set_terminal_init_fifos)(struct lxc_container *c, const char *in, const char *out);
++	bool (*set_terminal_init_fifos)(struct lxc_container *c, const char *in, const char *out, const char *err);
+ 
+ 	/*! isulad add
+ 	 * \brief An API call to add the path of terminal fifos
+@@ -885,7 +916,7 @@ struct lxc_container {
+ 	 *
+ 	 * \return \c true on success, else \c false.
+ 	 */
+-	bool (*add_terminal_fifos)(struct lxc_container *c, const char *in, const char *out);
++	bool (*add_terminal_fifos)(struct lxc_container *c, const char *in, const char *out, const char *err);
+ 
+ 	/*! isulad add
+ 	 * \brief An API call to set the path of info file
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 816b4a2..cad0d76 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -635,6 +635,13 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
+ 	}
+ 
+ 	TRACE("Mainloop is ready");
++	// iSulad: close stdin pipe if we do not want open_stdin with container stdin
++	if (!handler->conf->console.open_stdin) {
++		if (handler->conf->console.pipes[0][1] > 0) {
++			close(handler->conf->console.pipes[0][1]);
++			handler->conf->console.pipes[0][1] = -1;
++		}
++	}
+ 
+ 	ret = lxc_mainloop(&descr, -1);
+ 	close(descr.epfd);
+@@ -788,6 +795,8 @@ int lxc_init(const char *name, struct lxc_handler *handler)
+ 	int ret;
+ 	const char *loglevel;
+ 	struct lxc_conf *conf = handler->conf;
++	conf->console.disable_pty = handler->disable_pty;
++	conf->console.open_stdin = handler->open_stdin;
+ 
+ 	lsm_init();
+ 	TRACE("Initialized LSM");
+@@ -1244,7 +1253,7 @@ static int do_start(void *data)
+ 	 * means that migration won't work, but at least we won't spew output
+ 	 * where it isn't wanted.
+ 	 */
+-	if (handler->daemonize && !handler->conf->autodev) {
++	if (!handler->disable_pty && handler->daemonize && !handler->conf->autodev) {
+ 		ret = access(path, F_OK);
+ 		if (ret != 0) {
+ 			devnull_fd = open_devnull();
+@@ -1325,6 +1334,42 @@ static int do_start(void *data)
+ 		      "privileges");
+ 	}
+ 
++	/* isulad: dup2 pipe[0][0] to container stdin, pipe[1][1] to container stdout, pipe[2][1] to container stderr */
++	if (handler->disable_pty) {
++		if (handler->conf->console.pipes[0][1] >= 0) {
++			close(handler->conf->console.pipes[0][1]);
++			handler->conf->console.pipes[0][1] = -1;
++		}
++
++		if (handler->conf->console.pipes[0][0] >= 0) {
++			ret = dup2(handler->conf->console.pipes[0][0], STDIN_FILENO);
++			if (ret < 0)
++				goto out_warn_father;
++		}
++
++		if (handler->conf->console.pipes[1][0] >= 0) {
++			close(handler->conf->console.pipes[1][0]);
++			handler->conf->console.pipes[1][0] = -1;
++		}
++
++		if (handler->conf->console.pipes[1][1] >= 0) {
++			ret = dup2(handler->conf->console.pipes[1][1], STDOUT_FILENO);
++			if (ret < 0)
++				goto out_warn_father;
++		}
++		if (handler->conf->console.pipes[2][0] >= 0) {
++			close(handler->conf->console.pipes[2][0]);
++			handler->conf->console.pipes[2][0] = -1;
++		}
++
++		if (handler->conf->console.pipes[2][1] >= 0) {
++			ret = dup2(handler->conf->console.pipes[2][1], STDERR_FILENO);
++			if (ret < 0)
++				goto out_warn_father;
++		}
++
++	}
++
+ 	/* Some init's such as busybox will set sane tty settings on stdin,
+ 	 * stdout, stderr which it thinks is the console. We already set them
+ 	 * the way we wanted on the real terminal, and we want init to do its
+@@ -1332,7 +1377,7 @@ static int do_start(void *data)
+ 	 * make sure that that pty is stdin,stdout,stderr.
+ 	 */
+ 	 setsid();
+-	 if (handler->conf->console.slave >= 0) {
++	 if (!handler->disable_pty && handler->conf->console.slave >= 0) {
+ 		/* isulad:make the given terminal as controlling terminal to avoid warning
+ 		* sh: cannot set terminal process group (-1): Inappropriate ioctl for device
+ 		* sh: no job control in this shell */
+@@ -1367,7 +1412,7 @@ static int do_start(void *data)
+ 
+ 	close(handler->sigfd);
+ 
+-	if (handler->conf->console.slave < 0 && handler->daemonize) {
++	if (!handler->disable_pty && handler->conf->console.slave < 0 && handler->daemonize) {
+ 		if (devnull_fd < 0) {
+ 			devnull_fd = open_devnull();
+ 			if (devnull_fd < 0)
+@@ -1789,6 +1834,22 @@ static int lxc_spawn(struct lxc_handler *handler)
+ 	}
+ 	TRACE("Cloned child process %d", handler->pid);
+ 
++	/* isulad: close pipe after clone */
++	if (handler->conf->console.pipes[0][0] >= 0) {
++		close(handler->conf->console.pipes[0][0]);
++		handler->conf->console.pipes[0][0] = -1;
++	}
++
++	if (handler->conf->console.pipes[1][1] >= 0) {
++		close(handler->conf->console.pipes[1][1]);
++		handler->conf->console.pipes[1][1] = -1;
++	}
++
++	if (handler->conf->console.pipes[2][1] >= 0) {
++		close(handler->conf->console.pipes[2][1]);
++		handler->conf->console.pipes[2][1] = -1;
++	}
++
+ 	/* isulad: save pid/ppid info into file*/
+ 	if (handler->conf->container_info_file) {
+ 		if (lxc_save_container_info(handler->conf->container_info_file, handler->pid)) {
+diff --git a/src/lxc/start.h b/src/lxc/start.h
+index ab72e6e..0298991 100644
+--- a/src/lxc/start.h
++++ b/src/lxc/start.h
+@@ -99,6 +99,11 @@ struct lxc_handler {
+ 	/* Indicates whether should we close std{in,out,err} on start. */
+ 	bool daemonize;
+ 
++	/* Indicates whether should we using pipes or pty dup to std{in,out,err} for console log. */
++	bool disable_pty;
++	/* Indicates whether should we keep stdin active. */
++	bool open_stdin;
++
+ 	/* The child's pid. */
+ 	pid_t pid;
+ 
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 602d43d..dfce92e 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -432,7 +432,7 @@ static bool get_now_time_buffer(char *timebuffer, size_t maxsize)
+     return get_time_buffer(&ts, timebuffer, maxsize);
+ }
+ 
+-static ssize_t lxc_logger_write(struct lxc_terminal *terminal, const char *buf,
++static ssize_t lxc_logger_write(struct lxc_terminal *terminal, const char *type, const char *buf,
+ 				       int bytes_read)
+ {
+ 	logger_json_file *msg = NULL;
+@@ -452,7 +452,7 @@ static ssize_t lxc_logger_write(struct lxc_terminal *terminal, const char *buf,
+ 	}
+ 	memcpy(msg->log, buf, bytes_read);
+ 	msg->log_len = bytes_read;
+-	msg->stream = strdup("stdout");
++	msg->stream = type ? strdup(type) : strdup("stdout");
+ 
+ 	get_now_time_buffer(timebuffer, sizeof(timebuffer));
+ 	msg->time = strdup(timebuffer);
+@@ -472,7 +472,7 @@ cleanup:
+ 	return ret;
+ }
+ 
+-static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
++static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, const char *type, char *buf,
+ 				       int bytes_read)
+ {
+ #define __BUF_CACHE_SIZE (16 * LXC_TERMINAL_BUFFER_SIZE)
+@@ -504,7 +504,7 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
+ 	// Break up the data that we've buffered up into lines, and log each in turn.
+ 	for (index = 0; index < size; index++) {
+ 		if (cache[index] == '\n') {
+-			ret = lxc_logger_write(terminal, cache + begin, index - begin + 1);
++			ret = lxc_logger_write(terminal, type, cache + begin, index - begin + 1);
+ 			if (ret < 0) {
+ 				WARN("Failed to log msg");
+ 			}
+@@ -516,7 +516,7 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
+ 	 * noting that it's a partial log line. */
+ 	if (buf == NULL || (begin == 0 && size == __BUF_CACHE_SIZE)) {
+ 		if (begin < size) {
+-			ret = lxc_logger_write(terminal, cache + begin, index - begin + 1);
++			ret = lxc_logger_write(terminal, type, cache + begin, index - begin + 1);
+ 			if (ret < 0) {
+ 				WARN("Failed to log msg");
+ 			}
+@@ -541,14 +541,20 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
+ }
+ 
+ /* isulad: forward data to all fifos */
+-static void lxc_forward_data_to_fifo(struct lxc_list *list, char *buf, int r)
++static void lxc_forward_data_to_fifo(struct lxc_list *list, bool is_err, char *buf, int r)
+ {
+ 	struct lxc_list *it,*next;
+ 	struct lxc_fifos_fd *elem = NULL;
+ 
+ 	lxc_list_for_each_safe(it, list, next) {
+ 		elem = it->elem;
+-		lxc_write_nointr(elem->out_fd, buf, r);
++		if (is_err) {
++			if (elem->err_fd >= 0)
++				lxc_write_nointr(elem->err_fd, buf, r);
++		} else {
++			if (elem->out_fd >= 0)
++				lxc_write_nointr(elem->out_fd, buf, r);
++		}
+ 	}
+ 
+ 	return;
+@@ -585,7 +591,7 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 			terminal->master = -EBADF;
+ 			/* write remained buffer to terminal log */
+ 			if (terminal->log_fd >= 0) {
+-				w_log = lxc_terminal_write_log_file(terminal, NULL, 0);
++				w_log = lxc_terminal_write_log_file(terminal, "stdout", NULL, 0);
+ 				if (w_log < 0)
+ 					TRACE("Failed to write %d bytes to terminal log", r);
+ 			}
+@@ -601,33 +607,57 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 			/* isulad: delete fifos when the client close */
+ 			lxc_terminal_delete_fifo(fd, &terminal->fifos);
+ 			return LXC_MAINLOOP_CONTINUE;
+-		}  else {
++		} else if (fd == terminal->pipes[1][0] || fd == terminal->pipes[2][0]) {
++			if (fd == terminal->pipes[1][0]) {
++				w_log = lxc_terminal_write_log_file(terminal, "stdout", NULL, 0);
++				terminal->pipes[1][0] = -EBADF;
++			} else if (fd == terminal->pipes[2][0]) {
++				w_log = lxc_terminal_write_log_file(terminal, "stderr", NULL, 0);
++				terminal->pipes[2][0] = -EBADF;
++			}
++			if (w_log < 0)
++				TRACE("Failed to write %d bytes to terminal log", r);
++			close(fd);
++			return LXC_MAINLOOP_CONTINUE;
++		} else if (fd == terminal->pipes[0][1]) {
++			TRACE("closed stdin pipe of container stdin");
++			terminal->pipes[0][1] = -EBADF;
++			close(fd);
++			return LXC_MAINLOOP_CONTINUE;
++		} else {
+ 			ERROR("Handler received unexpected file descriptor");
+ 		}
+ 		close(fd);
+-
+ 		return LXC_MAINLOOP_CLOSE;
+ 	}
+ 
+-	if (fd == terminal->peer || lxc_terminal_is_fifo(fd, &terminal->fifos))
+-		w = lxc_write_nointr(terminal->master, buf, r);
++	if (fd == terminal->peer || lxc_terminal_is_fifo(fd, &terminal->fifos)) {
++		if (terminal->master > 0)
++			w = lxc_write_nointr(terminal->master, buf, r);
++		if (terminal->pipes[0][1] > 0)
++			w = lxc_write_nointr(terminal->pipes[0][1], buf, r);
++	}
+ 
+ 	w_rbuf = w_log = 0;
+-	if (fd == terminal->master) {
++	if (fd == terminal->master || fd == terminal->pipes[1][0] || fd == terminal->pipes[2][0]) {
+ 		/* write to peer first */
+ 		if (terminal->peer >= 0)
+ 			w = lxc_write_nointr(terminal->peer, buf, r);
+ 
+ 		/* isulad: forward data to fifos */
+-		lxc_forward_data_to_fifo(&terminal->fifos, buf, r);
++		lxc_forward_data_to_fifo(&terminal->fifos, fd == terminal->pipes[2][0], buf, r);
+ 
+ 		/* write to terminal ringbuffer */
+ 		if (terminal->buffer_size > 0)
+ 			w_rbuf = lxc_ringbuf_write(&terminal->ringbuf, buf, r);
+ 
+ 		/* write to terminal log */
+-		if (terminal->log_fd >= 0)
+-			w_log = lxc_terminal_write_log_file(terminal, buf, r);
++		if (terminal->log_fd >= 0) {
++			if (fd == terminal->master || fd == terminal->pipes[1][0])
++				w_log = lxc_terminal_write_log_file(terminal, "stdout", buf, r);
++			else if (fd == terminal->pipes[2][0])
++				w_log = lxc_terminal_write_log_file(terminal, "stderr", buf, r);
++		}
+ 	}
+ 
+ 	if (w != r)
+@@ -670,6 +700,41 @@ static int lxc_terminal_mainloop_add_peer(struct lxc_terminal *terminal)
+ 	return 0;
+ }
+ 
++/* isulad add pipes to mainloop */
++static int lxc_terminal_mainloop_add_pipes(struct lxc_terminal *terminal)
++{
++	int ret = 0;
++
++	// parent read data from fifo, and send to stdin of container
++	if (terminal->pipes[0][1] > 0) {
++		ret = lxc_mainloop_add_handler(terminal->descr, terminal->pipes[0][1],
++					     lxc_terminal_io_cb, terminal);
++		if (ret) {
++			ERROR("pipe fd %d not added to mainloop", terminal->pipes[0][1]);
++			return -1;
++		}
++	}
++	// parent read data from stdout of container, and send to fifo
++	if (terminal->pipes[1][0] > 0) {
++		ret = lxc_mainloop_add_handler(terminal->descr, terminal->pipes[1][0],
++					     lxc_terminal_io_cb, terminal);
++		if (ret) {
++			ERROR("pipe fd %d not added to mainloop", terminal->pipes[1][0]);
++			return -1;
++		}
++	}
++	// parent read data from stderr of container, and send to fifo
++	if (terminal->pipes[2][0] > 0) {
++		ret = lxc_mainloop_add_handler(terminal->descr, terminal->pipes[2][0],
++					     lxc_terminal_io_cb, terminal);
++		if (ret) {
++			ERROR("pipe fd %d not added to mainloop", terminal->pipes[2][0]);
++			return -1;
++		}
++	}
++	return ret;
++}
++
+ /* isulad add fifo to mainloop */
+ static int lxc_terminal_mainloop_add_fifo(struct lxc_terminal *terminal)
+ {
+@@ -696,19 +761,6 @@ int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
+ {
+ 	int ret;
+ 
+-	if (terminal->master < 0) {
+-		INFO("Terminal is not initialized");
+-		return 0;
+-	}
+-
+-	ret = lxc_mainloop_add_handler(descr, terminal->master,
+-				       lxc_terminal_io_cb, terminal);
+-	if (ret < 0) {
+-		ERROR("Failed to add handler for terminal master fd %d to "
+-		      "mainloop", terminal->master);
+-		return -1;
+-	}
+-
+ 	/* We cache the descr so that we can add an fd to it when someone
+ 	 * does attach to it in lxc_terminal_allocate().
+ 	 */
+@@ -720,6 +772,13 @@ int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
+ 		return -1;
+ 	}
+ 
++	/* isulad add pipes to mainloop */
++	ret = lxc_terminal_mainloop_add_pipes(terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal fifos to mainloop");
++		return -1;
++	}
++
+ 	/* isulad add fifo to mainloop */
+ 	ret = lxc_terminal_mainloop_add_fifo(terminal);
+ 	if (ret < 0) {
+@@ -727,6 +786,19 @@ int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
+ 		return -1;
+ 	}
+ 
++	if (terminal->master < 0) {
++		INFO("Terminal is not initialized");
++		return 0;
++	}
++
++	ret = lxc_mainloop_add_handler(descr, terminal->master,
++				       lxc_terminal_io_cb, terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal master fd %d to "
++		      "mainloop", terminal->master);
++		return -1;
++	}
++
+ 	return 0;
+ }
+ 
+@@ -1082,6 +1154,26 @@ void lxc_terminal_delete(struct lxc_terminal *terminal)
+ 		close(terminal->log_fd);
+ 	terminal->log_fd = -1;
+ 
++	/* isulad: close all pipes */
++	if (terminal->pipes[0][0] >= 0)
++		close(terminal->pipes[0][0]);
++	terminal->pipes[0][0] = -1;
++	if (terminal->pipes[0][1] >= 0)
++		close(terminal->pipes[0][1]);
++	terminal->pipes[0][1] = -1;
++	if (terminal->pipes[1][0] >= 0)
++		close(terminal->pipes[1][0]);
++	terminal->pipes[1][0] = -1;
++	if (terminal->pipes[1][1] >= 0)
++		close(terminal->pipes[1][1]);
++	terminal->pipes[1][1] = -1;
++	if (terminal->pipes[2][0] >= 0)
++		close(terminal->pipes[2][0]);
++	terminal->pipes[2][0] = -1;
++	if (terminal->pipes[2][1] >= 0)
++		close(terminal->pipes[2][1]);
++	terminal->pipes[2][1] = -1;
++
+ 	/* isulad: delete all fifos */
+ 	lxc_terminal_delete_fifo(-1, &terminal->fifos);
+ }
+@@ -1168,59 +1260,79 @@ static int terminal_fifo_open(const char *fifo_path, int flags)
+ }
+ 
+ /* isulad: set terminal fifos */
+-static int lxc_terminal_set_fifo(struct lxc_terminal *console, const char *in, const char *out)
++static int lxc_terminal_set_fifo(struct lxc_terminal *console, const char *in, const char *out, const char *err, int *input_fd)
+ {
+-	int fifofd_in = -1, fifofd_out = -1;
++	int fifofd_in = -1, fifofd_out = -1, fifofd_err = -1;
+ 	struct lxc_fifos_fd *fifo_elem = NULL;
+ 
+-	if (!in || !out)
++	if ((in && !fifo_exists(in)) || (out && !fifo_exists(out)) || (err && !fifo_exists(err))) {
++		ERROR("File %s or %s or %s does not refer to a FIFO", in, out, err);
+ 		return -1;
++	}
+ 
+-	if (!fifo_exists(in) || !fifo_exists(out)) {
+-		ERROR("File %s or %s does not refer to a FIFO", in, out);
+-		return -1;
++	if (in) {
++		fifofd_in = terminal_fifo_open(in, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
++		if (fifofd_in < 0) {
++			SYSERROR("Failed to open FIFO: %s", in);
++			return -1;
++		}
+ 	}
+ 
+-	fifofd_in = terminal_fifo_open(in, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+-	if (fifofd_in < 0) {
+-		ERROR("Failed to open FIFO: %s", in);
+-		return -1;
++	if (out) {
++		fifofd_out = terminal_fifo_open(out, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
++		if (fifofd_out < 0) {
++			SYSERROR("Failed to open FIFO: %s", out);
++			if (fifofd_in >= 0)
++				close(fifofd_in);
++			return -1;
++		}
+ 	}
+ 
+-	fifofd_out = terminal_fifo_open(out, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+-	if (fifofd_out < 0) {
+-		ERROR("Failed to open FIFO: %s", out);
+-		close(fifofd_in);
+-		return -1;
++	if (err) {
++		fifofd_err = terminal_fifo_open(err, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
++		if (fifofd_err < 0) {
++			SYSERROR("Failed to open FIFO: %s", err);
++			if (fifofd_in >= 0)
++				close(fifofd_in);
++			if (fifofd_out >= 0)
++				close(fifofd_out);
++			return -1;
++		}
+ 	}
+ 
+ 	fifo_elem = malloc(sizeof(*fifo_elem));
+ 	if (!fifo_elem) {
+-		close(fifofd_in);
+-		close(fifofd_out);
++		if (fifofd_in >= 0)
++			close(fifofd_in);
++		if (fifofd_out >= 0)
++			close(fifofd_out);
++		if (fifofd_err >= 0)
++			close(fifofd_err);
+ 		return -1;
+ 	}
+ 	memset(fifo_elem, 0, sizeof(*fifo_elem));
+ 
+-	fifo_elem->in_fifo = strdup(in);
+-	fifo_elem->out_fifo = strdup(out);
++	fifo_elem->in_fifo = strdup(in ? in : "");
++	fifo_elem->out_fifo = strdup(out ? out : "");
++	fifo_elem->err_fifo = strdup(err ? err : "");
+ 	fifo_elem->in_fd = fifofd_in;
+ 	fifo_elem->out_fd = fifofd_out;
++	fifo_elem->err_fd = fifofd_err;
+ 	lxc_list_add_elem(&fifo_elem->node, fifo_elem);
+ 	lxc_list_add_tail(&console->fifos, &fifo_elem->node);
+ 
+-	return fifofd_in;
++	if (input_fd)
++		*input_fd = fifofd_in;
++
++	return 0;
+ }
+ 
+ /* isulad: add default fifos */
+ static int lxc_terminal_fifo_default(struct lxc_terminal *terminal)
+ {
+-	if (!terminal->init_fifo[0] || !terminal->init_fifo[1]) {
+-		DEBUG("Invalid default terminal fifos");
+-		return 0;
+-	}
+-
+-	return lxc_terminal_set_fifo(terminal, terminal->init_fifo[0], terminal->init_fifo[1]);
++	if (terminal->init_fifo[0] || terminal->init_fifo[1] || terminal->init_fifo[2])
++		return lxc_terminal_set_fifo(terminal, terminal->init_fifo[0], terminal->init_fifo[1], terminal->init_fifo[2], NULL);
++	return 0;
+ }
+ 
+ /*
+@@ -1245,48 +1357,67 @@ int lxc_terminal_create(struct lxc_terminal *terminal)
+ {
+ 	int ret;
+ 
+-	ret = openpty(&terminal->master, &terminal->slave, NULL, NULL, NULL);
+-	if (ret < 0) {
+-		SYSERROR("Failed to open terminal");
+-		return -1;
+-	}
++	if (!terminal->disable_pty) {
++		ret = openpty(&terminal->master, &terminal->slave, NULL, NULL, NULL);
++		if (ret < 0) {
++			SYSERROR("Failed to open terminal");
++			return -1;
++		}
+ 
+-	ret = ttyname_r(terminal->slave, terminal->name, sizeof(terminal->name));
+-	if (ret < 0) {
+-		SYSERROR("Failed to retrieve name of terminal slave");
+-		goto err;
+-	}
++		ret = ttyname_r(terminal->slave, terminal->name, sizeof(terminal->name));
++		if (ret < 0) {
++			SYSERROR("Failed to retrieve name of terminal slave");
++			goto err;
++		}
+ 
+-	/* isulad: clear ONLCR flag */
+-	ret = use_unix_newline(terminal->master);
+-	if (ret < 0) {
+-		SYSERROR("Failed to clear ONLCR flag on terminal master");
+-		goto err;
+-	}
++		/* isulad: clear ONLCR flag */
++		ret = use_unix_newline(terminal->master);
++		if (ret < 0) {
++			SYSERROR("Failed to clear ONLCR flag on terminal master");
++			goto err;
++		}
+ 
+-	ret = fd_cloexec(terminal->master, true);
+-	if (ret < 0) {
+-		SYSERROR("Failed to set FD_CLOEXEC flag on terminal master");
+-		goto err;
+-	}
++		ret = fd_cloexec(terminal->master, true);
++		if (ret < 0) {
++			SYSERROR("Failed to set FD_CLOEXEC flag on terminal master");
++			goto err;
++		}
+ 
+-	/* isulad: make master NONBLOCK */
+-	ret = fd_nonblock(terminal->master);
+-	if (ret < 0) {
+-		SYSERROR("Failed to set O_NONBLOCK flag on terminal master");
+-		goto err;
+-	}
++		/* isulad: make master NONBLOCK */
++		ret = fd_nonblock(terminal->master);
++		if (ret < 0) {
++			SYSERROR("Failed to set O_NONBLOCK flag on terminal master");
++			goto err;
++		}
+ 
+-	ret = fd_cloexec(terminal->slave, true);
+-	if (ret < 0) {
+-		SYSERROR("Failed to set FD_CLOEXEC flag on terminal slave");
+-		goto err;
+-	}
++		ret = fd_cloexec(terminal->slave, true);
++		if (ret < 0) {
++			SYSERROR("Failed to set FD_CLOEXEC flag on terminal slave");
++			goto err;
++		}
+ 
+-	ret = lxc_terminal_peer_default(terminal);
+-	if (ret < 0) {
+-		ERROR("Failed to allocate proxy terminal");
+-		goto err;
++		ret = lxc_terminal_peer_default(terminal);
++		if (ret < 0) {
++			ERROR("Failed to allocate proxy terminal");
++			goto err;
++		}
++	} else {
++		/* isulad: create 3 pipes */
++		/* for stdin */
++		if (pipe2(terminal->pipes[0], O_CLOEXEC)) {
++			ERROR("Failed to create stdin pipe");
++			goto err;
++		}
++		/* for stdout */
++		if (pipe2(terminal->pipes[1], O_NONBLOCK | O_CLOEXEC)) {
++			ERROR("Failed to create stdout pipe");
++			goto err;
++		}
++		/* for stderr */
++		if (pipe2(terminal->pipes[2], O_NONBLOCK | O_CLOEXEC)) {
++			ERROR("Failed to create stderr pipe");
++			goto err;
++		}
+ 	}
+ 
+ 	/* isulad: open fifos */
+@@ -1581,6 +1712,13 @@ void lxc_terminal_init(struct lxc_terminal *terminal)
+ 	/* isulad init console fifos */
+ 	terminal->init_fifo[0] = NULL;
+ 	terminal->init_fifo[1] = NULL;
++	terminal->init_fifo[2] = NULL;
++	terminal->pipes[0][0] = -1;
++	terminal->pipes[0][1] = -1;
++	terminal->pipes[1][0] = -1;
++	terminal->pipes[1][1] = -1;
++	terminal->pipes[2][0] = -1;
++	terminal->pipes[2][1] = -1;
+ 	lxc_list_init(&terminal->fifos);
+ }
+ 
+@@ -1599,8 +1737,14 @@ int lxc_terminal_delete_fifo(int fd, struct lxc_list *list)
+ 				free(elem->in_fifo);
+ 			if (elem->out_fifo)
+ 				free(elem->out_fifo);
+-			close(elem->in_fd);
+-			close(elem->out_fd);
++			if (elem->err_fifo)
++				free(elem->err_fifo);
++			if (elem->in_fd >= 0)
++				close(elem->in_fd);
++			if (elem->out_fd >= 0)
++				close(elem->out_fd);
++			if (elem->err_fd >= 0)
++				close(elem->err_fd);
+ 			free(elem);
+ 		}
+ 	}
+@@ -1617,6 +1761,7 @@ void lxc_terminal_conf_free(struct lxc_terminal *terminal)
+ 	/*isulad: free console fifos */
+ 	free(terminal->init_fifo[0]);
+ 	free(terminal->init_fifo[1]);
++	free(terminal->init_fifo[2]);
+ 	lxc_terminal_delete_fifo(-1, &terminal->fifos);
+ }
+ 
+@@ -1647,7 +1792,8 @@ int lxc_terminal_add_fifos(struct lxc_conf *conf, const char *fifonames)
+ 	int ret = 0;
+ 	struct lxc_terminal *terminal = &conf->console;
+ 	int fifofd_in = -1;
+-	char *tmp = NULL, *saveptr = NULL, *in = NULL, *out = NULL;
++	char *tmp = NULL, *saveptr = NULL, *in = NULL, *out = NULL, *err = NULL;
++	const char *none_fifo_name = "none";
+ 
+ 	tmp = strdup(fifonames);
+ 	if (!tmp) {
+@@ -1660,14 +1806,27 @@ int lxc_terminal_add_fifos(struct lxc_conf *conf, const char *fifonames)
+ 		ret = -1;
+ 		goto free_out;
+ 	}
++	if (strcmp(in, none_fifo_name) == 0)
++		in = NULL;
++
+ 	out = strtok_r(NULL, "&&&&",  &saveptr);
+ 	if (!out) {
+ 		ret = -1;
+ 		goto free_out;
+ 	}
++	if (strcmp(out, none_fifo_name) == 0)
++		out = NULL;
+ 
+-	fifofd_in = lxc_terminal_set_fifo(terminal, in, out);
+-	if (fifofd_in < 0) {
++	err = strtok_r(NULL, "&&&&",  &saveptr);
++	if (!err) {
++		ret = -1;
++		goto free_out;
++	}
++	if (strcmp(err, none_fifo_name) == 0)
++		err = NULL;
++
++	ret = lxc_terminal_set_fifo(terminal, in, out, err, &fifofd_in);
++	if (ret < 0) {
+ 		ERROR("Faild to set fifos to console config");
+ 		ret = -1;
+ 		goto free_out;
+diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
+index 0c9653c..9bb341f 100644
+--- a/src/lxc/terminal.h
++++ b/src/lxc/terminal.h
+@@ -115,16 +115,21 @@ struct lxc_terminal {
+ 		/* the in-memory ringbuffer */
+ 		struct lxc_ringbuf ringbuf;
+ 	};
+-	char *init_fifo[2]; /* isulad: default fifos for the start */
++	char *init_fifo[3]; /* isulad: default fifos for the start */
+ 	struct lxc_list fifos; /* isulad: fifos used to forward teminal */
++	bool disable_pty;
++	bool open_stdin;
++	int pipes[3][2]; /* isulad: pipes for dup to container fds of stdin,stdout,stderr on daemonize mode*/
+ };
+ 
+ /* isulad: fifo struct */
+ struct lxc_fifos_fd {
+ 	char *in_fifo;
+ 	char *out_fifo;
++	char *err_fifo;
+ 	int in_fd;
+ 	int out_fd;
++	int err_fd;
+ 	struct lxc_list node;
+ };
+ 
+diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
+index afab9f5..d03f8a4 100644
+--- a/src/lxc/tools/arguments.h
++++ b/src/lxc/tools/arguments.h
+@@ -51,6 +51,8 @@ struct lxc_arguments {
+ 	char *log_priority;
+ 	int quiet;
+ 	int daemonize;
++	int disable_pty;
++	int open_stdin;
+ 	const char *rcfile;
+ 	const char *console;
+ 	const char *console_log;
+@@ -62,7 +64,7 @@ struct lxc_arguments {
+ 
+ 	/* for lxc-start */
+ 	const char *share_ns[32]; /* size must be greater than LXC_NS_MAX */
+-	char *terminal_fifos[2]; /* isulad add, fifos used to redirct stdin/out/err */
++	char *terminal_fifos[3]; /* isulad add, fifos used to redirct stdin/out/err */
+ 	const char *container_info; /* isulad: file used to store pid and ppid info of container */
+ 	const char *exit_monitor_fifo; /* isulad: fifo used to monitor state of monitor process */
+ 	unsigned int start_timeout; /* isulad: Seconds for waiting on a container to start before it is killed*/
+@@ -179,9 +181,13 @@ struct lxc_arguments {
+ /* isulad add begin */
+ #define OPT_INPUT_FIFO OPT_USAGE - 7
+ #define OPT_OUTPUT_FIFO OPT_USAGE - 8
+-#define OPT_CONTAINER_INFO OPT_USAGE - 9
+-#define OPT_EXIT_FIFO OPT_USAGE - 10
+-#define OPT_START_TIMEOUT OPT_USAGE - 11
++#define OPT_STDERR_FIFO OPT_USAGE - 9
++#define OPT_CONTAINER_INFO OPT_USAGE - 10
++#define OPT_EXIT_FIFO OPT_USAGE - 11
++#define OPT_START_TIMEOUT OPT_USAGE - 12
++#define OPT_DISABLE_PTY OPT_USAGE - 13
++#define OPT_OPEN_STDIN OPT_USAGE - 14
++
+ /* isulad add end*/
+ 
+ extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
+diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
+index acdf8a0..674050d 100644
+--- a/src/lxc/tools/lxc_attach.c
++++ b/src/lxc/tools/lxc_attach.c
+@@ -77,6 +77,7 @@ static const struct option my_longopts[] = {
+ 	{"rcfile", required_argument, 0, 'f'},
+ 	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO}, /* isulad add terminal fifos*/
+ 	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
++	{"err-fifo", required_argument, 0, OPT_STDERR_FIFO},
+ 	LXC_COMMON_OPTIONS
+ };
+ 
+@@ -201,6 +202,9 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case OPT_OUTPUT_FIFO:
+ 		args->terminal_fifos[1] = arg;
+ 		break;
++	case OPT_STDERR_FIFO:
++		args->terminal_fifos[2] = arg;
++		break;
+ 	}
+ 
+ 	return 0;
+@@ -460,9 +464,10 @@ int main(int argc, char *argv[])
+ 	if (elevated_privileges)
+ 		attach_options.attach_flags &= ~(elevated_privileges);
+ 
+-	if (my_args.terminal_fifos[0] && my_args.terminal_fifos[1]) {
++	if (my_args.terminal_fifos[0] || my_args.terminal_fifos[1] || my_args.terminal_fifos[2]) {
+ 		attach_options.init_fifo[0] = my_args.terminal_fifos[0];
+ 		attach_options.init_fifo[1] = my_args.terminal_fifos[1];
++		attach_options.init_fifo[2] = my_args.terminal_fifos[2];
+ 		attach_options.attach_flags |= LXC_ATTACH_TERMINAL;
+ 	} else if (stdfd_is_pty()) {
+ 		attach_options.attach_flags |= LXC_ATTACH_TERMINAL;
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index ec48701..183fafc 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -73,9 +73,12 @@ static const struct option my_longopts[] = {
+ 	/* isulad add begin */
+ 	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO},
+ 	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
++	{"err-fifo", required_argument, 0, OPT_STDERR_FIFO},
+ 	{"container-pidfile", required_argument, 0, OPT_CONTAINER_INFO},
+ 	{"exit-fifo", required_argument, 0, OPT_EXIT_FIFO},
+ 	{"start-timeout", required_argument, 0, OPT_START_TIMEOUT},
++	{"disable-pty", no_argument, 0, OPT_DISABLE_PTY},
++	{"open-stdin", no_argument, 0, OPT_OPEN_STDIN},
+ 	/* isulad add end */
+ 	LXC_COMMON_OPTIONS
+ };
+@@ -166,6 +169,9 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case OPT_OUTPUT_FIFO:
+ 		args->terminal_fifos[1] = arg;
+ 		break;
++	case OPT_STDERR_FIFO:
++		args->terminal_fifos[2] = arg;
++		break;
+ 	case OPT_CONTAINER_INFO:
+ 		args->container_info = arg;
+ 		break;
+@@ -179,6 +185,12 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 		}
+ 		args->start_timeout = (unsigned int)atoi(arg);
+ 		break;
++	case OPT_DISABLE_PTY:
++		args->disable_pty = 1;
++		break;
++	case OPT_OPEN_STDIN:
++		args->open_stdin = 1;
++		break;
+ 	}
+ 	return 0;
+ }
+@@ -381,11 +393,17 @@ int main(int argc, char *argv[])
+ 	if (!my_args.daemonize)
+ 		c->want_daemonize(c, false);
+ 
++	if (my_args.disable_pty)
++		c->want_disable_pty(c, true);
++
++	if (my_args.open_stdin)
++		c->want_open_stdin(c, true);
++
+ 	if (my_args.close_all_fds)
+ 		c->want_close_all_fds(c, true);
+ 
+-	if (my_args.terminal_fifos[0] && my_args.terminal_fifos[1])
+-		c->set_terminal_init_fifos(c, my_args.terminal_fifos[0], my_args.terminal_fifos[1]);
++	if (my_args.terminal_fifos[0] || my_args.terminal_fifos[1] || my_args.terminal_fifos[2])
++		c->set_terminal_init_fifos(c, my_args.terminal_fifos[0], my_args.terminal_fifos[1], my_args.terminal_fifos[2]);
+ 
+ 	if (args == default_args)
+ 		err = c->start(c, 0, NULL) ? EXIT_SUCCESS : EXIT_FAILURE;
+-- 
+1.8.3.1
+

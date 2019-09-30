@@ -1,0 +1,41 @@
+From 917a306cfab2e0cef3a666b23bf7c788bcf466d3 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Wed, 24 Apr 2019 22:22:55 +0800
+Subject: [PATCH 087/122] lxc: adapt to spec of oci hook
+
+poststart failed do not cause run failed
+
+Signed-off-by: liuhao <liuhao27@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 8cdccf1..a1d77eb 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -4782,6 +4782,7 @@ static int run_oci_hooks(const char *name, const char *lxcpath, struct lxc_conf
+ 	struct oci_hook_conf work_conf = {0};
+ 	size_t i;
+ 	int ret = 0;
++	int nret = 0;
+ 	char *rootpath;
+ 
+ 	if (!lc) {
+@@ -4811,9 +4812,9 @@ static int run_oci_hooks(const char *name, const char *lxcpath, struct lxc_conf
+ 		case OCI_HOOK_POSTSTART:
+ 			for (i = 0; i < lc->ocihooks->poststart_len; i++) {
+ 				work_conf.ocihook = lc->ocihooks->poststart[i];
+-				ret = run_ocihook_script_argv(name, "lxc", &work_conf, lxcpath, rootpath);
+-				if (ret != 0)
+-					break;
++				nret = run_ocihook_script_argv(name, "lxc", &work_conf, lxcpath, rootpath);
++				if (nret != 0)
++					WARN("running poststart hook %d failed, ContainerId: %s", i, name);
+ 			}
+ 			break;
+ 		case OCI_HOOK_POSTSTOP:
+-- 
+1.8.3.1
+

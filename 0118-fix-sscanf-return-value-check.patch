@@ -1,0 +1,55 @@
+From 0aade3f699ec02ead3b4707be0e259ded5c1e9ec Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 2 Sep 2019 06:24:07 -0400
+Subject: [PATCH 118/122] fix sscanf return value check
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/start.c |  2 +-
+ src/lxc/utils.c | 10 +++++++---
+ 2 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 00d478c..c1e0d5d 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1904,7 +1904,7 @@ static int lxc_check_container_info(char *filename, pid_t pid, pid_t p_pid, unsi
+ 	}
+ 
+ 	num = sscanf(sbuf, "%d %Lu %d %Lu", &saved_pid, &saved_start_time, &saved_ppid, &saved_pstart_time);
+-	if (num < 0) {
++	if (num != 4) {
+ 		SYSERROR("Call sscanf error");
+ 		ret = -1;
+ 		goto out;
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 1d2e9ee..c83c7a3 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -1952,8 +1952,8 @@ static proc_t *lxc_stat2proc(const char *S)
+ 
+ 	/* parse these two strings separately, skipping the leading "(". */
+ 	num = sscanf(S, "%d (%15c", &P->pid, P->cmd);   /* comm[16] in kernel */
+-	if (num < 0 && errno) {
+-		ERROR("Call sscanf error: %s", strerror(errno));
++	if (num != 2) {
++		ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
+ 		free(P);
+ 		return NULL;
+ 	}
+@@ -1985,7 +1985,11 @@ static proc_t *lxc_stat2proc(const char *S)
+ 	             &P->exit_signal, &P->processor,  /* 2.2.1 ends with "exit_signal" */
+ 	             &P->rtprio, &P->sched  /* both added to 2.5.18 */
+ 	            );
+-
++	if (num != 35) {
++		ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
++		free(P);
++		return NULL;
++	}
+ 	if (P->tty == 0)
+ 		P->tty = -1;  /* the old notty val, update elsewhere bef. moving to 0 */
+ 	return P;
+-- 
+1.8.3.1
+

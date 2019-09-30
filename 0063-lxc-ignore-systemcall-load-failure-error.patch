@@ -1,0 +1,27 @@
+From aa6af28e14e024cfc31b8d77516df9899eb480c8 Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Sat, 9 Mar 2019 03:10:06 +0800
+Subject: [PATCH 063/122] lxc: ignore systemcall load failure error
+
+Signed-off-by: wujing <wujing50@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/seccomp.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
+index 4a5b3d0..26eac90 100644
+--- a/src/lxc/seccomp.c
++++ b/src/lxc/seccomp.c
+@@ -543,7 +543,7 @@ bool do_resolve_add_rule(uint32_t arch, char *line, scmp_filter_ctx ctx,
+ 		errno = -ret;
+ 		SYSERROR("Failed loading rule for %s (nr %d action %d (%s))",
+ 		         line, nr, rule->action, get_action_name(rule->action));
+-		return false;
++		return true;
+ 	}
+ 
+ 	return true;
+-- 
+1.8.3.1
+

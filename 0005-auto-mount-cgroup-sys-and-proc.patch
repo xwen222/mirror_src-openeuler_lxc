@@ -1,0 +1,80 @@
+From f3c5a99c7bd1ecef02051489a97cbe0a1def254f Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Thu, 10 Jan 2019 20:40:19 +0800
+Subject: [PATCH 005/122] auto mount cgroup sys and proc
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c |  8 ++++++--
+ src/lxc/conf.c           | 15 ++++++++++++---
+ 2 files changed, 18 insertions(+), 5 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index acc6c30..aff2b5e 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1648,6 +1648,10 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
+ 
+ 	/* Mount tmpfs */
+ 	tmpfspath = must_make_path(root, "/sys/fs/cgroup", NULL);
++	if (mkdir_p(tmpfspath, 0755) < 0) {
++		ERROR("Failed to create directory: %s", tmpfspath);
++		goto on_error;
++	}
+ 	ret = safe_mount(NULL, tmpfspath, "tmpfs",
+ 			 MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_RELATIME,
+ 			 "size=10240k,mode=755", root);
+@@ -1700,8 +1704,8 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
+ 			continue;
+ 		}
+ 
+-		path2 = must_make_path(controllerpath, h->container_base_path,
+-				       ops->container_cgroup, NULL);
++		// Ignore ops->container_cgroup so we will not see directory lxc after /sys/fs/cgroup/xxx in container
++		path2 = must_make_path(controllerpath, h->container_base_path, NULL);
+ 		ret = mkdir_p(path2, 0755);
+ 		if (ret < 0) {
+ 			free(controllerpath);
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 20b7aba..18753d1 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -670,8 +670,8 @@ static int lxc_mount_auto_mounts(struct lxc_conf *conf, int flags, struct lxc_ha
+ 		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_MIXED, "%r/proc/sysrq-trigger",                          "%r/proc/sysrq-trigger",      NULL,    MS_BIND,                                         NULL },
+ 		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_MIXED, NULL,                                             "%r/proc/sysrq-trigger",      NULL,    MS_REMOUNT|MS_BIND|MS_RDONLY,                    NULL },
+ 		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_RW,    "proc",                                           "%r/proc",                    "proc",  MS_NODEV|MS_NOEXEC|MS_NOSUID,                    NULL },
+-		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_RW,     "sysfs",                                          "%r/sys",                     "sysfs", 0,                                               NULL },
+-		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_RO,     "sysfs",                                          "%r/sys",                     "sysfs", MS_RDONLY,                                       NULL },
++		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_RW,     "sysfs",                                          "%r/sys",                     "sysfs", MS_NODEV|MS_NOEXEC|MS_NOSUID,                                               NULL },
++		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_RO,     "sysfs",                                          "%r/sys",                     "sysfs", MS_RDONLY|MS_NODEV|MS_NOEXEC|MS_NOSUID,                                       NULL },
+ 		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_MIXED,  "sysfs",                                          "%r/sys",                     "sysfs", MS_NODEV|MS_NOEXEC|MS_NOSUID,                    NULL },
+ 		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_MIXED,  NULL,                                             "%r/sys",                     NULL,    MS_REMOUNT|MS_BIND|MS_RDONLY,                    NULL },
+ 		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_MIXED,  "sysfs",                                          "%r/sys/devices/virtual/net", "sysfs", 0,                                               NULL },
+@@ -710,6 +710,15 @@ static int lxc_mount_auto_mounts(struct lxc_conf *conf, int flags, struct lxc_ha
+ 			return -1;
+ 		}
+ 
++		if (mkdir_p(destination, 0755) < 0) {
++			SYSERROR("Failed to create mount target '%s'", destination);
++			saved_errno = errno;
++			free(source);
++			free(destination);
++			errno = saved_errno;
++			return -1;
++		}
++
+ 		mflags = add_required_remount_flags(source, destination,
+ 						    default_mounts[i].flags);
+ 		r = safe_mount(source, destination, default_mounts[i].fstype,
+@@ -717,7 +726,7 @@ static int lxc_mount_auto_mounts(struct lxc_conf *conf, int flags, struct lxc_ha
+ 			       conf->rootfs.path ? conf->rootfs.mount : NULL);
+ 		saved_errno = errno;
+ 		if (r < 0 && errno == ENOENT) {
+-			INFO("Mount source or target for \"%s\" on \"%s\" does "
++			INFO("Mount source for \"%s\" on \"%s\" does "
+ 			     "not exist. Skipping", source, destination);
+ 			r = 0;
+ 		} else if (r < 0) {
+-- 
+1.8.3.1
+

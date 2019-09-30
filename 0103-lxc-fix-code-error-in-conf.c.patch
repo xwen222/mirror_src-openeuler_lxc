@@ -1,0 +1,109 @@
+From d3f6e8e611dd6b3160d58159e99565c3686e6398 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 3 Jun 2019 11:14:22 -0400
+Subject: [PATCH 103/122] lxc: fix code error in conf.c
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c | 21 ++++++++++++++++-----
+ src/lxc/conf.h |  2 +-
+ 2 files changed, 17 insertions(+), 6 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index e7df336..127ef77 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -2446,7 +2446,8 @@ static int check_mount_destination(const char *rootfs, const char *dest)
+ 	}
+ 
+ 	for(invalid = invalid_destinations; *invalid != NULL; invalid++) {
+-		char *fullpath, *relpath;
++		char *fullpath = NULL;
++		char *relpath = NULL;
+ 		const char *parts[3] = {
+ 			rootfs,
+ 			*invalid,
+@@ -2588,6 +2589,8 @@ retry:
+ 			max_retry--;
+ 			DEBUG("mount entry with loop dev failed, retry mount."
+ 			      "retry count left %d", max_retry);
++			if (loop.lofd != -1)
++				close(loop.lofd);
+ 			goto retry;
+ 		}
+ 	}
+@@ -2799,7 +2802,9 @@ static int mount_file_entries(const struct lxc_conf *conf,
+ 			ret = mount_entry_on_absolute_rootfs(&mntent, rootfs,
+ 			                                     lxc_name, lxc_path);
+ 		free(mntent.mnt_fsname);
++		mntent.mnt_fsname = NULL;
+ 		free(mntent.mnt_dir);
++		mntent.mnt_dir = NULL;
+ 		if (ret < 0)
+ 			return -1;
+ 	}
+@@ -4378,8 +4383,9 @@ int lxc_drop_caps(struct lxc_conf *conf)
+ 	int ret = 0;
+ 	struct lxc_list *iterator = NULL;
+ 	char *keep_entry = NULL;
+-	int i, capid;
+-	int numcaps = lxc_caps_last_cap() + 1;
++	size_t i = 0;
++	int capid;
++	size_t numcaps = (size_t)lxc_caps_last_cap() + 1;
+ 	struct lxc_list *caps = NULL;
+ 	int *caplist = NULL;
+ 
+@@ -4545,6 +4551,10 @@ static char **merge_ocihook_env(char **oldenvs, size_t env_len, size_t *merge_en
+ 	for(j = 0; j < (sizeof(lxc_envs) / sizeof(char *)); j++) {
+ 		tmpenv = getenv(lxc_envs[j]);
+ 		if (tmpenv && i < (result_len - 1)) {
++			if (strlen(tmpenv) > (SIZE_MAX - 1 - 1 - strlen(lxc_envs[j]))) {
++				lxc_free_array((void **)result, free);
++				return NULL;
++			}
+ 			lxcenv_buf = malloc(strlen(tmpenv) + 1 + strlen(lxc_envs[j]) + 1);
+ 			if (!lxcenv_buf) {
+ 				lxc_free_array((void **)result, free);
+@@ -4837,7 +4847,7 @@ static int run_ocihook_script_argv(const char *name, const char *section,
+ {
+ 	int ret;
+ 	const char *script = oconf->ocihook->path;
+-	char *inmsg;
++	char *inmsg = NULL;
+ 
+ 	INFO("Executing script \"%s\" for container \"%s\", config section \"%s\".",
+ 	     script, name, section);
+@@ -4990,7 +5000,7 @@ int run_lxc_hooks(const char *name, char *hookname, struct lxc_conf *conf,
+ 	return 0;
+ }
+ 
+-int run_oci_hooks(const char *name, char *hookname, struct lxc_conf *conf, const char *lxcpath)
++int run_oci_hooks(const char *name, const char *hookname, struct lxc_conf *conf, const char *lxcpath)
+ {
+ 	int which = -1;
+ 
+@@ -5327,6 +5337,7 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
+ int lxc_clear_init_groups(struct lxc_conf *lxc_conf)
+ {
+ 	free(lxc_conf->init_groups);
++	lxc_conf->init_groups = NULL;
+ 	lxc_conf->init_groups_len = 0;
+ 
+ 	return 0;
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index 26bb70f..e4bfc48 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -445,7 +445,7 @@ extern struct lxc_conf *current_config;
+ 
+ extern int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf,
+                          char *argv[]);
+-extern int run_oci_hooks(const char *name, char *hookname, struct lxc_conf *conf, const char *lxcpath);
++extern int run_oci_hooks(const char *name, const char *hookname, struct lxc_conf *conf, const char *lxcpath);
+ 
+ extern int detect_shared_rootfs(void);
+ extern struct lxc_conf *lxc_conf_init(void);
+-- 
+1.8.3.1
+

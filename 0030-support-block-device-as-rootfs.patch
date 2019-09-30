@@ -1,0 +1,287 @@
+From 3d30577047030ebf63101324509f1d1ecfb837b8 Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Tue, 15 Jan 2019 16:00:30 +0800
+Subject: [PATCH 030/122] support block device as rootfs
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/Makefile.am             |  1 +
+ src/lxc/conf.c                  | 10 ++---
+ src/lxc/storage/block.c         | 86 +++++++++++++++++++++++++++++++++++++++++
+ src/lxc/storage/block.h         | 41 ++++++++++++++++++++
+ src/lxc/storage/dir.c           | 10 +----
+ src/lxc/storage/storage.c       | 18 +++++++++
+ src/lxc/storage/storage_utils.c |  2 +-
+ 7 files changed, 153 insertions(+), 15 deletions(-)
+ create mode 100644 src/lxc/storage/block.c
+ create mode 100644 src/lxc/storage/block.h
+
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index 5678b8d..260a7eb 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -130,6 +130,7 @@ liblxc_la_SOURCES = af_unix.c af_unix.h \
+ 		    start.c start.h \
+ 		    storage/btrfs.c storage/btrfs.h \
+ 		    storage/dir.c storage/dir.h \
++		    storage/block.c storage/block.h \
+ 		    storage/loop.c storage/loop.h \
+ 		    storage/lvm.c storage/lvm.h \
+ 		    storage/nbd.c storage/nbd.h \
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 439353b..88763ee 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -3865,13 +3865,10 @@ static int setup_populate_devs(const struct lxc_rootfs *rootfs, struct lxc_list
+ // isulad: setup rootfs mountopts
+ static int setup_rootfs_mountopts(const struct lxc_rootfs *rootfs)
+ {
+-	unsigned long mntflags, pflags;
++	unsigned long mflags, mntflags, pflags;
+ 	char *mntdata;
+ 
+-	// only remount / when container shares rootfs with host.
+-	if(!rootfs || !rootfs->path || strcmp(rootfs->path, "/"))
+-		return 0;
+-	if (!rootfs->options)
++	if(!rootfs || !rootfs->options)
+ 		return 0;
+ 
+ 	if (parse_mntopts(rootfs->options, &mntflags, &pflags, &mntdata) < 0) {
+@@ -3881,8 +3878,9 @@ static int setup_rootfs_mountopts(const struct lxc_rootfs *rootfs)
+ 	free(mntdata);
+ 
+ 	if (mntflags & MS_RDONLY) {
++		mflags = add_required_remount_flags("/", NULL, MS_BIND | MS_REC | mntflags | pflags | MS_REMOUNT);
+ 		DEBUG("remounting / as readonly");
+-		if (mount("/", "/", NULL, MS_BIND |MS_REMOUNT| MS_RDONLY, 0)) {
++		if (mount("/", "/", NULL, MS_BIND | MS_REMOUNT | MS_RDONLY, 0) < 0) {
+ 			SYSERROR("Failed to make / readonly.");
+ 			return -1;
+ 		}
+diff --git a/src/lxc/storage/block.c b/src/lxc/storage/block.c
+new file mode 100644
+index 0000000..eb75e70
+--- /dev/null
++++ b/src/lxc/storage/block.c
+@@ -0,0 +1,86 @@
++/*
++ * lxc: linux Container library
++ *
++ * (C) Copyright IBM Corp. 2007, 2008
++ *
++ * Authors:
++ * Daniel Lezcano <daniel.lezcano at free.fr>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++#ifndef _GNU_SOURCE
++#define _GNU_SOURCE 1
++#endif
++#include <stdint.h>
++#include <string.h>
++
++#include "config.h"
++#include "log.h"
++#include "storage.h"
++#include "storage_utils.h"
++#include "utils.h"
++
++lxc_log_define(blk, lxc);
++
++int blk_destroy(struct lxc_storage *orig)
++{
++	return 0;
++}
++
++bool blk_detect(const char *path)
++{
++	struct stat statbuf;
++	int ret;
++
++	if (!strncmp(path, "blk:", 4))
++		return true;
++
++	ret = stat(path, &statbuf);
++	if (ret == -1 && errno == EPERM) {
++		SYSERROR("blk_detect: failed to look at \"%s\"", path);
++		return false;
++	}
++
++	if (ret == 0 && S_ISBLK(statbuf.st_mode))
++		return true;
++
++	return false;
++}
++
++int blk_mount(struct lxc_storage *bdev)
++{
++	const char *src;
++	if (strcmp(bdev->type, "blk"))
++		return -22;
++
++	if (!bdev->src || !bdev->dest)
++		return -22;
++
++	src = lxc_storage_get_path(bdev->src, bdev->type);
++
++	return mount_unknown_fs(src, bdev->dest, bdev->mntopts);
++}
++
++int blk_umount(struct lxc_storage *bdev)
++{
++	if (strcmp(bdev->type, "blk"))
++		return -22;
++
++	if (!bdev->src || !bdev->dest)
++		return -22;
++
++	return umount(bdev->dest);
++}
+diff --git a/src/lxc/storage/block.h b/src/lxc/storage/block.h
+new file mode 100644
+index 0000000..2fa7565
+--- /dev/null
++++ b/src/lxc/storage/block.h
+@@ -0,0 +1,41 @@
++/*
++ * lxc: linux Container library
++ *
++ * (C) Copyright IBM Corp. 2007, 2008
++ *
++ * Authors:
++ * Daniel Lezcano <daniel.lezcano at free.fr>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++#ifndef __LXC_BLK_H
++#define __LXC_BLK_H
++
++#include <stdbool.h>
++#include <stdint.h>
++
++struct lxc_storage;
++
++struct bdev_specs;
++
++struct lxc_conf;
++
++extern int blk_destroy(struct lxc_storage *orig);
++extern bool blk_detect(const char *path);
++extern int blk_mount(struct lxc_storage *bdev);
++extern int blk_umount(struct lxc_storage *bdev);
++
++#endif /* __LXC_BLK_H */
+diff --git a/src/lxc/storage/dir.c b/src/lxc/storage/dir.c
+index deeecec..2b548d0 100644
+--- a/src/lxc/storage/dir.c
++++ b/src/lxc/storage/dir.c
+@@ -150,7 +150,7 @@ bool dir_detect(const char *path)
+ int dir_mount(struct lxc_storage *bdev)
+ {
+ 	int ret;
+-	unsigned long mflags = 0, mntflags = 0, pflags = 0;
++	unsigned long mntflags = 0, pflags = 0;
+ 	char *mntdata;
+ 	const char *src;
+ 
+@@ -169,13 +169,7 @@ int dir_mount(struct lxc_storage *bdev)
+ 
+ 	src = lxc_storage_get_path(bdev->src, bdev->type);
+ 
+-	ret = mount(src, bdev->dest, "bind", MS_BIND | MS_REC | mntflags | pflags, mntdata);
+-	if ((0 == ret) && (mntflags & MS_RDONLY)) {
+-		DEBUG("Remounting \"%s\" on \"%s\" readonly",
+-		      src ? src : "(none)", bdev->dest ? bdev->dest : "(none)");
+-		mflags = add_required_remount_flags(src, bdev->dest, MS_BIND | MS_REC | mntflags | pflags | MS_REMOUNT);
+-		ret = mount(src, bdev->dest, "bind", mflags, mntdata);
+-	}
++	ret = mount(src, bdev->dest, "bind", MS_BIND | MS_REC | (mntflags & ~MS_RDONLY) | pflags, mntdata);
+ 
+ 	if (ret < 0) {
+ 		SYSERROR("Failed to mount \"%s\" on \"%s\"", src, bdev->dest);
+diff --git a/src/lxc/storage/storage.c b/src/lxc/storage/storage.c
+index c4f4c2e..18f754a 100644
+--- a/src/lxc/storage/storage.c
++++ b/src/lxc/storage/storage.c
+@@ -61,6 +61,7 @@
+ #include "storage_utils.h"
+ #include "utils.h"
+ #include "zfs.h"
++#include "block.h"
+ 
+ #ifndef HAVE_STRLCPY
+ #include "include/strlcpy.h"
+@@ -114,6 +115,21 @@ static const struct lxc_storage_ops loop_ops = {
+     .can_backup = true,
+ };
+ 
++/* block */
++static const struct lxc_storage_ops blk_ops = {
++    .detect = &blk_detect,
++    .mount = &blk_mount,
++    .umount = &blk_umount,
++    .clone_paths = NULL,
++    .destroy = &blk_destroy,
++    .create = NULL,
++    .copy = NULL,
++    .snapshot = NULL,
++    .can_snapshot = false,
++    .can_backup = true,
++};
++
++
+ /* lvm */
+ static const struct lxc_storage_ops lvm_ops = {
+     .detect = &lvm_detect,
+@@ -199,6 +215,8 @@ static const struct lxc_storage_type bdevs[] = {
+ 	{ .name = "overlayfs", .ops = &ovl_ops,   },
+ 	{ .name = "loop",      .ops = &loop_ops,  },
+ 	{ .name = "nbd",       .ops = &nbd_ops,   },
++	//isulad: block device
++	{ .name = "blk",       .ops = &blk_ops,   }
+ };
+ 
+ static const size_t numbdevs = sizeof(bdevs) / sizeof(struct lxc_storage_type);
+diff --git a/src/lxc/storage/storage_utils.c b/src/lxc/storage/storage_utils.c
+index 46e08a3..b4dcb57 100644
+--- a/src/lxc/storage/storage_utils.c
++++ b/src/lxc/storage/storage_utils.c
+@@ -416,7 +416,7 @@ int find_fstype_cb(char *buffer, void *data)
+ 		return 0;
+ 	}
+ 
+-	if (mount(cbarg->rootfs, cbarg->target, fstype, mntflags, mntdata)) {
++	if (mount(cbarg->rootfs, cbarg->target, fstype, (mntflags & ~MS_RDONLY), mntdata)) {
+ 		SYSDEBUG("Failed to mount");
+ 		free(mntdata);
+ 		return 0;
+-- 
+1.8.3.1
+

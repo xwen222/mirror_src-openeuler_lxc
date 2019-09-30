@@ -1,0 +1,222 @@
+From a6f57fc8bbe7b0e2d2d77f300c3c84a2956634b6 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 10 Jan 2019 06:54:37 -0500
+Subject: [PATCH 001/122] confile: add lxc.isulad.init.args config interface
+
+lxc.isulad.init.args config interface is used to specify the args for
+the container.
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c         | 13 +++++++++++
+ src/lxc/conf.h         |  8 +++++++
+ src/lxc/confile.c      | 61 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/lxccontainer.c | 30 +++++++++++++++++++++++++
+ 4 files changed, 112 insertions(+)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index d95bc4c..f20d629 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -4014,6 +4014,18 @@ void lxc_clear_includes(struct lxc_conf *conf)
+ 	}
+ }
+ 
++/*isulad clear init args*/
++int lxc_clear_init_args(struct lxc_conf *lxc_conf)
++{
++	int i;
++
++	for (i = 0; i < lxc_conf->init_argc; i++)
++		free(lxc_conf->init_argv[i]);
++	free(lxc_conf->init_argv);
++
++	return 0;
++}
++
+ void lxc_conf_free(struct lxc_conf *conf)
+ {
+ 	if (!conf)
+@@ -4057,6 +4069,7 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 	lxc_clear_limits(conf, "lxc.prlimit");
+ 	lxc_clear_sysctls(conf, "lxc.sysctl");
+ 	lxc_clear_procs(conf, "lxc.proc");
++        lxc_clear_init_args(conf);
+ 	free(conf->cgroup_meta.dir);
+ 	free(conf->cgroup_meta.controllers);
+ 	free(conf);
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index 41f67cf..95c3027 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -376,6 +376,10 @@ struct lxc_conf {
+ 
+ 	/* procs */
+ 	struct lxc_list procs;
++
++    /* isulad add: init args used to repalce init_cmd*/
++	char **init_argv;
++	size_t init_argc;
+ };
+ 
+ extern int write_id_mapping(enum idtype idtype, pid_t pid, const char *buf,
+@@ -442,4 +446,8 @@ extern int lxc_clear_sysctls(struct lxc_conf *c, const char *key);
+ extern int setup_proc_filesystem(struct lxc_list *procs, pid_t pid);
+ extern int lxc_clear_procs(struct lxc_conf *c, const char *key);
+ 
++/* isulad add begin */
++int lxc_clear_init_args(struct lxc_conf *lxc_conf);
++/* isulad add end */
++
+ #endif /* __LXC_CONF_H */
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 05c6823..7297b35 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -150,6 +150,10 @@ lxc_config_define(tty_dir);
+ lxc_config_define(uts_name);
+ lxc_config_define(sysctl);
+ lxc_config_define(proc);
++/*isulad add begin*/
++lxc_config_define(init_args);
++/*isulad add end*/
++
+ 
+ static struct lxc_config_t config_jump_table[] = {
+ 	{ "lxc.arch",                      set_config_personality,                 get_config_personality,                 clr_config_personality,               },
+@@ -234,6 +238,10 @@ static struct lxc_config_t config_jump_table[] = {
+ 	{ "lxc.uts.name",                  set_config_uts_name,                    get_config_uts_name,                    clr_config_uts_name,                  },
+ 	{ "lxc.sysctl",                    set_config_sysctl,                      get_config_sysctl,                      clr_config_sysctl,                    },
+ 	{ "lxc.proc",                      set_config_proc,                        get_config_proc,                        clr_config_proc,                      },
++
++        /*isulad add begin*/
++        { "lxc.isulad.init.args",          set_config_init_args,                   get_config_init_args,                   clr_config_init_args,                 },
++        /*isulad add end*/
+ };
+ 
+ static const size_t config_jump_table_size = sizeof(config_jump_table) / sizeof(struct lxc_config_t);
+@@ -2184,6 +2192,33 @@ static int set_config_namespace_share(const char *key, const char *value,
+ 	return set_config_string_item(&lxc_conf->ns_share[ns_idx], value);
+ }
+ 
++/* isulad: set config for init args */
++static int set_config_init_args(const char *key, const char *value,
++				 struct lxc_conf *lxc_conf, void *data)
++{
++	int ret = 0;
++	char *tmp = NULL;
++	char *new_value = NULL;
++
++	ret = set_config_string_item(&new_value, value);
++	if (ret || !new_value)
++		return ret;
++
++	tmp = realloc(lxc_conf->init_argv, (lxc_conf->init_argc + 1) * sizeof(char *));
++	if (!tmp) {
++		ERROR("Out of memory");
++		free(new_value);
++		return -1;
++	}
++
++	lxc_conf->init_argv = (char **)tmp;
++
++	lxc_conf->init_argv[lxc_conf->init_argc] = new_value;
++	lxc_conf->init_argc++;
++
++	return 0;
++}
++
+ struct parse_line_conf {
+ 	struct lxc_conf *conf;
+ 	bool from_include;
+@@ -3716,6 +3751,25 @@ static int get_config_namespace_share(const char *key, char *retv, int inlen,
+ 	return fulllen;
+ }
+ 
++/* isulad: get config init args */
++static int get_config_init_args(const char *key, char *retv, int inlen,
++				  struct lxc_conf *c, void *data)
++{
++	int i, len, fulllen = 0;
++	struct lxc_list *it;
++
++	if (!retv)
++		inlen = 0;
++	else
++		memset(retv, 0, inlen);
++
++	for (i = 0; i < c->init_argc; i++) {
++           strprint(retv, inlen, "%s", c->init_argv[i]);
++    }
++
++	return fulllen;
++}
++
+ /* Callbacks to clear config items. */
+ static inline int clr_config_personality(const char *key, struct lxc_conf *c,
+ 					 void *data)
+@@ -4520,6 +4574,13 @@ static int clr_config_net_ipv6_address(const char *key,
+ 	return 0;
+ }
+ 
++/* isulad: clr config init args*/
++static inline int clr_config_init_args(const char *key, struct lxc_conf *c,
++				   void *data)
++{
++	return lxc_clear_init_args(c);
++}
++
+ static int get_config_net_nic(const char *key, char *retv, int inlen,
+ 			      struct lxc_conf *c, void *data)
+ {
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index ad70886..b4cacce 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -847,6 +847,31 @@ static bool wait_on_daemonized_start(struct lxc_handler *handler, int pid)
+ 	return true;
+ }
+ 
++/* isulad: use init argv as init cmd */
++static char **use_init_args(char **init_argv, size_t init_args)
++{
++	size_t i;
++	int nargs = 0;
++	char **argv;
++
++	if (!init_argv)
++		return NULL;
++
++	do {
++		argv = malloc(sizeof(char *));
++	} while (!argv);
++
++	argv[0] = NULL;
++	for (i = 0; i < init_args; i++)
++		push_arg(&argv, init_argv[i], &nargs);
++
++	if (nargs == 0) {
++		free(argv);
++		return NULL;
++	}
++	return argv;
++}
++
+ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const argv[])
+ {
+ 	int ret;
+@@ -903,6 +928,11 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
+ 			argv = init_cmd = split_init_cmd(conf->init_cmd);
+ 	}
+ 
++    /* isulad: use init argv as init cmd */
++	if (!argv) {
++		argv = init_cmd = use_init_args(conf->init_argv, conf->init_argc);
++	}
++
+ 	/* ... otherwise use default_args. */
+ 	if (!argv) {
+ 		if (useinit) {
+-- 
+1.8.3.1
+

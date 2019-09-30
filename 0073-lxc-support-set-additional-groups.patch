@@ -1,0 +1,247 @@
+From 5c599c0a93b66eea1633f54ac61bcd99142758e3 Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Mon, 25 Mar 2019 17:17:00 +0800
+Subject: [PATCH 073/122] lxc: support set additional groups
+
+Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c  |  8 ++++---
+ src/lxc/conf.c    | 12 ++++++++++
+ src/lxc/conf.h    |  3 +++
+ src/lxc/confile.c | 66 ++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ src/lxc/start.c   | 25 ++++++++++++---------
+ 5 files changed, 100 insertions(+), 14 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index c979c85..618f2f1 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -903,9 +903,6 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 			goto on_error;
+ 	}
+ 
+-	if (!lxc_setgroups(0, NULL) && errno != EPERM)
+-		goto on_error;
+-
+ 	/* Set {u,g}id. */
+ 	if (options->uid != LXC_INVALID_UID)
+ 		new_uid = options->uid;
+@@ -1017,6 +1014,11 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 		goto on_error;
+ 	}
+ 
++	if (init_ctx->container && init_ctx->container->lxc_conf &&
++			!lxc_setgroups(init_ctx->container->lxc_conf->init_groups_len,
++			init_ctx->container->lxc_conf->init_groups))
++		goto on_error;
++
+ 	if (!lxc_switch_uid_gid(new_uid, new_gid))
+ 		goto on_error;
+ 
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index abfba04..58fc059 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -5184,10 +5184,21 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
+ 	for (i = 0; i < lxc_conf->init_argc; i++)
+ 		free(lxc_conf->init_argv[i]);
+ 	free(lxc_conf->init_argv);
++	lxc_conf->init_argc = 0;
+ 
+ 	return 0;
+ }
+ 
++/*isulad clear init groups*/
++int lxc_clear_init_groups(struct lxc_conf *lxc_conf)
++{
++	free(lxc_conf->init_groups);
++	lxc_conf->init_groups_len = 0;
++
++	return 0;
++}
++
++
+ /*isulad: clear populate devices*/
+ int lxc_clear_populate_devices(struct lxc_conf *c)
+ {
+@@ -5294,6 +5305,7 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 	free(conf->cgroup_meta.controllers);
+ 	/* isulad add begin */
+ 	lxc_clear_init_args(conf);
++	lxc_clear_init_groups(conf);
+ 	lxc_clear_populate_devices(conf);
+ 	lxc_clear_rootfs_masked_paths(conf);
+ 	lxc_clear_rootfs_ro_paths(conf);
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index 93cf15d..11cf596 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -418,6 +418,8 @@ struct lxc_conf {
+ 	/* init args used to repalce init_cmd*/
+ 	char **init_argv;
+ 	size_t init_argc;
++	gid_t *init_groups;
++	size_t init_groups_len;
+ 	/* populate devices*/
+ 	struct lxc_list populate_devs;
+ 
+@@ -498,6 +500,7 @@ extern int lxc_clear_namespace(struct lxc_conf *c);
+ 
+ /* isulad add begin */
+ int lxc_clear_init_args(struct lxc_conf *lxc_conf);
++int lxc_clear_init_groups(struct lxc_conf *lxc_conf);
+ int lxc_clear_populate_devices(struct lxc_conf *c);
+ int lxc_clear_rootfs_masked_paths(struct lxc_conf *c);
+ int lxc_clear_rootfs_ro_paths(struct lxc_conf *c);
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 3940b32..60e6c46 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -154,6 +154,7 @@ lxc_config_define(sysctl);
+ lxc_config_define(proc);
+ /*isulad add begin*/
+ lxc_config_define(init_args);
++lxc_config_define(init_groups);
+ lxc_config_define(populate_device);
+ lxc_config_define(umask);
+ /*isulad add end*/
+@@ -245,6 +246,7 @@ static struct lxc_config_t config_jump_table[] = {
+ 
+ 	/*isulad add begin*/
+ 	{ "lxc.isulad.init.args",          set_config_init_args,                   get_config_init_args,                   clr_config_init_args,                 },
++	{ "lxc.isulad.init.groups",        set_config_init_groups,                 get_config_init_groups,                 clr_config_init_groups,               },
+ 	{ "lxc.isulad.populate.device",    set_config_populate_device,             get_config_populate_device,             clr_config_populate_device,           },
+ 	{ "lxc.isulad.rootfs.maskedpaths", set_config_rootfs_masked_paths,         get_config_rootfs_masked_paths,         clr_config_rootfs_masked_paths,       },
+ 	{ "lxc.isulad.rootfs.ropaths",     set_config_rootfs_ro_paths,             get_config_rootfs_ro_paths,             clr_config_rootfs_ro_paths,           },
+@@ -2230,6 +2232,43 @@ static int set_config_init_args(const char *key, const char *value,
+ 	return 0;
+ }
+ 
++/* isulad: set config for init groups */
++static int set_config_init_groups(const char *key, const char *value,
++				 struct lxc_conf *lxc_conf, void *data)
++{
++	char *groups, *token;
++	int ret = -1;
++
++	if (lxc_config_value_empty(value))
++		return lxc_clear_init_groups(lxc_conf);
++
++	groups = strdup(value);
++	if (!groups)
++		return -1;
++
++	/* In case several capability keep is specified in a single line
++	 * split these caps in a single element for the list.
++	 */
++	lxc_iterate_parts(token, groups, " \t") {
++		gid_t *tmp;
++		tmp = realloc(lxc_conf->init_groups, (lxc_conf->init_groups_len + 1) * sizeof(gid_t));
++		if (!tmp) {
++			ERROR("Out of memory");
++			goto on_error;
++		}
++		lxc_conf->init_groups = tmp;
++		tmp[lxc_conf->init_groups_len] = atoll(token);
++		lxc_conf->init_groups_len++;
++	}
++
++	ret = 0;
++
++on_error:
++	free(groups);
++
++	return ret;
++}
++
+ /* isulad: set config for populate device */
+ static int set_config_populate_device(const char *key, const char *value,
+ 				 struct lxc_conf *lxc_conf, void *data)
+@@ -3947,7 +3986,25 @@ static int get_config_init_args(const char *key, char *retv, int inlen,
+ 
+ 	for (i = 0; i < c->init_argc; i++) {
+            strprint(retv, inlen, "%s", c->init_argv[i]);
+-    }
++	}
++
++	return fulllen;
++}
++
++/* isulad: get config init groups */
++static int get_config_init_groups(const char *key, char *retv, int inlen,
++				  struct lxc_conf *c, void *data)
++{
++	int i, len, fulllen = 0;
++
++	if (!retv)
++		inlen = 0;
++	else
++		memset(retv, 0, inlen);
++
++	for (i = 0; i < c->init_groups_len; i++) {
++           strprint(retv, inlen, "%u\n", c->init_groups[i]);
++	}
+ 
+ 	return fulllen;
+ }
+@@ -4836,6 +4893,13 @@ static inline int clr_config_init_args(const char *key, struct lxc_conf *c,
+ 	return lxc_clear_init_args(c);
+ }
+ 
++/* isulad: clr config init args*/
++static inline int clr_config_init_groups(const char *key, struct lxc_conf *c,
++				   void *data)
++{
++	return lxc_clear_init_groups(c);
++}
++
+ /* isulad: clr config populate devices*/
+ static inline int clr_config_populate_device(const char *key, struct lxc_conf *c,
+ 				   void *data)
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 2fca4e1..ae92c13 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1666,6 +1666,20 @@ static int do_start(void *data)
+ 	if (lxc_setup_env_home(new_uid) < 0)
+ 		goto out_warn_father;
+ 
++	/* If we are in a new user namespace we already dropped all groups when
++	 * we switched to root in the new user namespace further above. Only
++	 * drop groups if we can, so ensure that we have necessary privilege.
++	 */
++	if (lxc_list_empty(&handler->conf->id_map))
++	#if HAVE_LIBCAP
++		if (lxc_proc_cap_is_set(CAP_SETGID, CAP_EFFECTIVE))
++	#endif
++			/* isulad: set groups for init process, and before we set uid and gid */
++			if (!lxc_setgroups(handler->conf->init_groups_len, handler->conf->init_groups)) {
++				ERROR("Can not set groups");
++				goto out_warn_father;
++			}
++
+ 	/* Avoid unnecessary syscalls. */
+ 	if (new_uid == nsuid)
+ 		new_uid = LXC_INVALID_UID;
+@@ -1676,16 +1690,7 @@ static int do_start(void *data)
+ 	if (!lxc_switch_uid_gid(new_uid, new_gid))
+ 		goto out_warn_father;
+ 
+-	/* If we are in a new user namespace we already dropped all groups when
+-	 * we switched to root in the new user namespace further above. Only
+-	 * drop groups if we can, so ensure that we have necessary privilege.
+-	 */
+-	if (lxc_list_empty(&handler->conf->id_map))
+-		#if HAVE_LIBCAP
+-		if (lxc_proc_cap_is_set(CAP_SETGID, CAP_EFFECTIVE))
+-		#endif
+-			if (!lxc_setgroups(0, NULL))
+-				goto out_warn_father;
++
+ 
+ 	ret = lxc_ambient_caps_down();
+ 	if (ret < 0) {
+-- 
+1.8.3.1
+

@@ -1,0 +1,45 @@
+From 548054179d5e5b43368491822ebed803c9a03a36 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 29 Apr 2019 04:13:52 -0400
+Subject: [PATCH 092/122] lxc: add output error when create unified cgroup
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index b1f56b0..2bf142f 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1132,7 +1132,7 @@ __cgfsng_ops static bool cgfsng_payload_destroy(struct cgroup_ops *ops,
+ 	return true;
+ }
+ 
+-static bool cg_unified_create_cgroup(struct hierarchy *h, char *cgname)
++static bool cg_unified_create_cgroup(struct hierarchy *h, char *cgname, int errfd)
+ {
+ 	size_t i, parts_len;
+ 	char **it;
+@@ -1187,6 +1187,9 @@ static bool cg_unified_create_cgroup(struct hierarchy *h, char *cgname)
+ 		if (ret < 0) {
+ 			SYSERROR("Could not enable \"%s\" controllers in the "
+ 				 "unified cgroup \"%s\"", add_controllers, cgroup);
++			lxc_write_error_message(errfd, "%s:%d: Could not enable \"%s\" controllers in the "
++				"unified cgroup: \"%s\"",
++				__FILE__, __LINE__, add_controllers, strerror(errno));
+ 			goto on_error;
+ 		}
+ 	}
+@@ -1260,7 +1263,7 @@ static bool create_path_for_hierarchy(struct hierarchy *h, char *cgname, int err
+ 		return false;
+ 	}
+ 
+-	return cg_unified_create_cgroup(h, cgname);
++	return cg_unified_create_cgroup(h, cgname, errfd);
+ }
+ 
+ /* isulad: create hierarchies path, if fail, return the error */
+-- 
+1.8.3.1
+

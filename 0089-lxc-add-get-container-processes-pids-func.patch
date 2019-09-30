@@ -1,0 +1,177 @@
+From 4241f51abad788017ca5a0da5946ccc2672bdc3b Mon Sep 17 00:00:00 2001
+From: maoweiyong <maoweiyong@huawei.com>
+Date: Tue, 23 Apr 2019 12:12:55 +0800
+Subject: [PATCH 089/122] lxc:add get container processes pids func
+
+Signed-off-by: maoweiyong <maoweiyong@huawei.com>
+---
+ src/lxc/lxccontainer.c | 18 ++++++++++++
+ src/lxc/lxccontainer.h | 11 ++++++++
+ src/lxc/start.c        | 76 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/start.h        |  2 ++
+ 4 files changed, 107 insertions(+)
+
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 8a3724c..fa13e52 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -5212,6 +5212,23 @@ static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pi
+ 
+ WRAP_API_1(bool, lxcapi_clean_container_resource, pid_t)
+ 
++/* isulad get coantainer pids */
++static bool do_lxcapi_get_container_pids(struct lxc_container *c, pid_t **pids,size_t *pids_len)
++{
++	int ret;
++
++	if (!c)
++		return false;
++
++	ret = do_lxcapi_get_pids(c->name, c->config_path, c->lxc_conf, pids,pids_len);
++	if (ret)
++		ERROR("Failed to get container %s pids", c->name);
++	return ret == 0;
++
++}
++
++WRAP_API_2(bool, lxcapi_get_container_pids, pid_t **,size_t *)
++
+ /* isulad add clean resources */
+ static bool do_lxcapi_add_terminal_fifo(struct lxc_container *c, const char *in_fifo, const char *out_fifo, const char *err_fifo)
+ {
+@@ -5373,6 +5390,7 @@ static struct lxc_container *do_lxc_container_new(const char *name, const char *
+ 	c->set_start_timeout = lxcapi_set_start_timeout;
+ 	c->clean_container_resource = lxcapi_clean_container_resource;
+ 	c->add_terminal_fifos = lxcapi_add_terminal_fifo;
++	c->get_container_pids = lxcapi_get_container_pids;
+ 	/* isulad add end */
+ 	return c;
+ 
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index c3368e4..608f815 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -947,6 +947,17 @@ struct lxc_container {
+ 	 * \return \c true on success, else \c false.
+ 	 */
+ 	bool (*clean_container_resource) (struct lxc_container *c, pid_t pid);
++
++	/*! isulad add
++	 * \brief An API call to get container pids
++	 *
++	 * \param c Container.
++	 * \param pids Value of container pids.
++	 * \param pids_len Value of container pids len.
++	 * \param pid Value of container pid.
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*get_container_pids)(struct lxc_container *c,pid_t **pids,size_t *pids_len);
+ };
+ 
+ /*!
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index f1cd7fa..2b0d43e 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -2638,6 +2638,55 @@ on_error:
+ 	return NULL;
+ }
+ 
++/*isulad: init handler for clean */
++static struct lxc_handler *lxc_init_pids_handler(char *name, char *lxcpath, struct lxc_conf *conf)
++{
++	int i;
++	struct lxc_handler *handler;
++
++	handler = malloc(sizeof(*handler));
++	if (!handler)
++		return NULL;
++
++	memset(handler, 0, sizeof(*handler));
++
++	/* Note that am_guest_unpriv() checks the effective uid. We
++	 * probably don't care if we are real root only if we are running
++	 * as root so this should be fine.
++	 */
++	handler->am_root = !am_guest_unpriv();
++	handler->data_sock[0] = handler->data_sock[1] = -1;
++	handler->conf = conf;
++	handler->lxcpath = lxcpath;
++	handler->pinfd = -1;
++	handler->sigfd = -EBADF;
++	handler->init_died = false;
++	handler->state_socket_pair[0] = handler->state_socket_pair[1] = -1;
++	if (handler->conf->reboot == REBOOT_NONE)
++		lxc_list_init(&handler->conf->state_clients);
++
++	for (i = 0; i < LXC_NS_MAX; i++)
++		handler->nsfd[i] = -1;
++
++	handler->name = name;
++	handler->exit_code = -1; /* isulad: record exit code of container */
++
++	handler->cgroup_ops = cgroup_init(handler);
++	if (!handler->cgroup_ops) {
++		ERROR("Failed to initialize cgroup driver");
++		goto on_error;
++	}
++
++	INFO("Container \"%s\" 's clean handler is initialized.", name);
++
++	return handler;
++
++on_error:
++	lxc_free_handler(handler);
++
++	return NULL;
++}
++
+ /*isulad: set env for clean resources */
+ static int clean_resource_set_env(struct lxc_handler *handler)
+ {
+@@ -2770,3 +2819,30 @@ out:
+ 	return ret;
+ }
+ 
++/*isulad: do_lxcapi_get_pids */
++int do_lxcapi_get_pids(char *name, char *lxcpath, struct lxc_conf *conf, pid_t **pids,size_t *pids_len)
++{
++	int ret = 0;
++	struct lxc_handler *handler = NULL;
++	int retry_count = 0;
++	int max_retry = 10;
++	struct cgroup_ops *cg_ops = NULL;
++
++	handler = lxc_init_pids_handler(name, lxcpath, conf);
++	if (!handler) {
++		ERROR("Failed to init container %s clean handler", name);
++		ret = -1;
++		goto out;
++	}
++
++	cg_ops = handler->cgroup_ops;
++	ret = get_all_pids(cg_ops, pids, pids_len);
++	if (ret < 0) {
++		WARN("failed to get all pids");
++	}
++
++out:
++	lxc_free_handler(handler);
++	return ret;
++}
++
+diff --git a/src/lxc/start.h b/src/lxc/start.h
+index 0298991..20e667c 100644
+--- a/src/lxc/start.h
++++ b/src/lxc/start.h
+@@ -188,5 +188,7 @@ extern int resolve_clone_flags(struct lxc_handler *handler);
+ /*isulad: do_lxcapi_clean_resource */
+ extern int do_lxcapi_clean_resource(char *name, char *lxcpath, struct lxc_conf *conf, pid_t pid);
+ 
++/*isulad: do_lxcapi_get_pids */
++extern int do_lxcapi_get_pids(char *name, char *lxcpath, struct lxc_conf *conf, pid_t **pids,size_t *pids_len);
+ 
+ #endif
+-- 
+1.8.3.1
+

@@ -1,0 +1,132 @@
+From 693b1ab25741606299037bc660387a5d109f238c Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Mon, 14 Jan 2019 21:13:00 +0800
+Subject: [PATCH 026/122] remove filelock and do not destroy directory when
+ destroy container
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/lxccontainer.c | 14 ++++++++++++--
+ src/lxc/lxclock.c      | 25 +++++++++++++++++++++++++
+ src/lxc/lxclock.h      |  5 +++++
+ src/lxc/storage/dir.c  | 12 +-----------
+ 4 files changed, 43 insertions(+), 13 deletions(-)
+
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 68134d8..81c0ec3 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -2996,8 +2996,14 @@ static bool container_destroy(struct lxc_container *c,
+ 	bool bret = false;
+ 	int ret = 0;
+ 
+-	if (!c || !do_lxcapi_is_defined(c))
++	if (!c)
+ 		return false;
++	// isulad: if container is not defined, we need to remove disk lock file
++	// which is created in lxc_container_new.
++	if (!do_lxcapi_is_defined(c)) {
++		container_disk_removelock(c);
++		return false;
++	}
+ 
+ 	conf = c->lxc_conf;
+ 	if (container_disk_lock(c))
+@@ -3124,12 +3130,16 @@ out:
+ 		free(path);
+ 
+ 	container_disk_unlock(c);
++	if (bret) {
++		if (container_disk_removelock(c))
++			bret = false;
++	}
+ 	return bret;
+ }
+ 
+ static bool do_lxcapi_destroy(struct lxc_container *c)
+ {
+-	if (!c || !lxcapi_is_defined(c))
++	if (!c)
+ 		return false;
+ 
+ 	if (has_snapshots(c)) {
+diff --git a/src/lxc/lxclock.c b/src/lxc/lxclock.c
+index e3d4654..8890968 100644
+--- a/src/lxc/lxclock.c
++++ b/src/lxc/lxclock.c
+@@ -198,6 +198,21 @@ on_error:
+ 	return l;
+ }
+ 
++static int lxc_removelock(struct lxc_lock *l)
++{
++	int ret = 0;
++
++	if (l->type == LXC_LOCK_FLOCK) {
++		ret = unlink(l->u.f.fname);
++		if (ret && errno != ENOENT) {
++			SYSERROR("Error unlink %s", l->u.f.fname);
++			return ret;
++		}
++	}
++
++	return ret;
++}
++
+ int lxclock(struct lxc_lock *l, int timeout)
+ {
+ 	struct flock lk;
+@@ -386,3 +401,13 @@ void container_disk_unlock(struct lxc_container *c)
+ 	lxcunlock(c->slock);
+ 	lxcunlock(c->privlock);
+ }
++
++int container_disk_removelock(struct lxc_container *c)
++{
++	int ret;
++
++	ret = lxc_removelock(c->slock);
++	if (ret)
++		return ret;
++	return lxc_removelock(c->privlock);
++}
+diff --git a/src/lxc/lxclock.h b/src/lxc/lxclock.h
+index 364a71b..e86bc34 100644
+--- a/src/lxc/lxclock.h
++++ b/src/lxc/lxclock.h
+@@ -174,4 +174,9 @@ extern int container_disk_lock(struct lxc_container *c);
+  */
+ extern void container_disk_unlock(struct lxc_container *c);
+ 
++/*!
++ * \brief isulad: remove the containers disk lock file.
++ */
++int container_disk_removelock(struct lxc_container *c);
++
+ #endif
+diff --git a/src/lxc/storage/dir.c b/src/lxc/storage/dir.c
+index c7b5ee2..deeecec 100644
+--- a/src/lxc/storage/dir.c
++++ b/src/lxc/storage/dir.c
+@@ -123,17 +123,7 @@ int dir_create(struct lxc_storage *bdev, const char *dest, const char *n,
+ 
+ int dir_destroy(struct lxc_storage *orig)
+ {
+-	int ret;
+-	const char *src;
+-
+-	src = lxc_storage_get_path(orig->src, orig->src);
+-
+-	ret = lxc_rmdir_onedev(src, NULL);
+-	if (ret < 0) {
+-		ERROR("Failed to delete \"%s\"", src);
+-		return -1;
+-	}
+-
++	// isulad: do not destroy rootfs for directory, it should be managed by caller
+ 	return 0;
+ }
+ 
+-- 
+1.8.3.1
+

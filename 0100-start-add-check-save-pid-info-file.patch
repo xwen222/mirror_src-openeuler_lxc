@@ -1,0 +1,139 @@
+From 5f9953ea9fffa99ca3838e3b59ab3ee170e62795 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Wed, 22 May 2019 23:00:17 -0400
+Subject: [PATCH 100/122] start: add check save pid info file
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/start.c | 72 +++++++++++++++++++++++++++++++++++++++++++++++++--------
+ src/lxc/utils.c |  2 +-
+ src/lxc/utils.h |  1 +
+ 3 files changed, 64 insertions(+), 11 deletions(-)
+
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 3657d4e..4541793 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1850,14 +1850,10 @@ static inline int do_share_ns(void *arg)
+ 	return 0;
+ }
+ 
+-/* isuald: save pid/ppid info */
+-static int lxc_save_container_info(char *filename, pid_t pid)
++static int lxc_write_container_info(char *filename, pid_t pid, pid_t p_pid, unsigned long long start_at, unsigned long long p_start_at)
+ {
+ 	FILE *pid_fp = NULL;
+ 	int ret = 0;
+-	pid_t p_pid = 0;
+-	unsigned long long start_at = 0;
+-	unsigned long long p_start_at = 0;
+ 
+ 	pid_fp = fopen(filename, "w");
+ 	if (pid_fp == NULL) {
+@@ -1866,11 +1862,6 @@ static int lxc_save_container_info(char *filename, pid_t pid)
+ 		goto out;
+ 	}
+ 
+-	start_at = lxc_get_process_startat(pid);
+-
+-	p_pid = getpid();
+-	p_start_at = lxc_get_process_startat(p_pid);
+-
+ 	if (fprintf(pid_fp, "%d %llu %d %llu\n", pid, start_at, p_pid, p_start_at) < 0) {
+ 		SYSERROR("Failed to write '%s'", filename);
+ 		ret = -1;
+@@ -1883,6 +1874,67 @@ out:
+ 	return ret;
+ }
+ 
++static int lxc_check_container_info(char *filename, pid_t pid, pid_t p_pid, unsigned long long start_at, unsigned long long p_start_at)
++{
++	int ret = 0;
++	int num;
++	char sbuf[1024] = {0}; /* bufs for stat */
++	int saved_pid;		/* process id */
++	int saved_ppid;		/* pid of parent process */
++	unsigned long long saved_start_time;	/* start time of process -- seconds since 1-1-70 */
++	unsigned long long saved_pstart_time;	/* start time of parent process -- seconds since 1-1-70 */
++
++	if ((lxc_file2str(filename, sbuf, sizeof(sbuf))) == -1) {
++		SYSERROR("Failed to read pidfile %s", filename);
++		ret = -1;
++		goto out;
++	}
++
++	num = sscanf(sbuf, "%d %Lu %d %Lu", &saved_pid, &saved_start_time, &saved_ppid, &saved_pstart_time);
++	if (num < 0) {
++		SYSERROR("Call sscanf error");
++		ret = -1;
++		goto out;
++	}
++
++	if (pid != saved_pid || p_pid != saved_ppid
++		|| start_at != saved_start_time || p_start_at != saved_pstart_time) {
++		ERROR("Check container info failed");
++		ret = -1;
++		goto out;
++	}
++
++out:
++	return ret;
++}
++
++
++/* isuald: save pid/ppid info */
++static int lxc_save_container_info(char *filename, pid_t pid)
++{
++	int ret = 0;
++	pid_t p_pid = 0;
++	unsigned long long start_at = 0;
++	unsigned long long p_start_at = 0;
++
++	start_at = lxc_get_process_startat(pid);
++	p_pid = getpid();
++	p_start_at = lxc_get_process_startat(p_pid);
++
++	ret = lxc_write_container_info(filename, pid, p_pid, start_at, p_start_at);
++	if (ret != 0) {
++		goto out;
++	}
++
++	ret = lxc_check_container_info(filename, pid, p_pid, start_at, p_start_at);
++	if (ret != 0) {
++		goto out;
++	}
++
++out:
++	return ret;
++}
++
+ /* lxc_spawn() performs crucial setup tasks and clone()s the new process which
+  * exec()s the requested container binary.
+  * Note that lxc_spawn() runs in the parent namespaces. Any operations performed
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index fd6075f..dc0e6c5 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -1909,7 +1909,7 @@ set_env:
+ 
+ 
+ /* isulad: read file to buffer */
+-static int lxc_file2str(const char *filename, char ret[], int cap)
++int lxc_file2str(const char *filename, char ret[], int cap)
+ {
+ 	int fd, num_read;
+ 
+diff --git a/src/lxc/utils.h b/src/lxc/utils.h
+index 20407af..4410ff2 100644
+--- a/src/lxc/utils.h
++++ b/src/lxc/utils.h
+@@ -323,5 +323,6 @@ extern void lxc_write_error_message(int errfd, const char *format, ...);
+ extern bool lxc_process_alive(pid_t pid, unsigned long long start_time);
+ 
+ extern bool is_non_negative_num(const char *s);
++extern int lxc_file2str(const char *filename, char ret[], int cap);
+ 
+ #endif /* __LXC_UTILS_H */
+-- 
+1.8.3.1
+

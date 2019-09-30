@@ -1,0 +1,41 @@
+From d4c2a04690f61c6d42c69f53b96cc039e94d5256 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Sat, 12 Jan 2019 16:28:41 +0800
+Subject: [PATCH 015/122] fix high gcc compile bug
+
+fix high gcc compile bug
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/terminal.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 3bb3a52..7aa4730 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -235,18 +235,18 @@ static int lxc_terminal_truncate_log_file(struct lxc_terminal *terminal)
+ static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
+ {
+ 	int ret;
+-	size_t i;
++	unsigned int i;
+ 	char tmp[PATH_MAX] = {0};
+ 	char *rename_fname = NULL;
+ 
+ 	for (i = terminal->log_rotate - 1; i > 1; i--) {
+-		ret = sprintf(tmp, "%s.%d", terminal->log_path, i);
++		ret = sprintf(tmp, "%s.%u", terminal->log_path, i);
+ 		if (ret < 0)
+ 			return -EFBIG;
+ 		if (rename_fname)
+ 			free(rename_fname);
+ 		rename_fname = strdup(tmp);
+-		ret = sprintf(tmp, "%s.%d", terminal->log_path, (i - 1));
++		ret = sprintf(tmp, "%s.%u", terminal->log_path, (i - 1));
+ 		if (ret < 0) {
+ 			free(rename_fname);
+ 			return -EFBIG;
+-- 
+1.8.3.1
+

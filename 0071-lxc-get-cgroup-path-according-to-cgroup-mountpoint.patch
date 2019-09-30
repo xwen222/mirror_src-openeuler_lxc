@@ -1,0 +1,126 @@
+From 5c369714d1a1d74606e6ee44a3df4e1d159ee702 Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Thu, 21 Mar 2019 22:05:09 +0800
+Subject: [PATCH 071/122] lxc: get cgroup path according to cgroup mountpoint
+
+Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 6 ++++--
+ src/lxc/cgroups/cgroup.h | 2 +-
+ src/lxc/commands.c       | 6 +++---
+ src/lxc/criu.c           | 2 +-
+ src/lxc/start.c          | 8 +++-----
+ 5 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 5ceb06b..62d58f9 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1852,7 +1852,7 @@ __cgfsng_ops static bool cgfsng_unfreeze(struct cgroup_ops *ops)
+ }
+ 
+ __cgfsng_ops static const char *cgfsng_get_cgroup(struct cgroup_ops *ops,
+-						    const char *controller)
++						    const char *controller, bool skip_mount)
+ {
+ 	struct hierarchy *h;
+ 
+@@ -1863,7 +1863,9 @@ __cgfsng_ops static const char *cgfsng_get_cgroup(struct cgroup_ops *ops,
+ 		return NULL;
+ 	}
+ 
+-	return h->container_full_path ? h->container_full_path + strlen(h->mountpoint) : NULL;
++	if (!h->container_full_path)
++		h->container_full_path = must_make_path(h->mountpoint, h->container_base_path, ops->container_cgroup, NULL);
++	return skip_mount ? h->container_full_path + strlen(h->mountpoint) : h->container_full_path;
+ }
+ 
+ /* Given a cgroup path returned from lxc_cmd_get_cgroup_path, build a full path,
+diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
+index b6116f6..edbb1e3 100644
+--- a/src/lxc/cgroups/cgroup.h
++++ b/src/lxc/cgroups/cgroup.h
+@@ -129,7 +129,7 @@ struct cgroup_ops {
+ 	bool (*destroy)(struct cgroup_ops *ops, struct lxc_handler *handler);
+ 	bool (*payload_create)(struct cgroup_ops *ops, struct lxc_handler *handler);
+ 	bool (*payload_enter)(struct cgroup_ops *ops, pid_t pid);
+-	const char *(*get_cgroup)(struct cgroup_ops *ops, const char *controller);
++	const char *(*get_cgroup)(struct cgroup_ops *ops, const char *controller, bool skip_mount);
+ 	bool (*escape)(const struct cgroup_ops *ops);
+ 	int (*num_hierarchies)(struct cgroup_ops *ops);
+ 	bool (*get_hierarchies)(struct cgroup_ops *ops, int n, char ***out);
+diff --git a/src/lxc/commands.c b/src/lxc/commands.c
+index f0c95df..c74b8c1 100644
+--- a/src/lxc/commands.c
++++ b/src/lxc/commands.c
+@@ -481,9 +481,9 @@ static int lxc_cmd_get_cgroup_callback(int fd, struct lxc_cmd_req *req,
+ 	struct cgroup_ops *cgroup_ops = handler->cgroup_ops;
+ 
+ 	if (req->datalen > 0)
+-		path = cgroup_ops->get_cgroup(cgroup_ops, req->data);
++		path = cgroup_ops->get_cgroup(cgroup_ops, req->data, true);
+ 	else
+-		path = cgroup_ops->get_cgroup(cgroup_ops, NULL);
++		path = cgroup_ops->get_cgroup(cgroup_ops, NULL, true);
+ 	if (!path)
+ 		return -1;
+ 
+@@ -655,7 +655,7 @@ static int lxc_cmd_stop_callback(int fd, struct lxc_cmd_req *req,
+ 		 * lxc_unfreeze() would do another cmd (GET_CGROUP) which would
+ 		 * deadlock us.
+ 		 */
+-		if (!cgroup_ops->get_cgroup(cgroup_ops, "freezer"))
++		if (!cgroup_ops->get_cgroup(cgroup_ops, "freezer", true))
+ 			return 0;
+ 
+ 		if (cgroup_ops->unfreeze(cgroup_ops))
+diff --git a/src/lxc/criu.c b/src/lxc/criu.c
+index bb97859..5c77979 100644
+--- a/src/lxc/criu.c
++++ b/src/lxc/criu.c
+@@ -332,7 +332,7 @@ static void exec_criu(struct cgroup_ops *cgroup_ops, struct lxc_conf *conf,
+ 		} else {
+ 			const char *p;
+ 
+-			p = cgroup_ops->get_cgroup(cgroup_ops, controllers[0]);
++			p = cgroup_ops->get_cgroup(cgroup_ops, controllers[0], true);
+ 			if (!p) {
+ 				ERROR("failed to get cgroup path for %s", controllers[0]);
+ 				goto err;
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index b14e46f..9243a6d 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1032,17 +1032,15 @@ static int _recursive_read_cgroup_procs(const char *dirpath, pid_t **pids, size_
+ 
+ int get_all_pids(struct cgroup_ops *cg_ops, pid_t **pids, size_t *len)
+ {
+-	char *devices_path = NULL;
++	const char *devices_path = NULL;
+ 	int ret;
+ 
+-	devices_path = must_make_path("/sys/fs/cgroup", "devices", cg_ops->container_cgroup, NULL);
++	devices_path = cg_ops->get_cgroup(cg_ops, "devices", false);
+ 	if (!file_exists(devices_path)) {
+-		free(devices_path);
+ 		return 0;
+ 	}
+ 
+ 	ret = _recursive_read_cgroup_procs(devices_path, pids, len);
+-	free(devices_path);
+ 	return ret;
+ }
+ 
+@@ -1051,7 +1049,7 @@ static int set_cgroup_freezer(struct cgroup_ops *cg_ops, const char *value)
+ 	char *fullpath;
+ 	int ret;
+ 
+-	fullpath = must_make_path("/sys/fs/cgroup", "freezer", cg_ops->container_cgroup, "freezer.state", NULL);
++	fullpath = must_make_path(cg_ops->get_cgroup(cg_ops, "freezer", false), "freezer.state", NULL);
+ 	ret = lxc_write_to_file(fullpath, value, strlen(value), false, 0666);
+ 	free(fullpath);
+ 	return ret;
+-- 
+1.8.3.1
+

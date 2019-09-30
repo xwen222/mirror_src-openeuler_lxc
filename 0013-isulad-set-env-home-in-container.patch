@@ -1,0 +1,139 @@
+From 4fad66dc56b5863b3e272408b265eddf244434ef Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Sat, 12 Jan 2019 14:42:27 +0800
+Subject: [PATCH 013/122] isulad: set env home in container
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c         |  5 +++++
+ src/lxc/cgroups/cgfsng.c |  5 +++--
+ src/lxc/conf.c           |  2 +-
+ src/lxc/start.c          |  4 ++++
+ src/lxc/utils.c          | 29 +++++++++++++++++++++++++++++
+ src/lxc/utils.h          |  3 +++
+ 6 files changed, 45 insertions(+), 3 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index e7ba705..2bbf1eb 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -876,6 +876,11 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 	else
+ 		new_gid = ns_root_gid;
+ 
++	// isulad: set env home in container
++	if (lxc_setup_env_home(new_uid) < 0) {
++		goto on_error;
++	}
++
+ 	if ((init_ctx->container && init_ctx->container->lxc_conf &&
+ 	     init_ctx->container->lxc_conf->no_new_privs) ||
+ 	    (options->attach_flags & LXC_ATTACH_NO_NEW_PRIVS)) {
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index aff2b5e..3e702b3 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1704,8 +1704,9 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
+ 			continue;
+ 		}
+ 
+-		// Ignore ops->container_cgroup so we will not see directory lxc after /sys/fs/cgroup/xxx in container
+-		path2 = must_make_path(controllerpath, h->container_base_path, NULL);
++		// isulad: ignore ops->container_cgroup so we will not see directory lxc after /sys/fs/cgroup/xxx in container,
++		// isulad: ignore h->container_base_path so we will not see subgroup of /sys/fs/cgroup/xxx/subgroup in container
++		path2 = must_make_path(controllerpath, NULL);
+ 		ret = mkdir_p(path2, 0755);
+ 		if (ret < 0) {
+ 			free(controllerpath);
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index bc45e44..5065e69 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -3680,7 +3680,7 @@ int lxc_setup(struct lxc_handler *handler)
+ 		return -1;
+ 	}
+ 
+-	/*isulad: move mount entrues here, before we do lxc_fill_autodev and populate devices  */
++	/*isulad: move mount entries here, before we do lxc_fill_autodev and populate devices  */
+ 	if (!lxc_list_empty(&lxc_conf->mount_list)) {
+ 		ret = setup_mount_entries(lxc_conf, &lxc_conf->rootfs,
+ 					  &lxc_conf->mount_list, name, lxcpath);
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 9365d11..b13326c 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1398,6 +1398,10 @@ static int do_start(void *data)
+ 	new_uid = handler->conf->init_uid;
+ 	new_gid = handler->conf->init_gid;
+ 
++	// isulad: set env home in container
++	if (lxc_setup_env_home(new_uid) < 0)
++		goto out_warn_father;
++
+ 	/* Avoid unnecessary syscalls. */
+ 	if (new_uid == nsuid)
+ 		new_uid = LXC_INVALID_UID;
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 4728284..74e74a1 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -45,6 +45,7 @@
+ #include <sys/types.h>
+ #include <sys/wait.h>
+ #include <unistd.h>
++#include <pwd.h>
+ 
+ #include "config.h"
+ #include "log.h"
+@@ -1829,6 +1830,34 @@ int lxc_setup_keyring(void)
+ 	return ret;
+ }
+ 
++// isulad: set env home in container
++int lxc_setup_env_home(uid_t uid)
++{
++#define __DEFAULT_HOMEDIR__ "/"
++	int ret = 0;
++	char *homedir;
++	struct passwd pwd, *result = NULL;
++	char buf[BUFSIZ];
++
++	ret = getpwuid_r(uid, &pwd, buf, BUFSIZ, &result);
++	if (ret || !result || !result->pw_dir) {
++		WARN("User invalid, can not find user '%u'", uid);
++		homedir = __DEFAULT_HOMEDIR__;
++	} else {
++		homedir = result->pw_dir;
++	}
++
++	// if we didn't configure HOME, set it based on uid
++	if (setenv("HOME", homedir, 0) < 0) {
++		SYSERROR("Unable to set env 'HOME'");
++		return -1;
++	}
++
++	NOTICE("Setted env 'HOME' to %s", homedir);
++	return 0;
++}
++
++
+ /* isulad: read file to buffer */
+ static int lxc_file2str(const char *filename, char ret[], int cap)
+ {
+diff --git a/src/lxc/utils.h b/src/lxc/utils.h
+index 8e4ed89..364bf67 100644
+--- a/src/lxc/utils.h
++++ b/src/lxc/utils.h
+@@ -309,6 +309,9 @@ extern int fd_cloexec(int fd, bool cloexec);
+ extern int recursive_destroy(char *dirname);
+ extern int lxc_setup_keyring(void);
+ 
++// isulad: set env home in container
++extern int lxc_setup_env_home(uid_t uid);
++
+ extern int fd_nonblock(int fd);
+ extern int unsigned long long lxc_get_process_startat(pid_t pid);
+ 
+-- 
+1.8.3.1
+

@@ -1,0 +1,28 @@
+From 1ea4f8a2c3d3070fa9aafd9f055bed3b9018198b Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Sat, 12 Jan 2019 03:23:53 -0500
+Subject: [PATCH 012/122] Init fifos in lxc_attach_terminal
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/terminal.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 508e2e6..410f643 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -1341,6 +1341,10 @@ void lxc_terminal_init(struct lxc_terminal *terminal)
+ 	terminal->peer = -EBADF;
+ 	terminal->log_fd = -EBADF;
+ 	lxc_terminal_info_init(&terminal->proxy);
++	/* isulad init console fifos */
++	terminal->init_fifo[0] = NULL;
++	terminal->init_fifo[1] = NULL;
++	lxc_list_init(&terminal->fifos);
+ }
+ 
+ /* isulad: judge the fd whether is fifo */
+-- 
+1.8.3.1
+

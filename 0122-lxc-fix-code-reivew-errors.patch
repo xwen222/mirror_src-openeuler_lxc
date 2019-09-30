@@ -1,0 +1,210 @@
+From 2313b7a2a444d841e57dca83814e7b17e67354db Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 26 Sep 2019 07:47:19 -0400
+Subject: [PATCH 122/122] lxc: fix code reivew errors
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/commands.c         |  2 +-
+ src/lxc/commands_utils.c   |  2 +-
+ src/lxc/confile.c          |  4 ++--
+ src/lxc/json/json_common.c | 15 +++++----------
+ src/lxc/lxccontainer.c     |  6 ++++--
+ src/lxc/terminal.c         |  8 +++++---
+ src/lxc/utils.c            |  2 +-
+ 7 files changed, 19 insertions(+), 20 deletions(-)
+
+diff --git a/src/lxc/commands.c b/src/lxc/commands.c
+index fa02a4b..7d6cf6f 100644
+--- a/src/lxc/commands.c
++++ b/src/lxc/commands.c
+@@ -1083,7 +1083,7 @@ int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath, const char
+ 	if (tmp == NULL)
+ 		return -1;
+ 	ret = snprintf(tmp, len, "%s%s%s%s%s", cmd_in_fifo, split, cmd_out_fifo, split, cmd_err_fifo);
+-	if (ret < 0)
++	if (ret < 0 || ret >= len)
+ 		return -1;
+ 
+ 	struct lxc_cmd_rr cmd = {
+diff --git a/src/lxc/commands_utils.c b/src/lxc/commands_utils.c
+index f48f118..56ecce7 100644
+--- a/src/lxc/commands_utils.c
++++ b/src/lxc/commands_utils.c
+@@ -144,7 +144,7 @@ int lxc_make_abstract_socket_name(char *path, size_t pathlen,
+ 	}
+ 
+ 	ret = snprintf(offset, len, "%s/%s/%s", lxcpath, name, suffix);
+-	if (ret < 0) {
++	if (ret < 0 || ret >= len) {
+ 		ERROR("Failed to create abstract socket name");
+ 		return -1;
+ 	}
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 3a02e09..3eaae4a 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -3834,7 +3834,7 @@ static int get_config_prlimit(const char *key, char *retv, int inlen,
+ 			partlen = STRLITERALLEN("unlimited");
+ 		} else {
+ 			partlen = snprintf(buf, MAX_LIMIT_BUF_LEN, "%" PRIu64, (uint64_t)lim->limit.rlim_cur);
+-			if (partlen < 0) {
++			if (partlen < 0 || partlen >= MAX_LIMIT_BUF_LEN) {
+ 				return -1;
+ 			}
+ 		}
+@@ -3844,7 +3844,7 @@ static int get_config_prlimit(const char *key, char *retv, int inlen,
+ 				(void)memcpy(buf + partlen, ":unlimited", STRLITERALLEN(":unlimited") + 1);
+ 			} else {
+ 				nret = snprintf(buf + partlen, (MAX_LIMIT_BUF_LEN - partlen), ":%" PRIu64, (uint64_t)lim->limit.rlim_max);
+-				if (nret < 0) {
++				if (nret < 0 || nret >= (MAX_LIMIT_BUF_LEN - partlen)) {
+ 					return -1;
+ 				}
+ 			}
+diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
+index ed2fe83..ec20c59 100755
+--- a/src/lxc/json/json_common.c
++++ b/src/lxc/json/json_common.c
+@@ -17,7 +17,7 @@ yajl_gen_status reformat_uint(void *ctx, long long unsigned int num) {
+     int ret;
+ 
+     ret = snprintf(numstr, MAX_NUM_STR_LEN, "%llu", num);
+-    if (ret < 0) {
++    if (ret < 0 || ret >= MAX_NUM_STR_LEN) {
+         return yajl_gen_in_error_state;
+     }
+     return reformat_number(ctx, (const char *)numstr, strlen(numstr));
+@@ -28,7 +28,7 @@ yajl_gen_status reformat_int(void *ctx, long long int num) {
+     int ret;
+ 
+     ret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", num);
+-    if (ret < 0) {
++    if (ret < 0 || ret >= MAX_NUM_STR_LEN) {
+         return yajl_gen_in_error_state;
+     }
+     return reformat_number(ctx, (const char *)numstr, strlen(numstr));
+@@ -400,7 +400,7 @@ yajl_gen_status gen_json_map_int_int(void *ctx, json_map_int_int *map, struct pa
+         char numstr[MAX_NUM_STR_LEN];
+         int nret;
+         nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
+-        if (nret < 0) {
++        if (nret < 0 || nret >= MAX_NUM_STR_LEN) {
+             if (!*err && asprintf(err, "Error to print string") < 0) {
+                 *(err) = safe_strdup("error allocating memory");
+             }
+@@ -541,7 +541,7 @@ yajl_gen_status gen_json_map_int_bool(void *ctx, json_map_int_bool *map, struct
+         char numstr[MAX_NUM_STR_LEN];
+         int nret;
+         nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
+-        if (nret < 0) {
++        if (nret < 0 || nret >= MAX_NUM_STR_LEN) {
+             if (!*err && asprintf(err, "Error to print string") < 0) {
+                 *(err) = safe_strdup("error allocating memory");
+             }
+@@ -569,11 +569,6 @@ yajl_gen_status gen_json_map_int_bool(void *ctx, json_map_int_bool *map, struct
+ 
+ void free_json_map_int_bool(json_map_int_bool *map) {
+     if (map != NULL) {
+-        size_t i;
+-        for (i = 0; i < map->len; i++) {
+-            // No need to free key for type int
+-            // No need to free value for type bool
+-        }
+         free(map->keys);
+         map->keys = NULL;
+         free(map->values);
+@@ -677,7 +672,7 @@ yajl_gen_status gen_json_map_int_string(void *ctx, json_map_int_string *map, str
+         char numstr[MAX_NUM_STR_LEN];
+         int nret;
+         nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
+-        if (nret < 0) {
++        if (nret < 0 || nret >= MAX_NUM_STR_LEN) {
+             if (!*err && asprintf(err, "Error to print string") < 0) {
+                 *(err) = safe_strdup("error allocating memory");
+             }
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 5a72483..9f9cbfc 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -3200,7 +3200,7 @@ static bool container_destroy(struct lxc_container *c,
+ 		ERROR("Failed to destroy directory \"%s\" for \"%s\"", path,
+ 		      c->name);
+ 		ret = snprintf(msg, BUFSIZ, "Failed to destroy directory \"%s\": %s", path, errno ? strerror(errno) : "error");
+-		if (ret < 0) {
++		if (ret < 0 || ret >= BUFSIZ) {
+ 			ERROR("Sprintf failed");
+ 			goto out;
+ 		}
+@@ -5276,6 +5276,7 @@ static int set_start_extral_configs(struct lxc_container *c)
+ 	char fpath[PATH_MAX] = {0};
+ 	parser_error jerr = NULL;
+ 	int ret = -1;
++	int nret = 0;
+ 	container_start_generate_config *start_conf = NULL;
+ 	struct lxc_conf *lconf = c->lxc_conf;
+ 	size_t i = 0;
+@@ -5288,7 +5289,8 @@ static int set_start_extral_configs(struct lxc_container *c)
+ 		}
+ 		lconf = c->lxc_conf;
+ 	}
+-	if (snprintf(fpath, PATH_MAX, "%s/%s/%s", c->config_path, c->name, START_GENERATE_CONFIG) < 0) {
++	nret = snprintf(fpath, PATH_MAX, "%s/%s/%s", c->config_path, c->name, START_GENERATE_CONFIG);
++	if (nret < 0 || nret >= PATH_MAX) {
+ 		fprintf(stderr, "Sprintf config path failed\n");
+ 		return -1;
+ 	}
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 32c69a4..e81f57e 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -242,13 +242,13 @@ static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
+ 
+ 	for (i = terminal->log_rotate - 1; i > 1; i--) {
+ 		ret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, i);
+-		if (ret < 0) {
++		if (ret < 0 || ret >= PATH_MAX) {
+ 			return -EFBIG;
+ 		}
+ 		free(rename_fname);
+ 		rename_fname = safe_strdup(tmp);
+ 		ret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, (i - 1));
+-		if (ret < 0) {
++		if (ret < 0 || ret >= PATH_MAX) {
+ 			free(rename_fname);
+ 			return -EFBIG;
+ 		}
+@@ -415,6 +415,7 @@ static bool get_time_buffer(struct timespec *timestamp, char *timebuffer,
+ 	int32_t nanos = 0;
+ 	time_t seconds;
+ 	size_t len = 0;
++	int ret = 0;
+ 
+ 	if (!timebuffer || !maxsize) {
+ 		return false;
+@@ -426,7 +427,8 @@ static bool get_time_buffer(struct timespec *timestamp, char *timebuffer,
+ 
+ 	nanos = (int32_t)timestamp->tv_nsec;
+ 	len = strlen(timebuffer);
+-	if (snprintf(timebuffer + len, (maxsize - len), ".%09dZ", nanos) < 0) {
++	ret = snprintf(timebuffer + len, (maxsize - len), ".%09dZ", nanos);
++	if (ret < 0 || ret >= (maxsize - len)) {
+ 		return false;
+ 	}
+ 
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index c83c7a3..31bcac7 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -2041,7 +2041,7 @@ void lxc_write_error_message(int errfd, const char *format, ...)
+ 	va_start(argp, format);
+ 	ret = vsnprintf(errbuf, BUFSIZ, format, argp);
+ 	va_end(argp);
+-	if (ret < 0)
++	if (ret < 0 || ret >= BUFSIZ)
+ 		SYSERROR("Failed to call vsnprintf");
+ 	sret = write(errfd, errbuf, strlen(errbuf));
+ 	if (sret < 0)
+-- 
+1.8.3.1
+

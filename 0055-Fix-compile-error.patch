@@ -1,0 +1,229 @@
+From 9e3eb0c5c5258c6d8e658129ef87ae7ff3ffe64f Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 24 Jan 2019 05:14:24 -0500
+Subject: [PATCH 055/122] Fix compile error
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c   | 13 -------------
+ src/lxc/conf.c             |  8 ++------
+ src/lxc/confile.c          |  1 -
+ src/lxc/start.c            |  2 --
+ src/lxc/terminal.c         | 32 ++++++++++++++++----------------
+ src/lxc/terminal.h         |  3 ---
+ src/lxc/tools/lxc_attach.c |  2 --
+ src/lxc/utils.c            |  1 -
+ 8 files changed, 18 insertions(+), 44 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 6bfa693..e513218 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1263,18 +1263,6 @@ static bool create_path_for_hierarchy(struct hierarchy *h, char *cgname, int err
+ 	return cg_unified_create_cgroup(h, cgname);
+ }
+ 
+-static void remove_path_for_hierarchy(struct hierarchy *h, char *cgname)
+-{
+-	int ret;
+-
+-	ret = rmdir(h->container_full_path);
+-	if (ret < 0)
+-		SYSERROR("Failed to rmdir(\"%s\") from failed creation attempt", h->container_full_path);
+-
+-	free(h->container_full_path);
+-	h->container_full_path = NULL;
+-}
+-
+ /* isulad: create hierarchies path, if fail, return the error */
+ __cgfsng_ops static bool cgfsng_payload_create(struct cgroup_ops *ops,
+ 					       struct lxc_handler *handler)
+@@ -2439,7 +2427,6 @@ static bool cg_hybrid_init(struct cgroup_ops *ops)
+ 
+ 	while (getline(&line, &len, f) != -1) {
+ 		int type;
+-		bool writeable;
+ 		struct hierarchy *new;
+ 		char *base_cgroup = NULL, *mountpoint = NULL;
+ 		char **controller_list = NULL;
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 1e403eb..4800943 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -1518,7 +1518,7 @@ error:
+ // remount_readonly will bind over the top of an existing path and ensure that it is read-only.
+ static bool remount_readonly(const char *path)
+ {
+-	int ret, savederrno, i;
++	int ret, i;
+ 
+ 	if (!path)
+ 		return true;
+@@ -4005,7 +4005,7 @@ static int setup_rootfs_mountopts(const struct lxc_rootfs *rootfs)
+ 	if (mntflags & MS_RDONLY) {
+ 		mflags = add_required_remount_flags("/", NULL, MS_BIND | MS_REC | mntflags | pflags | MS_REMOUNT);
+ 		DEBUG("remounting / as readonly");
+-		if (mount("/", "/", NULL, MS_BIND | MS_REMOUNT | MS_RDONLY, 0) < 0) {
++		if (mount("/", "/", NULL, mflags, 0) < 0) {
+ 			SYSERROR("Failed to make / readonly.");
+ 			return -1;
+ 		}
+@@ -4776,7 +4776,6 @@ default_out:
+ static int run_oci_hooks(const char *name, const char *lxcpath, struct lxc_conf *lc, int which, int errfd)
+ {
+ 	struct oci_hook_conf work_conf = {0};
+-	oci_runtime_spec_hooks *ocihooks = NULL;
+ 	size_t i;
+ 	int ret = 0;
+ 	char *rootpath;
+@@ -4836,7 +4835,6 @@ int run_lxc_hooks(const char *name, char *hookname, struct lxc_conf *conf,
+ 	int which = -1;
+ 
+ 	if (strcmp(hookname, "oci-prestart") == 0) {
+-		int ret;
+ 		which = OCI_HOOK_PRESTART;
+ 		if (!argv || !argv[0]) {
+ 			ERROR("oci hook require lxcpath");
+@@ -4844,7 +4842,6 @@ int run_lxc_hooks(const char *name, char *hookname, struct lxc_conf *conf,
+ 		}
+ 		return run_oci_hooks(name, argv[0], conf, which, conf->errpipe[1]);
+ 	} else if (strcmp(hookname, "oci-poststart") == 0) {
+-		int ret;
+ 		which = OCI_HOOK_POSTSTART;
+ 		if (!argv || !argv[0]) {
+ 			ERROR("oci hook require lxcpath");
+@@ -4852,7 +4849,6 @@ int run_lxc_hooks(const char *name, char *hookname, struct lxc_conf *conf,
+ 		}
+ 		return run_oci_hooks(name, argv[0], conf, which, conf->errpipe[1]);
+ 	} else if (strcmp(hookname, "oci-poststop") == 0) {
+-		int ret;
+ 		which = OCI_HOOK_POSTSTOP;
+ 		if (!argv || !argv[0]) {
+ 			ERROR("oci hook require lxcpath");
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 7e9d5c8..f66d01b 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -3909,7 +3909,6 @@ static int get_config_init_args(const char *key, char *retv, int inlen,
+ 				  struct lxc_conf *c, void *data)
+ {
+ 	int i, len, fulllen = 0;
+-	struct lxc_list *it;
+ 
+ 	if (!retv)
+ 		inlen = 0;
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index daf2af4..816b4a2 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -2470,8 +2470,6 @@ retry:
+ 		ret = -1;
+ 	}
+ 
+-
+-out_fini_handler:
+ 	lxc_free_handler(handler);
+ out:
+ 	return ret;
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 95140e0..252a644 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -418,6 +418,21 @@ static void lxc_forward_data_to_fifo(struct lxc_list *list, char *buf, int r)
+ 	return;
+ }
+ 
++/* isulad: judge the fd whether is fifo */
++static bool lxc_terminal_is_fifo(int fd, struct lxc_list *list)
++{
++	struct lxc_list *it,*next;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, list, next) {
++		elem = it->elem;
++		if (elem->in_fd == fd)
++			return true;
++	}
++
++	return false;
++}
++
+ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 		       struct lxc_epoll_descr *descr)
+ {
+@@ -1067,7 +1082,7 @@ static int lxc_terminal_fifo_default(struct lxc_terminal *terminal)
+ }
+ 
+ /*
+- * isulad: disable (XSI) Map NL to CR-NL on output. 
++ * isulad: disable (XSI) Map NL to CR-NL on output.
+  * */
+ static int use_unix_newline(int master_fd)
+ {
+@@ -1427,21 +1442,6 @@ void lxc_terminal_init(struct lxc_terminal *terminal)
+ 	lxc_list_init(&terminal->fifos);
+ }
+ 
+-/* isulad: judge the fd whether is fifo */
+-static bool lxc_terminal_is_fifo(int fd, struct lxc_list *list)
+-{
+-	struct lxc_list *it,*next;
+-	struct lxc_fifos_fd *elem = NULL;
+-
+-	lxc_list_for_each_safe(it, list, next) {
+-		elem = it->elem;
+-		if (elem->in_fd == fd)
+-			return true;
+-	}
+-
+-	return false;
+-}
+-
+ /* isulad: if fd == -1, means delete all the fifos*/
+ int lxc_terminal_delete_fifo(int fd, struct lxc_list *list)
+ {
+diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
+index d006b80..0c9653c 100644
+--- a/src/lxc/terminal.h
++++ b/src/lxc/terminal.h
+@@ -305,9 +305,6 @@ extern void lxc_terminal_info_init(struct lxc_terminal_info *terminal);
+ extern void lxc_terminal_init(struct lxc_terminal *terminal);
+ extern int lxc_terminal_map_ids(struct lxc_conf *c,
+ 				struct lxc_terminal *terminal);
+-
+-/* isulad: judge the fd whether is fifo*/
+-static bool lxc_terminal_is_fifo(int fd, struct lxc_list *list);
+ /* isulad: if fd == -1, means delete all the fifos*/
+ int lxc_terminal_delete_fifo(int fd, struct lxc_list *list);
+ int lxc_terminal_add_fifos(struct lxc_conf *conf, const char *fifonames);
+diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
+index a590fd1..8856934 100644
+--- a/src/lxc/tools/lxc_attach.c
++++ b/src/lxc/tools/lxc_attach.c
+@@ -398,11 +398,9 @@ out:
+ 
+ int main(int argc, char *argv[])
+ {
+-	int ret = -1;
+ 	int wexit = 0;
+ 	char *errmsg = NULL;
+ 	struct lxc_log log;
+-	pid_t pid;
+ 	lxc_attach_options_t attach_options = LXC_ATTACH_OPTIONS_DEFAULT;
+ 	lxc_attach_command_t command = (lxc_attach_command_t){.program = NULL};
+ 
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 4db61c5..9a50fce 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -2026,7 +2026,6 @@ void lxc_write_error_message(int errfd, const char *format, ...)
+ 
+ bool lxc_process_alive(pid_t pid, unsigned long long start_time)
+ {
+-		int ret;
+ 	int sret = 0;
+ 	bool alive = true;
+ 	proc_t *pid_info = NULL;
+-- 
+1.8.3.1
+

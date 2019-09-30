@@ -1,0 +1,381 @@
+From 478dfb4eadd6812bd63fc0d37cf1acad21a58e6a Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Sat, 12 Jan 2019 15:55:52 +0800
+Subject: [PATCH 016/122] add masked paths and ro paths
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c    | 135 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/conf.h    |   8 ++++
+ src/lxc/confile.c | 113 ++++++++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 255 insertions(+), 1 deletion(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 5065e69..537f956 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -1343,6 +1343,95 @@ static int lxc_mount_rootfs(struct lxc_conf *conf)
+ 	return 0;
+ }
+ 
++
++// maskPath masks the top of the specified path inside a container to avoid
++// security issues from processes reading information from non-namespace aware
++// mounts ( proc/kcore ).
++static bool mask_path(const char *path)
++{
++	int ret;
++
++	if (!path)
++		return true;
++
++	ret = mount("/dev/null", path, "", MS_BIND, "");
++	if (ret < 0 && errno != ENOENT) {
++		if (errno == ENOTDIR) {
++			ret = mount("tmpfs", path, "tmpfs", MS_RDONLY, "");
++			if (ret < 0)
++				goto error;
++			return true;
++		}
++		goto error;
++	}
++	return true;
++
++error:
++	SYSERROR("Failed to mask path \"%s\": %s", path, strerror(errno));
++	return false;
++}
++
++// remount_readonly will bind over the top of an existing path and ensure that it is read-only.
++static bool remount_readonly(const char *path)
++{
++	int ret, savederrno, i;
++
++	if (!path)
++		return true;
++
++	for (i = 0; i < 5; i++) {
++		ret = mount("", path, "", MS_REMOUNT | MS_RDONLY, "");
++		if (ret < 0 && errno != ENOENT) {
++			if (errno == EINVAL) {
++				// Probably not a mountpoint, use bind-mount
++				ret = mount(path, path, "", MS_BIND, "");
++				if (ret < 0)
++					goto on_error;
++				ret = mount(path, path, "", MS_BIND | MS_REMOUNT | MS_RDONLY | MS_REC | \
++					    MS_NOEXEC | MS_NOSUID | MS_NODEV, "");
++				if (ret < 0)
++					goto on_error;
++			} else if (errno == EBUSY) {
++				DEBUG("Try to mount \"%s\" to readonly after 100ms.", path);
++				usleep(100 * 1000);
++				continue;
++			} else {
++				goto on_error;
++			}
++		}
++		return true;
++	}
++
++on_error:
++	SYSERROR("Unable to mount \"%s\" to readonly", path);
++	return false;
++}
++
++// isulad: setup rootfs masked paths
++static int setup_rootfs_maskedpaths(struct lxc_list *maskedpaths)
++{
++	struct lxc_list *it;
++
++	lxc_list_for_each(it, maskedpaths) {
++	       if (!mask_path((char *)it->elem))
++	               return -1;
++	}
++
++	return 0;
++}
++// isulad: setup rootfs ro paths
++static int setup_rootfs_ropaths(struct lxc_list *ropaths)
++{
++	struct lxc_list *it;
++
++	lxc_list_for_each(it, ropaths) {
++	       if (!remount_readonly((char *)it->elem))
++	               return -1;
++	}
++
++	return 0;
++}
++
+ int lxc_chroot(const struct lxc_rootfs *rootfs)
+ {
+ 	int i, ret;
+@@ -2759,6 +2848,8 @@ struct lxc_conf *lxc_conf_init(void)
+ 
+ 	/* isulad add begin */
+ 	lxc_list_init(&new->populate_devs);
++	lxc_list_init(&new->rootfs.maskedpaths);
++	lxc_list_init(&new->rootfs.ropaths);
+ 	new->exit_fd = -1;
+ 	/* isulad add end */
+ 
+@@ -3759,6 +3850,22 @@ int lxc_setup(struct lxc_handler *handler)
+ 	if (ret < 0)
+ 		return -1;
+ 
++	//isulad: setup rootfs masked paths
++	if (!lxc_list_empty(&lxc_conf->rootfs.maskedpaths)) {
++		if (setup_rootfs_maskedpaths(&lxc_conf->rootfs.maskedpaths)) {
++			ERROR("failed to setup maskedpaths");
++			return -1;
++		}
++	}
++
++	// isulad: setup rootfs ro paths
++	if (!lxc_list_empty(&lxc_conf->rootfs.ropaths)) {
++		if (setup_rootfs_ropaths(&lxc_conf->rootfs.ropaths)) {
++			ERROR("failed to setup readonlypaths");
++			return -1;
++		}
++	}
++
+ 	ret = setup_personality(lxc_conf->personality);
+ 	if (ret < 0) {
+ 		ERROR("Failed to set personality");
+@@ -4147,6 +4254,32 @@ int lxc_clear_populate_devices(struct lxc_conf *c)
+ 	return 0;
+ }
+ 
++/*isulad: clear rootfs masked paths*/
++int lxc_clear_rootfs_masked_paths(struct lxc_conf *c)
++{
++	struct lxc_list *it,*next;
++
++	lxc_list_for_each_safe(it, &c->rootfs.maskedpaths, next) {
++		lxc_list_del(it);
++		free(it->elem);
++		free(it);
++	}
++	return 0;
++}
++
++/*isulad: clear rootfs ro paths*/
++int lxc_clear_rootfs_ro_paths(struct lxc_conf *c)
++{
++	struct lxc_list *it,*next;
++
++	lxc_list_for_each_safe(it, &c->rootfs.ropaths, next) {
++		lxc_list_del(it);
++		free(it->elem);
++		free(it);
++	}
++	return 0;
++}
++
+ void lxc_conf_free(struct lxc_conf *conf)
+ {
+ 	if (!conf)
+@@ -4195,6 +4328,8 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 	/* isulad add begin */
+ 	lxc_clear_init_args(conf);
+ 	lxc_clear_populate_devices(conf);
++	lxc_clear_rootfs_masked_paths(conf);
++	lxc_clear_rootfs_ro_paths(conf);
+ 	free(conf->container_info_file);
+ 	if (conf->exit_fd != -1)
+ 		close(conf->exit_fd);
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index 2d939cd..7927812 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -160,6 +160,8 @@ struct lxc_tty_info {
+  * @options    : mount options
+  * @mountflags : the portion of @options that are flags
+  * @data       : the portion of @options that are not flags
++ * @maskedpaths: A list of paths to be msked over inside the container
++ * @ropaths    : A list of paths to be remounted with readonly inside the container
+  */
+ struct lxc_rootfs {
+ 	char *path;
+@@ -168,6 +170,10 @@ struct lxc_rootfs {
+ 	char *options;
+ 	unsigned long mountflags;
+ 	char *data;
++	/* isulad: maskedpaths */
++	struct lxc_list maskedpaths;
++	/* isulad: ropaths */
++	struct lxc_list ropaths;
+ };
+ 
+ /*
+@@ -477,6 +483,8 @@ extern int lxc_clear_procs(struct lxc_conf *c, const char *key);
+ /* isulad add begin */
+ int lxc_clear_init_args(struct lxc_conf *lxc_conf);
+ int lxc_clear_populate_devices(struct lxc_conf *c);
++int lxc_clear_rootfs_masked_paths(struct lxc_conf *c);
++int lxc_clear_rootfs_ro_paths(struct lxc_conf *c);
+ 
+ /* isulad add end */
+ 
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index e782211..e199965 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -139,6 +139,8 @@ lxc_config_define(pty_max);
+ lxc_config_define(rootfs_mount);
+ lxc_config_define(rootfs_options);
+ lxc_config_define(rootfs_path);
++lxc_config_define(rootfs_masked_paths);
++lxc_config_define(rootfs_ro_paths);
+ lxc_config_define(seccomp_profile);
+ lxc_config_define(selinux_context);
+ lxc_config_define(signal_halt);
+@@ -243,6 +245,8 @@ static struct lxc_config_t config_jump_table[] = {
+ 	/*isulad add begin*/
+ 	{ "lxc.isulad.init.args",          set_config_init_args,                   get_config_init_args,                   clr_config_init_args,                 },
+ 	{ "lxc.isulad.populate.device",    set_config_populate_device,             get_config_populate_device,             clr_config_populate_device,           },
++	{ "lxc.isulad.rootfs.maskedpaths", set_config_rootfs_masked_paths,         get_config_rootfs_masked_paths,         clr_config_rootfs_masked_paths,       },
++	{ "lxc.isulad.rootfs.ropaths",     set_config_rootfs_ro_paths,             get_config_rootfs_ro_paths,             clr_config_rootfs_ro_paths,           },
+ 	/*isulad add end*/
+ };
+ 
+@@ -2224,7 +2228,7 @@ static int set_config_init_args(const char *key, const char *value,
+ 	return 0;
+ }
+ 
+-/* isulad: set config for init args */
++/* isulad: set config for populate device */
+ static int set_config_populate_device(const char *key, const char *value,
+ 				 struct lxc_conf *lxc_conf, void *data)
+ {
+@@ -2308,6 +2312,62 @@ on_error:
+                 free(dev_elem);
+         }
+         return -1;
++}
++
++/* isulad: set config for rootfs masked paths */
++static int set_config_rootfs_masked_paths(const char *key, const char *value,
++				 struct lxc_conf *lxc_conf, void *data)
++{
++	struct lxc_list *list_item = NULL;
++
++	if (lxc_config_value_empty(value))
++		return lxc_clear_rootfs_masked_paths(lxc_conf);
++
++	list_item = malloc(sizeof(*list_item));
++	if (!list_item)
++		goto on_error;
++
++	list_item->elem = strdup(value);
++
++	if (!list_item->elem)
++		goto on_error;
++
++	lxc_list_add_tail(&lxc_conf->rootfs.maskedpaths, list_item);
++
++	return 0;
++
++on_error:
++	free(list_item);
++
++	return -1;
++}
++
++/* isulad: set config for rootfs ro paths */
++static int set_config_rootfs_ro_paths(const char *key, const char *value,
++				 struct lxc_conf *lxc_conf, void *data)
++{
++	struct lxc_list *list_item = NULL;
++
++	if (lxc_config_value_empty(value))
++		return lxc_clear_rootfs_ro_paths(lxc_conf);
++
++	list_item = malloc(sizeof(*list_item));
++	if (!list_item)
++		goto on_error;
++
++	list_item->elem = strdup(value);
++
++	if (!list_item->elem)
++		goto on_error;
++
++	lxc_list_add_tail(&lxc_conf->rootfs.ropaths, list_item);
++
++	return 0;
++
++on_error:
++	free(list_item);
++
++	return -1;
+ 
+ }
+ 
+@@ -3889,6 +3949,43 @@ static int get_config_populate_device(const char *key, char *retv, int inlen,
+ 	return fulllen;
+ }
+ 
++// isulad: get config rootfs masked paths
++static int get_config_rootfs_masked_paths(const char *key, char *retv, int inlen,
++				  struct lxc_conf *c, void *data)
++{
++	int len, fulllen = 0;
++	struct lxc_list *it;
++
++	if (!retv)
++		inlen = 0;
++	else
++		memset(retv, 0, inlen);
++
++	lxc_list_for_each(it, &c->rootfs.maskedpaths) {
++		strprint(retv, inlen, "%s\n", (char *)it->elem);
++	}
++
++	return fulllen;
++}
++
++// isulad: get config rootfs ro paths
++static int get_config_rootfs_ro_paths(const char *key, char *retv, int inlen,
++				  struct lxc_conf *c, void *data)
++{
++	int len, fulllen = 0;
++	struct lxc_list *it;
++
++	if (!retv)
++		inlen = 0;
++	else
++		memset(retv, 0, inlen);
++
++	lxc_list_for_each(it, &c->rootfs.ropaths) {
++		strprint(retv, inlen, "%s\n", (char *)it->elem);
++	}
++
++	return fulllen;
++}
+ 
+ /* Callbacks to clear config items. */
+ static inline int clr_config_personality(const char *key, struct lxc_conf *c,
+@@ -4708,6 +4805,20 @@ static inline int clr_config_populate_device(const char *key, struct lxc_conf *c
+ 	return lxc_clear_populate_devices(c);
+ }
+ 
++/* isulad: clr config rootfs masked paths */
++static inline int clr_config_rootfs_masked_paths(const char *key, struct lxc_conf *c,
++				   void *data)
++{
++	return lxc_clear_rootfs_masked_paths(c);
++}
++
++/* isulad: clr config rootfs ro paths */
++static inline int clr_config_rootfs_ro_paths(const char *key, struct lxc_conf *c,
++				   void *data)
++{
++	return lxc_clear_rootfs_ro_paths(c);
++}
++
+ static int get_config_net_nic(const char *key, char *retv, int inlen,
+ 			      struct lxc_conf *c, void *data)
+ {
+-- 
+1.8.3.1
+

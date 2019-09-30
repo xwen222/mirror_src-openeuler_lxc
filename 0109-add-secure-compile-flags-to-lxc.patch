@@ -1,0 +1,104 @@
+From f6b39a07c8622c65bf10f484a455ba79f53b15f7 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Thu, 20 Jun 2019 17:46:40 +0800
+Subject: [PATCH 109/122] add secure compile flags to lxc
+
+add secure compile flags to lxc
+
+Signed-off-by: liuhao <liuhao27@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ configure.ac        | 25 +++++++++++++++++++------
+ src/lxc/Makefile.am |  5 +++++
+ 2 files changed, 24 insertions(+), 6 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 4da52a2..a714779 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -44,6 +44,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror -Wno-portability subdir-objects])
+ AC_CANONICAL_HOST
+ AM_PROG_CC_C_O
+ AC_GNU_SOURCE
++CFLAGS=`echo "${CFLAGS#\-g}"`
+ 
+ # Test if we have a new enough compiler.
+ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+@@ -192,6 +193,11 @@ AC_ARG_ENABLE([werror],
+ 	[do not treat warnings as errors])],
+ 	[], [enable_werror=yes])
+ 
++AC_ARG_ENABLE([debug],
++	[AC_HELP_STRING([--enable-debug],
++	[set -g into cflags [default=no]])],
++	[], [enable_debug=no])
++
+ # Allow disabling rpath
+ AC_ARG_ENABLE([rpath],
+ 	[AC_HELP_STRING([--enable-rpath], [set rpath in executables [default=no]])],
+@@ -200,8 +206,8 @@ AM_CONDITIONAL([ENABLE_RPATH], [test "x$enable_rpath" = "xyes"])
+ 
+ # Documentation (manpages)
+ AC_ARG_ENABLE([doc],
+-	[AC_HELP_STRING([--enable-doc], [make man pages [default=auto]])],
+-	[], [enable_doc=auto])
++	[AC_HELP_STRING([--enable-doc], [make man pages [default=no]])],
++	[], [enable_doc=no])
+ 
+ if test "x$enable_doc" = "xyes" -o "x$enable_doc" = "xauto"; then
+ 	db2xman=""
+@@ -692,18 +698,25 @@ AX_CHECK_COMPILE_FLAG([-Wstrict-prototypes], [CFLAGS="$CFLAGS -Wstrict-prototype
+ AX_CHECK_COMPILE_FLAG([-fno-strict-aliasing], [CFLAGS="$CFLAGS -fno-strict-aliasing"],,[-Werror])
+ AX_CHECK_COMPILE_FLAG([-fstack-clash-protection], [CFLAGS="$CFLAGS -fstack-clash-protection"],,[-Werror])
+ AX_CHECK_COMPILE_FLAG([-fstack-protector-strong], [CFLAGS="$CFLAGS -fstack-protector-strong"],,[-Werror])
+-AX_CHECK_COMPILE_FLAG([-g], [CFLAGS="$CFLAGS -g"],,[-Werror])
+ AX_CHECK_COMPILE_FLAG([--mcet -fcf-protection], [CFLAGS="$CFLAGS --mcet -fcf-protection"],,[-Werror])
+ AX_CHECK_COMPILE_FLAG([-Werror=implicit-function-declaration], [CFLAGS="$CFLAGS -Werror=implicit-function-declaration"],,[-Werror])
+ 
+-AX_CHECK_LINK_FLAG([-z relro], [LDLAGS="$LDLAGS -z relro"],,[])
+-AX_CHECK_LINK_FLAG([-z now], [LDLAGS="$LDLAGS -z now"],,[])
+ 
+-CFLAGS="$CFLAGS -Wvla -std=gnu11"
++AX_CHECK_LINK_FLAG([-z relro], [LDFLAGS="$LDFLAGS -z relro"],,[])
++AX_CHECK_LINK_FLAG([-z now], [LDFLAGS="$LDFLAGS -z now"],,[])
++AX_CHECK_LINK_FLAG([-z noexecstack], [LDFLAGS="$LDFLAGS -z noexecstack"],,[])
++
++LDFLAGS="$LDFLAGS -fPIE -pie"
++
++CFLAGS="$CFLAGS -Wvla -std=gnu11 -D_FORTIFY_SOURCE=2 -Wall -fPIC -fPIE -pie"
+ if test "x$enable_werror" = "xyes"; then
+ 	CFLAGS="$CFLAGS -Werror"
+ fi
+ 
++if test "x$enable_debug" = "xyes"; then
++    CFLAGS="$CFLAGS -g"
++fi
++
+ AC_ARG_ENABLE([thread-safety],
+ 	[AC_HELP_STRING([--enable-thread-safety], [enforce thread-safety otherwise fail the build [default=yes]])],
+ 	[], [enable_thread_safety=yes])
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index 4ec2081..b24fcfd 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -233,12 +233,17 @@ endif
+ 
+ # build the shared library
+ liblxc_la_CFLAGS = -fPIC \
++		   -fPIE -pie \
+ 		   -DPIC \
++		   -D_FORTIFY_SOURCE=2 -Wall \
+ 		   $(AM_CFLAGS) \
+ 		   -pthread
+ 
+ liblxc_la_LDFLAGS = -pthread \
+ 		    -Wl,-no-undefined \
++		    -Wl,-z,relro \
++		    -Wl,-z,now \
++		    -Wl,-z,noexecstack \
+ 		    -Wl,-soname,liblxc.so.$(firstword $(subst ., ,@LXC_ABI@)) \
+ 		    -version-info @LXC_ABI_MAJOR@ @YAJL_LIBS@
+ 
+-- 
+1.8.3.1
+

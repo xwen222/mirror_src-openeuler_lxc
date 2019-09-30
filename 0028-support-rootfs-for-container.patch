@@ -1,0 +1,123 @@
+From 53fa77bebc3e896396036cb3a482f75f138da788 Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Tue, 15 Jan 2019 09:45:44 +0800
+Subject: [PATCH 028/122] support rootfs / for container
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c | 61 ++++++++++++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 53 insertions(+), 8 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index e076bf2..f429491 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -888,9 +888,6 @@ static int lxc_setup_ttys(struct lxc_conf *conf)
+ 	char *ttydir = ttys->dir;
+ 	char path[PATH_MAX], lxcpath[PATH_MAX];
+ 
+-	if (!conf->rootfs.path)
+-		return 0;
+-
+ 	for (i = 0; i < ttys->max; i++) {
+ 		struct lxc_terminal_info *tty = &ttys->tty[i];
+ 
+@@ -1394,7 +1391,7 @@ static int lxc_mount_rootfs(struct lxc_conf *conf)
+ {
+ 	int ret;
+ 	struct lxc_storage *bdev;
+-	const struct lxc_rootfs *rootfs = &conf->rootfs;
++	struct lxc_rootfs *rootfs = &conf->rootfs;
+ 	unsigned long flags, mntflags, pflags;
+ 	char *mntdata;
+ 
+@@ -1405,6 +1402,17 @@ static int lxc_mount_rootfs(struct lxc_conf *conf)
+ 			return -1;
+ 		}
+ 
++		// isulad: bind mount / to rootfs.mount. then we can do pivot root even if we use / as root.
++		if (!access(rootfs->mount, F_OK)) {
++			rootfs->path = strdup("/");
++			if (mount("/", rootfs->mount, NULL, MS_BIND, 0)) {
++				SYSERROR("Failed to mount / to %s.", rootfs->mount);
++				return -1;
++			}
++		} else {
++			INFO("Use '/' as container rootfs, but no valid mountpoint provided. Something may go wrong.");
++		}
++
+ 		return 0;
+ 	}
+ 
+@@ -3854,6 +3862,35 @@ static int setup_populate_devs(const struct lxc_rootfs *rootfs, struct lxc_list
+ 	return 0;
+ }
+ 
++// isulad: setup rootfs mountopts
++static int setup_rootfs_mountopts(const struct lxc_rootfs *rootfs)
++{
++	unsigned long mntflags, pflags;
++	char *mntdata;
++
++	// only remount / when container shares rootfs with host.
++	if(!rootfs || !rootfs->path || strcmp(rootfs->path, "/"))
++		return 0;
++	if (!rootfs->options)
++		return 0;
++
++	if (parse_mntopts(rootfs->options, &mntflags, &pflags, &mntdata) < 0) {
++		free(mntdata);
++		return -1;
++	}
++	free(mntdata);
++
++	if (mntflags & MS_RDONLY) {
++		DEBUG("remounting / as readonly");
++		if (mount("/", "/", NULL, MS_BIND |MS_REMOUNT| MS_RDONLY, 0)) {
++			SYSERROR("Failed to make / readonly.");
++			return -1;
++		}
++	}
++	return 0;
++}
++
++
+ int lxc_setup(struct lxc_handler *handler)
+ {
+ 	int ret;
+@@ -4020,12 +4057,20 @@ int lxc_setup(struct lxc_handler *handler)
+ 		return -1;
+ 	}
+ 
+-	ret = lxc_setup_devpts(lxc_conf);
+-	if (ret < 0) {
+-		ERROR("Failed to setup new devpts instance");
++	/* isulad: remount rootfs readonly if necessary */
++	if (setup_rootfs_mountopts(&lxc_conf->rootfs)) {
++		ERROR("failed to set rootfs for '%s'", name);
+ 		return -1;
+ 	}
+ 
++	if (lxc_conf->rootfs.path) {
++		ret = lxc_setup_devpts(lxc_conf);
++		if (ret < 0) {
++			ERROR("Failed to setup new devpts instance");
++			return -1;
++		}
++	}
++
+ 	ret = lxc_create_ttys(handler);
+ 	if (ret < 0)
+ 		return -1;
+@@ -4184,7 +4229,7 @@ static char **merge_ocihook_env(char **oldenvs, size_t env_len, size_t *merge_en
+ 	return result;
+ }
+ 
+-static struct lxc_popen_FILE *lxc_popen_ocihook(char *commandpath, char **args, int args_len, 
++static struct lxc_popen_FILE *lxc_popen_ocihook(char *commandpath, char **args, int args_len,
+ 				char **envs, int env_len, const char *instr)
+ {
+ 	int ret;
+-- 
+1.8.3.1
+

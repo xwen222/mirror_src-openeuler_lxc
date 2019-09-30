@@ -1,0 +1,278 @@
+From aa6bea319eb9d86b296589e17219f96f6d0e3ed1 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Thu, 4 Jul 2019 11:08:26 +0800
+Subject: [PATCH 112/122] fix secure errors
+
+1. use snprintf replace sprintf
+2. use malloc replace alloca
+
+Signed-off-by: liuhao <liuhao27@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c             |  6 ++++--
+ src/lxc/confile.c          | 38 ++++++++++++++++++++++++--------------
+ src/lxc/json/json_common.c | 12 ++++++------
+ src/lxc/lxccontainer.c     |  8 ++++++--
+ src/lxc/terminal.c         | 31 ++++++++++++++++++++++++-------
+ 5 files changed, 64 insertions(+), 31 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 1dfdaf3..996d267 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -4543,18 +4543,20 @@ static char **merge_ocihook_env(char **oldenvs, size_t env_len, size_t *merge_en
+ 	}
+ 
+ 	for(j = 0; j < (sizeof(lxc_envs) / sizeof(char *)); j++) {
++		size_t env_buf_len = 0;
+ 		tmpenv = getenv(lxc_envs[j]);
+ 		if (tmpenv && i < (result_len - 1)) {
+ 			if (strlen(tmpenv) > (SIZE_MAX - 1 - 1 - strlen(lxc_envs[j]))) {
+ 				lxc_free_array((void **)result, free);
+ 				return NULL;
+ 			}
+-			lxcenv_buf = malloc(strlen(tmpenv) + 1 + strlen(lxc_envs[j]) + 1);
++			env_buf_len = ((strlen(tmpenv) + 1) + strlen(lxc_envs[j])) + 1;
++			lxcenv_buf = malloc(env_buf_len);
+ 			if (!lxcenv_buf) {
+ 				lxc_free_array((void **)result, free);
+ 				return NULL;
+ 			}
+-			if (sprintf(lxcenv_buf, "%s=%s", lxc_envs[j], tmpenv) < 0) {
++			if (snprintf(lxcenv_buf, env_buf_len, "%s=%s", lxc_envs[j], tmpenv) < 0) {
+ 				free(lxcenv_buf);
+ 				continue;
+ 			}
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 8262d1e..8a082d5 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -3802,9 +3802,11 @@ static int get_config_no_new_privs(const char *key, char *retv, int inlen,
+ static int get_config_prlimit(const char *key, char *retv, int inlen,
+                               struct lxc_conf *c, void *data)
+ {
+-	int fulllen = 0, len;
++	int fulllen = 0;
++	int len = 0;
+ 	bool get_all = false;
+-	struct lxc_list *it;
++	struct lxc_list *it = NULL;
++	int nret = 0;
+ 
+ 	if (!retv)
+ 		inlen = 0;
+@@ -3818,32 +3820,40 @@ static int get_config_prlimit(const char *key, char *retv, int inlen,
+ 	else
+ 		return -1;
+ 
++#define MAX_LIMIT_BUF_LEN ((INTTYPE_TO_STRLEN(uint64_t) * 2) + 2)
+ 	lxc_list_for_each(it, &c->limits) {
+ 		/* 2 colon separated 64 bit integers or the word 'unlimited' */
+-		char buf[INTTYPE_TO_STRLEN(uint64_t) * 2 + 2];
++		char buf[MAX_LIMIT_BUF_LEN] = { 0 };
+ 		int partlen;
+ 		struct lxc_limit *lim = it->elem;
+ 
+ 		if (lim->limit.rlim_cur == RLIM_INFINITY) {
+-			memcpy(buf, "unlimited", STRLITERALLEN("unlimited") + 1);
++			if (memcpy(buf, "unlimited", STRLITERALLEN("unlimited") + 1) == NULL) {
++				return -1;
++			}
+ 			partlen = STRLITERALLEN("unlimited");
+ 		} else {
+-			partlen = sprintf(buf, "%" PRIu64,
+-			                  (uint64_t)lim->limit.rlim_cur);
++			partlen = snprintf(buf, MAX_LIMIT_BUF_LEN, "%" PRIu64, (uint64_t)lim->limit.rlim_cur);
++			if (partlen < 0) {
++				return -1;
++			}
+ 		}
+ 
+ 		if (lim->limit.rlim_cur != lim->limit.rlim_max) {
+-			if (lim->limit.rlim_max == RLIM_INFINITY)
+-				memcpy(buf + partlen, ":unlimited",
+-				       STRLITERALLEN(":unlimited") + 1);
+-			else
+-				sprintf(buf + partlen, ":%" PRIu64,
+-				        (uint64_t)lim->limit.rlim_max);
++			if (lim->limit.rlim_max == RLIM_INFINITY) {
++				if (memcpy(buf + partlen, ":unlimited", STRLITERALLEN(":unlimited") + 1) == NULL) {
++					return -1;
++				}
++			} else {
++				nret = snprintf(buf + partlen, (MAX_LIMIT_BUF_LEN - partlen), ":%" PRIu64, (uint64_t)lim->limit.rlim_max);
++				if (nret < 0) {
++					return -1;
++				}
++			}
+ 		}
+ 
+ 		if (get_all) {
+-			strprint(retv, inlen, "lxc.prlimit.%s = %s\n",
+-			         lim->resource, buf);
++			strprint(retv, inlen, "lxc.prlimit.%s = %s\n", lim->resource, buf);
+ 		} else if (strcmp(lim->resource, key) == 0) {
+ 			strprint(retv, inlen, "%s", buf);
+ 		}
+diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
+index bea9b14..5da1e6d 100755
+--- a/src/lxc/json/json_common.c
++++ b/src/lxc/json/json_common.c
+@@ -16,7 +16,7 @@ yajl_gen_status reformat_uint(void *ctx, long long unsigned int num) {
+     char numstr[MAX_NUM_STR_LEN];
+     int ret;
+ 
+-    ret = sprintf(numstr, "%llu", num);
++    ret = snprintf(numstr, MAX_NUM_STR_LEN, "%llu", num);
+     if (ret < 0) {
+         return yajl_gen_in_error_state;
+     }
+@@ -27,7 +27,7 @@ yajl_gen_status reformat_int(void *ctx, long long int num) {
+     char numstr[MAX_NUM_STR_LEN];
+     int ret;
+ 
+-    ret = sprintf(numstr, "%lld", num);
++    ret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", num);
+     if (ret < 0) {
+         return yajl_gen_in_error_state;
+     }
+@@ -399,7 +399,7 @@ yajl_gen_status gen_json_map_int_int(void *ctx, json_map_int_int *map, struct pa
+     for (i = 0; i < len; i++) {
+         char numstr[MAX_NUM_STR_LEN];
+         int nret;
+-        nret = sprintf(numstr, "%lld", (long long int)map->keys[i]);
++        nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
+         if (nret < 0) {
+             if (!*err && asprintf(err, "Error to print string") < 0) {
+                 *(err) = safe_strdup("error allocating memory");
+@@ -545,7 +545,7 @@ yajl_gen_status gen_json_map_int_bool(void *ctx, json_map_int_bool *map, struct
+     for (i = 0; i < len; i++) {
+         char numstr[MAX_NUM_STR_LEN];
+         int nret;
+-        nret = sprintf(numstr, "%lld", (long long int)map->keys[i]);
++        nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
+         if (nret < 0) {
+             if (!*err && asprintf(err, "Error to print string") < 0) {
+                 *(err) = safe_strdup("error allocating memory");
+@@ -686,7 +686,7 @@ yajl_gen_status gen_json_map_int_string(void *ctx, json_map_int_string *map, str
+     for (i = 0; i < len; i++) {
+         char numstr[MAX_NUM_STR_LEN];
+         int nret;
+-        nret = sprintf(numstr, "%lld", (long long int)map->keys[i]);
++        nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
+         if (nret < 0) {
+             if (!*err && asprintf(err, "Error to print string") < 0) {
+                 *(err) = safe_strdup("error allocating memory");
+@@ -1184,4 +1184,4 @@ int append_json_map_string_string(json_map_string_string *map, const char *key,
+ 
+     map->len++;
+     return 0;
+-}
+\ No newline at end of file
++}
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index ede4c88..3b2c5af 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -3196,7 +3196,11 @@ static bool container_destroy(struct lxc_container *c,
+ 		char msg[BUFSIZ] = { 0 };
+ 		ERROR("Failed to destroy directory \"%s\" for \"%s\"", path,
+ 		      c->name);
+-		sprintf(msg, "Failed to destroy directory \"%s\": %s", path, errno ? strerror(errno) : "error");
++		ret = snprintf(msg, BUFSIZ, "Failed to destroy directory \"%s\": %s", path, errno ? strerror(errno) : "error");
++		if (ret < 0) {
++			ERROR("Sprintf failed");
++			goto out;
++		}
+ 		c->error_string = safe_strdup(msg);
+ 		goto out;
+ 	}
+@@ -5278,7 +5282,7 @@ static int set_start_extral_configs(struct lxc_container *c)
+ 			return -1;
+ 		}
+ 	}
+-	if (sprintf(fpath, "%s/%s/%s", c->config_path, c->name, START_GENERATE_CONFIG) < 0) {
++	if (snprintf(fpath, PATH_MAX, "%s/%s/%s", c->config_path, c->name, START_GENERATE_CONFIG) < 0) {
+ 		fprintf(stderr, "Sprintf config path failed\n");
+ 		return -1;
+ 	}
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 970db69..b9b65c6 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -241,13 +241,13 @@ static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
+ 	char *rename_fname = NULL;
+ 
+ 	for (i = terminal->log_rotate - 1; i > 1; i--) {
+-		ret = sprintf(tmp, "%s.%u", terminal->log_path, i);
++		ret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, i);
+ 		if (ret < 0) {
+ 			return -EFBIG;
+ 		}
+ 		free(rename_fname);
+ 		rename_fname = safe_strdup(tmp);
+-		ret = sprintf(tmp, "%s.%u", terminal->log_path, (i - 1));
++		ret = snprintf(tmp, PATH_MAX, "%s.%u", terminal->log_path, (i - 1));
+ 		if (ret < 0) {
+ 			free(rename_fname);
+ 			return -EFBIG;
+@@ -284,11 +284,21 @@ static int lxc_terminal_rotate_log_file(struct lxc_terminal *terminal)
+ 	}
+ 
+ 	len = strlen(terminal->log_path) + sizeof(".1");
+-	tmp = alloca(len);
++	tmp = malloc(len);
++	if (tmp == NULL) {
++		ERROR("Out of memory");
++		return -1;
++	}
++	if (memset(tmp, 0, len) != NULL) {
++		ERROR("Memset failed");
++		goto free_out;
++	}
+ 
+ 	ret = snprintf(tmp, len, "%s.1", terminal->log_path);
+-	if (ret < 0 || (size_t)ret >= len)
+-		return -EFBIG;
++	if (ret < 0 || (size_t)ret >= len) {
++		ret = -EFBIG;
++		goto free_out;
++	}
+ 
+ 	close(terminal->log_fd);
+ 	terminal->log_fd = -1;
+@@ -297,7 +307,10 @@ static int lxc_terminal_rotate_log_file(struct lxc_terminal *terminal)
+ 		SYSERROR("Rename container log file failed");
+ 	}
+ 
+-	return lxc_terminal_create_log_file(terminal);
++	ret = lxc_terminal_create_log_file(terminal);
++free_out:
++	free(tmp);
++	return ret;
+ }
+ 
+ static int lxc_terminal_rotate_write_data(struct lxc_terminal *terminal, const char *buf,
+@@ -403,6 +416,7 @@ static bool get_time_buffer(struct timespec *timestamp, char *timebuffer,
+ 	struct tm tm_utc = { 0 };
+ 	int32_t nanos = 0;
+ 	time_t seconds;
++	size_t len = 0;
+ 
+ 	if (!timebuffer || !maxsize) {
+ 		return false;
+@@ -413,7 +427,10 @@ static bool get_time_buffer(struct timespec *timestamp, char *timebuffer,
+ 	strftime(timebuffer, maxsize, "%Y-%m-%dT%H:%M:%S", &tm_utc);
+ 
+ 	nanos = (int32_t)timestamp->tv_nsec;
+-	sprintf(timebuffer + strlen(timebuffer), ".%09dZ", nanos);
++	len = strlen(timebuffer);
++	if (snprintf(timebuffer + len, (maxsize - len), ".%09dZ", nanos) < 0) {
++		return false;
++	}
+ 
+ 	return true;
+ }
+-- 
+1.8.3.1
+

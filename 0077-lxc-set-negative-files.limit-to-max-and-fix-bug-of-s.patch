@@ -1,0 +1,117 @@
+From fe7032c4ed978c38beb00804abb46ad691c0a83c Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Tue, 2 Apr 2019 23:59:20 -0400
+Subject: [PATCH 077/122] lxc: set negative files.limit to max and fix bug of
+ setting homedir
+
+Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c  | 19 +++++++++++++++----
+ src/lxc/storage/storage.c |  5 ++---
+ src/lxc/utils.c           | 29 ++++++++++++++++++++---------
+ 3 files changed, 37 insertions(+), 16 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 62d58f9..cc08737 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -2259,19 +2259,30 @@ static bool __cg_legacy_setup_limits(struct cgroup_ops *ops,
+ 		cg = iterator->elem;
+ 
+ 		if (do_devices == !strncmp("devices", cg->subsystem, 7)) {
+-			if (cg_legacy_set_data(ops, cg->subsystem, cg->value)) {
++			const char *cgvalue = cg->value;
++			if (strcmp(cg->subsystem, "files.limit") == 0) {
++				if (lxc_safe_long_long(cgvalue, &setvalue) != 0) {
++					SYSERROR("Invalid integer value %s", cgvalue);
++					goto out;
++				}
++				if (setvalue <= 0) {
++					cgvalue = "max";
++				}
++			}
++			if (cg_legacy_set_data(ops, cg->subsystem, cgvalue)) {
+ 				if (do_devices && (errno == EACCES || errno == EPERM)) {
+ 					WARN("Failed to set \"%s\" to \"%s\"",
+-					     cg->subsystem, cg->value);
++					     cg->subsystem, cgvalue);
+ 					continue;
+ 				}
+ 				WARN("Failed to set \"%s\" to \"%s\"",
+-				     cg->subsystem, cg->value);
++				     cg->subsystem, cgvalue);
+ 				goto out;
+ 			}
+ 			DEBUG("Set controller \"%s\" set to \"%s\"",
+-			      cg->subsystem, cg->value);
++			      cg->subsystem, cgvalue);
+ 		}
++
+ 		// isulad: check cpu shares
+ 		if (strcmp(cg->subsystem, "cpu.shares") == 0) {
+ 			if (cg_legacy_get_data(ops, cg->subsystem, value, sizeof(value)) < 0) {
+diff --git a/src/lxc/storage/storage.c b/src/lxc/storage/storage.c
+index 88ed788..fa79762 100644
+--- a/src/lxc/storage/storage.c
++++ b/src/lxc/storage/storage.c
+@@ -611,9 +611,8 @@ bool storage_destroy(struct lxc_conf *conf)
+ 
+ 	r = storage_init(conf);
+ 	if (r == NULL) {
+-		ERROR("%s 's storage init failed, the storage may be deleted already", conf->name);
+-		ret = true;
+-		return ret;
++		WARN("%s 's storage init failed, the storage may be deleted already", conf->name);
++		return true;
+ 	}
+ 
+ 	destroy_rv = r->ops->destroy(r);
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 69eb3e5..7b82d06 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -1873,20 +1873,31 @@ int lxc_setup_keyring(void)
+ // isulad: set env home in container
+ int lxc_setup_env_home(uid_t uid)
+ {
+-#define __DEFAULT_HOMEDIR__ "/"
++#define __PASSWD_FILE__ "/etc/passwd"
+ 	int ret = 0;
+-	char *homedir;
+-	struct passwd pwd, *result = NULL;
++	char *homedir = "/"; // default home dir is /
++	FILE *stream = NULL;
++	struct passwd pw, *pwbufp = NULL;
+ 	char buf[BUFSIZ];
+ 
+-	ret = getpwuid_r(uid, &pwd, buf, BUFSIZ, &result);
+-	if (ret || !result || !result->pw_dir) {
+-		WARN("User invalid, can not find user '%u'", uid);
+-		homedir = __DEFAULT_HOMEDIR__;
+-	} else {
+-		homedir = result->pw_dir;
++	stream = fopen_cloexec(__PASSWD_FILE__, "r");
++	if (stream == NULL) {
++		SYSWARN("Failed to open %s: %s", __PASSWD_FILE__);
++		goto set_env;
+ 	}
+ 
++	while (fgetpwent_r(stream, &pw, buf, sizeof(buf), &pwbufp) == 0 && pwbufp != NULL) {
++		if (pwbufp->pw_uid == uid) {
++			homedir = pwbufp->pw_dir;
++			goto set_env;
++		}
++	}
++	WARN("User invalid, can not find user '%u'", uid);
++
++set_env:
++	if (stream)
++		fclose(stream);
++
+ 	// if we didn't configure HOME, set it based on uid
+ 	if (setenv("HOME", homedir, 0) < 0) {
+ 		SYSERROR("Unable to set env 'HOME'");
+-- 
+1.8.3.1
+

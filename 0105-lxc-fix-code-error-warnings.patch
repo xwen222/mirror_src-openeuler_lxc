@@ -1,0 +1,74 @@
+From 2ec27dbac6d9e6e9b6aafb7eef205d4e89e2950e Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 3 Jun 2019 23:02:50 -0400
+Subject: [PATCH 105/122] lxc: fix code error warnings
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c         | 5 ++++-
+ src/lxc/lxccontainer.c | 3 +--
+ src/lxc/start.c        | 2 +-
+ 3 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 127ef77..8311723 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -5325,9 +5325,12 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
+ {
+ 	int i;
+ 
+-	for (i = 0; i < lxc_conf->init_argc; i++)
++	for (i = 0; i < lxc_conf->init_argc; i++) {
+ 		free(lxc_conf->init_argv[i]);
++		lxc_conf->init_argv[i] = NULL;
++	}
+ 	free(lxc_conf->init_argv);
++	lxc_conf->init_argv = NULL;
+ 	lxc_conf->init_argc = 0;
+ 
+ 	return 0;
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 72417ed..a09e066 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -1180,6 +1180,7 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
+ 		if (conf->exit_fd < 0) {
+ 			ERROR("Failed to open exit fifo %s: %s.", c->exit_fifo, strerror(errno));
+ 			ret = 1;
++			lxc_free_handler(handler);
+ 			goto on_error;
+ 		}
+ 	}
+@@ -1208,7 +1209,6 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
+ reboot:
+ 	if (conf->reboot == REBOOT_INIT) {
+ 		/* initialize handler */
+-		lxc_free_handler(handler);
+ 		handler = lxc_init_handler(c->name, conf, c->config_path, c->daemonize);
+ 		if (!handler) {
+ 			ret = 1;
+@@ -1249,7 +1249,6 @@ reboot:
+ 		conf->reboot = REBOOT_INIT;
+ 		goto reboot;
+ 	}
+-	lxc_free_handler(handler);
+ 
+ on_error:
+ 	if (c->pidfile) {
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index ccdd844..2380581 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -2421,7 +2421,7 @@ int __lxc_start(const char *name, struct lxc_handler *handler,
+ 	ret = lxc_init(name, handler);
+ 	if (ret < 0) {
+ 		ERROR("Failed to initialize container \"%s\"", name);
+-		return -1;
++		goto out_fini_nonet;
+ 	}
+ 	handler->ops = ops;
+ 	handler->data = data;
+-- 
+1.8.3.1
+

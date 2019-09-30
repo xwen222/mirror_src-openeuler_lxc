@@ -1,0 +1,93 @@
+From e30d1a025a5f74c90a60a36fb6b61ccce18b88cf Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Sat, 12 Jan 2019 15:29:56 +0800
+Subject: [PATCH 014/122] support rotate for container log file
+
+support rotate for container log file
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/confile.c  |  3 +++
+ src/lxc/terminal.c | 40 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 43 insertions(+)
+
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index cbef2e2..e782211 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -1802,11 +1802,14 @@ static int set_config_console_rotate(const char *key, const char *value,
+ 	if (lxc_safe_uint(value, &lxc_conf->console.log_rotate) < 0)
+ 		return -1;
+ 
++	/*
++	 * isulad: support rotate muti-files
+ 	if (lxc_conf->console.log_rotate > 1) {
+ 		ERROR("The \"lxc.console.rotate\" config key can only be set "
+ 		      "to 0 or 1");
+ 		return -1;
+ 	}
++	*/
+ 
+ 	return 0;
+ }
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 410f643..3bb3a52 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -229,6 +229,39 @@ static int lxc_terminal_truncate_log_file(struct lxc_terminal *terminal)
+ 	return lxc_unpriv(ftruncate(terminal->log_fd, 0));
+ }
+ 
++/*
++ * isuald: support mult-logfiles
++ * */
++static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
++{
++	int ret;
++	size_t i;
++	char tmp[PATH_MAX] = {0};
++	char *rename_fname = NULL;
++
++	for (i = terminal->log_rotate - 1; i > 1; i--) {
++		ret = sprintf(tmp, "%s.%d", terminal->log_path, i);
++		if (ret < 0)
++			return -EFBIG;
++		if (rename_fname)
++			free(rename_fname);
++		rename_fname = strdup(tmp);
++		ret = sprintf(tmp, "%s.%d", terminal->log_path, (i - 1));
++		if (ret < 0) {
++			free(rename_fname);
++			return -EFBIG;
++		}
++		ret = lxc_unpriv(rename(tmp, rename_fname));
++		if (ret < 0 && errno != ENOENT)
++			return ret;
++	}
++
++	if (rename_fname)
++		free(rename_fname);
++
++	return 0;
++}
++
+ static int lxc_terminal_rotate_log_file(struct lxc_terminal *terminal)
+ {
+ 	int ret;
+@@ -242,6 +275,13 @@ static int lxc_terminal_rotate_log_file(struct lxc_terminal *terminal)
+ 	if (terminal->log_fd < 0)
+ 		return -EBADF;
+ 
++	/* isuald: rotate old log file first */
++	ret = lxc_terminal_rename_old_log_file(terminal);
++	if(ret != 0) {
++		ERROR("Rename old log file failed");
++		return ret;
++	}
++
+ 	len = strlen(terminal->log_path) + sizeof(".1");
+ 	tmp = alloca(len);
+ 
+-- 
+1.8.3.1
+

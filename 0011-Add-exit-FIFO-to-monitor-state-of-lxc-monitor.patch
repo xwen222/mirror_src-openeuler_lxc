@@ -1,0 +1,261 @@
+From dab4938915c64b201434719712dd5222a11b9dcf Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Sat, 12 Jan 2019 02:07:15 -0500
+Subject: [PATCH 011/122] Add exit FIFO to monitor state of [lxc monitor]
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c            |  3 +++
+ src/lxc/conf.h            |  2 ++
+ src/lxc/confile.c         |  8 ++++----
+ src/lxc/lxccontainer.c    | 20 +++++++++++++++++++-
+ src/lxc/lxccontainer.h    |  6 ++++++
+ src/lxc/start.c           | 10 ++++++++++
+ src/lxc/start.h           |  2 ++
+ src/lxc/terminal.c        |  4 ++--
+ src/lxc/tools/arguments.h |  2 ++
+ src/lxc/tools/lxc_start.c |  9 +++++++++
+ 10 files changed, 59 insertions(+), 7 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 0b4b63b..bc45e44 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -2759,6 +2759,7 @@ struct lxc_conf *lxc_conf_init(void)
+ 
+ 	/* isulad add begin */
+ 	lxc_list_init(&new->populate_devs);
++	new->exit_fd = -1;
+ 	/* isulad add end */
+ 
+ 	return new;
+@@ -4195,6 +4196,8 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 	lxc_clear_init_args(conf);
+ 	lxc_clear_populate_devices(conf);
+ 	free(conf->container_info_file);
++	if (conf->exit_fd != -1)
++		close(conf->exit_fd);
+ 	/* isulad add end */
+ 	free(conf);
+ }
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index e0954f9..2d939cd 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -405,6 +405,8 @@ struct lxc_conf {
+ 	struct lxc_list populate_devs;
+ 
+ 	char *container_info_file;
++
++	int exit_fd; /* exit fifo fd*/
+ 	/* isulad add end */
+ };
+ 
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index e3212d3..cbef2e2 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -240,10 +240,10 @@ static struct lxc_config_t config_jump_table[] = {
+ 	{ "lxc.sysctl",                    set_config_sysctl,                      get_config_sysctl,                      clr_config_sysctl,                    },
+ 	{ "lxc.proc",                      set_config_proc,                        get_config_proc,                        clr_config_proc,                      },
+ 
+-        /*isulad add begin*/
+-        { "lxc.isulad.init.args",          set_config_init_args,                   get_config_init_args,                   clr_config_init_args,                 },
+-        { "lxc.isulad.populate.device",    set_config_populate_device,             get_config_populate_device,             clr_config_populate_device,           },
+-        /*isulad add end*/
++	/*isulad add begin*/
++	{ "lxc.isulad.init.args",          set_config_init_args,                   get_config_init_args,                   clr_config_init_args,                 },
++	{ "lxc.isulad.populate.device",    set_config_populate_device,             get_config_populate_device,             clr_config_populate_device,           },
++	/*isulad add end*/
+ };
+ 
+ static const size_t config_jump_table_size = sizeof(config_jump_table) / sizeof(struct lxc_config_t);
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 5679b9b..8029f33 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -295,6 +295,10 @@ static void lxc_container_free(struct lxc_container *c)
+ 	free(c->config_path);
+ 	c->config_path = NULL;
+ 
++	/* isulad: free exit fifo */
++	free(c->exit_fifo);
++	c->exit_fifo = NULL;
++
+ 	free(c);
+ }
+ 
+@@ -882,7 +886,7 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
+ 		NULL,
+ 	};
+ 	char **init_cmd = NULL;
+-	int keepfds[3] = {-1, -1, -1};
++	int keepfds[4] = {-1, -1, -1, -1};
+ 
+ 	/* container does exist */
+ 	if (!c)
+@@ -1077,6 +1081,16 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
+ 		}
+ 	}
+ 
++	/* isulad: open exit fifo */
++	if (c->exit_fifo) {
++		conf->exit_fd = open(c->exit_fifo, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
++		if (conf->exit_fd < 0) {
++			ERROR("Failed to open exit fifo %s: %s.", c->exit_fifo, strerror(errno));
++			ret = 1;
++			goto on_error;
++		}
++	}
++
+ 	conf->reboot = REBOOT_NONE;
+ 
+ 	/* Unshare the mount namespace if requested */
+@@ -1111,6 +1125,10 @@ reboot:
+ 	keepfds[0] = handler->conf->maincmd_fd;
+ 	keepfds[1] = handler->state_socket_pair[0];
+ 	keepfds[2] = handler->state_socket_pair[1];
++	/* isulad: keep exit fifo fd */
++	if (conf->exit_fd >= 0) {
++		keepfds[3] = conf->exit_fd;
++	}
+ 	ret = lxc_check_inherited(conf, c->daemonize, keepfds,
+ 				  sizeof(keepfds) / sizeof(keepfds[0]));
+ 	if (ret < 0) {
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index 3c845fe..503038a 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -81,6 +81,12 @@ struct lxc_container {
+ 	 */
+ 	char *pidfile;
+ 
++	/*! isulad:
++	 * \private
++	 * exit FIFO File to open used monitor the state of lxc monitor process.
++	 */
++	char *exit_fifo;
++
+ 	/*!
+ 	 * \private
+ 	 * Container semaphore lock.
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 9d71dd7..9365d11 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -730,6 +730,7 @@ struct lxc_handler *lxc_init_handler(const char *name, struct lxc_conf *conf,
+ 		handler->nsfd[i] = -1;
+ 
+ 	handler->name = name;
++	handler->exit_code = -1; /* isulad: record exit code of container */
+ 
+ 	if (daemonize && handler->conf->reboot == REBOOT_NONE) {
+ 		/* Create socketpair() to synchronize on daemonized startup.
+@@ -1005,6 +1006,14 @@ void lxc_fini(const char *name, struct lxc_handler *handler)
+ 		 */
+ 		lxc_monitor_send_state(name, STOPPED, handler->lxcpath);
+ 
++
++		/* isuald: write exit code to exit fifo */
++		if (handler->conf->exit_fd >= 0) {
++			ret = write(handler->conf->exit_fd, &handler->exit_code, sizeof(int));
++			if (ret != sizeof(int))
++				SYSERROR("Failed to write to exit code to exit fifo.");
++		}
++
+ 		/* The command socket is closed so no one can acces the command
+ 		 * socket anymore so there's no need to lock it.
+ 		 */
+@@ -2038,6 +2047,7 @@ int __lxc_start(const char *name, struct lxc_handler *handler,
+ 	lxc_error_set_and_log(handler->pid, status);
+ 	if (error_num)
+ 		*error_num = handler->exit_status;
++	handler->exit_code = exit_code; /* isuald: record exit code*/
+ 
+ out_fini:
+ 	lxc_delete_network(handler);
+diff --git a/src/lxc/start.h b/src/lxc/start.h
+index df987dc..f59bf54 100644
+--- a/src/lxc/start.h
++++ b/src/lxc/start.h
+@@ -133,6 +133,8 @@ struct lxc_handler {
+ 	int exit_status;
+ 
+ 	struct cgroup_ops *cgroup_ops;
++
++	int exit_code;/* isulad: record the exit code of container */
+ };
+ 
+ struct execute_args {
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index c507712..508e2e6 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -1004,8 +1004,8 @@ static int lxc_terminal_set_fifo(struct lxc_terminal *console, const char *in, c
+ static int lxc_terminal_fifo_default(struct lxc_terminal *terminal)
+ {
+ 	if (!terminal->init_fifo[0] || !terminal->init_fifo[1]) {
+-		ERROR("Invalid default terminal fifos");
+-		return -1;
++		DEBUG("Invalid default terminal fifos");
++		return 0;
+ 	}
+ 
+ 	return lxc_terminal_set_fifo(terminal, terminal->init_fifo[0], terminal->init_fifo[1]);
+diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
+index b6df23f..61f4a0a 100644
+--- a/src/lxc/tools/arguments.h
++++ b/src/lxc/tools/arguments.h
+@@ -64,6 +64,7 @@ struct lxc_arguments {
+ 	const char *share_ns[32]; /* size must be greater than LXC_NS_MAX */
+ 	const char *terminal_fifos[2]; /* isulad add, fifos used to redirct stdin/out/err */
+ 	const char *container_info; /* isulad: file used to store pid and ppid info of container */
++	const char *exit_monitor_fifo; /* isulad: fifo used to monitor state of monitor process */
+ 
+ 	/* for lxc-console */
+ 	unsigned int ttynum;
+@@ -178,6 +179,7 @@ struct lxc_arguments {
+ #define OPT_INPUT_FIFO OPT_USAGE - 7
+ #define OPT_OUTPUT_FIFO OPT_USAGE - 8
+ #define OPT_CONTAINER_INFO OPT_USAGE - 9
++#define OPT_EXIT_FIFO OPT_USAGE - 10
+ /* isulad add end*/
+ 
+ extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 2f94d67..60c7d70 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -73,6 +73,7 @@ static const struct option my_longopts[] = {
+ 	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO},
+ 	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
+ 	{"container-pidfile", required_argument, 0, OPT_CONTAINER_INFO},
++	{"exit-fifo", required_argument, 0, OPT_EXIT_FIFO},
+ 	/* isulad add end */
+ 	LXC_COMMON_OPTIONS
+ };
+@@ -154,6 +155,9 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case OPT_CONTAINER_INFO:
+ 		args->container_info = arg;
+ 		break;
++	case OPT_EXIT_FIFO:
++		args->exit_monitor_fifo = arg;
++		break;
+ 	}
+ 	return 0;
+ }
+@@ -332,6 +336,11 @@ int main(int argc, char *argv[])
+ 		}
+ 	}
+ 
++	/* isulad: fifo used to monitor state of monitor process */
++	if (my_args.exit_monitor_fifo != NULL) {
++		c->exit_fifo = strdup(my_args.exit_monitor_fifo);
++	}
++
+ 	if (my_args.console)
+ 		if (!c->set_config_item(c, "lxc.console.path", my_args.console))
+ 			goto out;
+-- 
+1.8.3.1
+

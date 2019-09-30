@@ -1,0 +1,25 @@
+From 14cba1d8fc2139afeb0db68c969540c3315768f2 Mon Sep 17 00:00:00 2001
+From: LiuHao <liuhao27@huawei.com>
+Date: Thu, 5 Sep 2019 11:48:57 +0800
+Subject: [PATCH 120/122] remove unuse unmount-namespace
+
+Signed-off-by: LiuHao <liuhao27@huawei.com>
+---
+ lxc.spec.in | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/lxc.spec.in b/lxc.spec.in
+index 7fcd811..2ca12fe 100644
+--- a/lxc.spec.in
++++ b/lxc.spec.in
+@@ -259,7 +259,6 @@ fi
+ %{_libdir}/*.a
+ %{_libdir}/%{name}
+ %{_localstatedir}/*
+-%{_libexecdir}/%{name}/hooks/unmount-namespace
+ %{_libexecdir}/%{name}/lxc-apparmor-load
+ %{_libexecdir}/%{name}/lxc-monitord
+ %attr(4111,root,root) %{_libexecdir}/%{name}/lxc-user-nic
+-- 
+1.8.3.1
+

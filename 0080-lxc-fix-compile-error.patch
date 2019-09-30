@@ -1,0 +1,35 @@
+From ff3a4e1e01afe4cabd6dfae8400b3bfa5803567d Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Mon, 8 Apr 2019 08:29:46 -0400
+Subject: [PATCH 080/122] lxc: fix compile error
+
+Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/utils.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 7b82d06..fd6075f 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -1874,7 +1874,6 @@ int lxc_setup_keyring(void)
+ int lxc_setup_env_home(uid_t uid)
+ {
+ #define __PASSWD_FILE__ "/etc/passwd"
+-	int ret = 0;
+ 	char *homedir = "/"; // default home dir is /
+ 	FILE *stream = NULL;
+ 	struct passwd pw, *pwbufp = NULL;
+@@ -1882,7 +1881,7 @@ int lxc_setup_env_home(uid_t uid)
+ 
+ 	stream = fopen_cloexec(__PASSWD_FILE__, "r");
+ 	if (stream == NULL) {
+-		SYSWARN("Failed to open %s: %s", __PASSWD_FILE__);
++		SYSWARN("Failed to open %s", __PASSWD_FILE__);
+ 		goto set_env;
+ 	}
+ 
+-- 
+1.8.3.1
+

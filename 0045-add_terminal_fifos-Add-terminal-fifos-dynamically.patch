@@ -1,0 +1,254 @@
+From 698f04aa780eed16e70f96f3405596e98f3828a2 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 17 Jan 2019 02:18:14 -0500
+Subject: [PATCH 045/122] add_terminal_fifos: Add terminal fifos dynamically
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/commands.c     | 62 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/commands.h     |  4 ++++
+ src/lxc/lxccontainer.c | 24 +++++++++++++++++++
+ src/lxc/lxccontainer.h | 10 ++++++++
+ src/lxc/terminal.c     | 47 ++++++++++++++++++++++++++++++++++++++
+ src/lxc/terminal.h     |  1 +
+ 6 files changed, 148 insertions(+)
+
+diff --git a/src/lxc/commands.c b/src/lxc/commands.c
+index 47a824a..46b2805 100644
+--- a/src/lxc/commands.c
++++ b/src/lxc/commands.c
+@@ -96,6 +96,7 @@ static const char *lxc_cmd_str(lxc_cmd_t cmd)
+ 		[LXC_CMD_ADD_STATE_CLIENT]    = "add_state_client",
+ 		[LXC_CMD_CONSOLE_LOG]         = "console_log",
+ 		[LXC_CMD_SERVE_STATE_CLIENTS] = "serve_state_clients",
++		[LXC_CMD_SET_TERMINAL_FIFOS]  = "set_terminal_fifos",
+ 	};
+ 
+ 	if (cmd >= LXC_CMD_MAX)
+@@ -1056,6 +1057,66 @@ reap_client_fd:
+ 	return 1;
+ }
+ 
++/*
++ * isulad: lxc_cmd_set_terminal_fifos: Set the fifos used for the container as terminal input/output
++ *
++ * @hashed_sock_name: hashed socket name
++ *
++ * Returns 0 when success, else when fail.
++ */
++int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath, const char *in_fifo, const char *out_fifo)
++{
++	int ret = 0, stopped = 0;
++	int len = 0;
++	char *tmp = NULL;
++
++	if (!in_fifo || !out_fifo) {
++		return -1;
++	}
++
++	len = strlen(in_fifo) + strlen("&&&&") + strlen(out_fifo) + 1;
++	tmp = malloc(len);
++	if (!tmp)
++		return -1;
++	snprintf(tmp, len, "%s%s%s", in_fifo, "&&&&", out_fifo);
++
++	struct lxc_cmd_rr cmd = {
++		.req = {
++			.cmd = LXC_CMD_SET_TERMINAL_FIFOS,
++			.datalen = strlen(tmp)+1,
++			.data = tmp,
++		},
++	};
++
++	ret = lxc_cmd(name, &cmd, &stopped, lxcpath, NULL);
++	if (ret < 0) {
++		ERROR("Failed to send command to container");
++		free(tmp);
++		return -1;
++	}
++
++	if (cmd.rsp.ret != 0) {
++		ERROR("Command response error:%d", cmd.rsp.ret);
++		free(tmp);
++		return -1;
++	}
++
++	free(tmp);
++	return 0;
++}
++
++static int lxc_cmd_set_terminal_fifos_callback(int fd, struct lxc_cmd_req *req,
++					struct lxc_handler *handler)
++{
++	struct lxc_cmd_rsp rsp;
++	memset(&rsp, 0, sizeof(rsp));
++
++	rsp.ret = lxc_terminal_add_fifos(handler->conf, req->data);;
++
++	return lxc_cmd_rsp_send(fd, &rsp);
++
++}
++
+ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
+ 			   struct lxc_handler *handler)
+ {
+@@ -1075,6 +1136,7 @@ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
+ 		[LXC_CMD_ADD_STATE_CLIENT]    = lxc_cmd_add_state_client_callback,
+ 		[LXC_CMD_CONSOLE_LOG]         = lxc_cmd_console_log_callback,
+ 		[LXC_CMD_SERVE_STATE_CLIENTS] = lxc_cmd_serve_state_clients_callback,
++		[LXC_CMD_SET_TERMINAL_FIFOS]  = lxc_cmd_set_terminal_fifos_callback,
+ 	};
+ 
+ 	if (req->cmd >= LXC_CMD_MAX) {
+diff --git a/src/lxc/commands.h b/src/lxc/commands.h
+index 2c024b6..0c64544 100644
+--- a/src/lxc/commands.h
++++ b/src/lxc/commands.h
+@@ -46,6 +46,7 @@ typedef enum {
+ 	LXC_CMD_ADD_STATE_CLIENT,
+ 	LXC_CMD_CONSOLE_LOG,
+ 	LXC_CMD_SERVE_STATE_CLIENTS,
++	LXC_CMD_SET_TERMINAL_FIFOS,
+ 	LXC_CMD_MAX,
+ } lxc_cmd_t;
+ 
+@@ -125,4 +126,7 @@ extern int lxc_try_cmd(const char *name, const char *lxcpath);
+ extern int lxc_cmd_console_log(const char *name, const char *lxcpath,
+ 			       struct lxc_console_log *log);
+ 
++extern int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath,
++				const char *in_fifo, const char *out_fifo);
++
+ #endif /* __commands_h */
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index d641851..bfbf223 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -5164,6 +5164,29 @@ static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pi
+ 
+ WRAP_API_1(bool, lxcapi_clean_container_resource, pid_t)
+ 
++/* isulad add clean resources */
++static bool do_lxcapi_add_terminal_fifo(struct lxc_container *c, const char *in_fifo, const char *out_fifo)
++{
++	bool ret = true;
++
++	if (!c || !c->lxc_conf || !in_fifo || !out_fifo)
++		return false;
++	if (container_mem_lock(c)) {
++		ERROR("Error getting mem lock");
++		return false;
++	}
++
++	if (lxc_cmd_set_terminal_fifos(c->name, c->config_path, in_fifo, out_fifo)) {
++		ERROR("Error set console fifos");
++		ret = false;
++	}
++
++	container_mem_unlock(c);
++	return ret;
++}
++
++WRAP_API_2(bool, lxcapi_add_terminal_fifo, const char *, const char *)
++
+ static struct lxc_container *do_lxc_container_new(const char *name, const char *configpath, bool load_config)
+ {
+ 	struct lxc_container *c;
+@@ -5299,6 +5322,7 @@ static struct lxc_container *do_lxc_container_new(const char *name, const char *
+ 	c->set_container_info_file = lxcapi_set_container_info_file;
+ 	c->set_start_timeout = lxcapi_set_start_timeout;
+ 	c->clean_container_resource = lxcapi_clean_container_resource;
++	c->add_terminal_fifos = lxcapi_add_terminal_fifo;
+ 	/* isulad add end */
+ 	return c;
+ 
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index a00e0ec..c1d83ba 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -878,6 +878,16 @@ struct lxc_container {
+ 	bool (*set_terminal_init_fifos)(struct lxc_container *c, const char *in, const char *out);
+ 
+ 	/*! isulad add
++	 * \brief An API call to add the path of terminal fifos
++	 *
++	 * \param c Container.
++	 * \param path Value of the console path..
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*add_terminal_fifos)(struct lxc_container *c, const char *in, const char *out);
++
++	/*! isulad add
+ 	 * \brief An API call to set the path of info file
+ 	 *
+ 	 * \param c Container.
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index ee3aef2..a33830d 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -1473,3 +1473,50 @@ int lxc_terminal_map_ids(struct lxc_conf *c, struct lxc_terminal *terminal)
+ 
+ 	return 0;
+ }
++
++/* isulad: add fifos dynamic*/
++int lxc_terminal_add_fifos(struct lxc_conf *conf, const char *fifonames)
++{
++	int ret = 0;
++	struct lxc_terminal *terminal = &conf->console;
++	int fifofd_in = -1;
++	char *tmp = NULL, *saveptr = NULL, *in = NULL, *out = NULL;
++
++	tmp = strdup(fifonames);
++	if (!tmp) {
++		ret = -1;
++		goto free_out;
++	}
++
++	in = strtok_r(tmp, "&&&&", &saveptr);
++	if (!in) {
++		ret = -1;
++		goto free_out;
++	}
++	out = strtok_r(NULL, "&&&&",  &saveptr);
++	if (!out) {
++		ret = -1;
++		goto free_out;
++	}
++
++	fifofd_in = lxc_terminal_set_fifo(terminal, in, out);
++	if (fifofd_in < 0) {
++		ERROR("Faild to set fifos to console config");
++		ret = -1;
++		goto free_out;
++	}
++
++	if (lxc_mainloop_add_handler(terminal->descr, fifofd_in,
++				     lxc_terminal_io_cb, terminal)) {
++		ERROR("console fifo not added to mainloop");
++		lxc_terminal_delete_fifo(fifofd_in, &terminal->fifos);
++		ret = -1;
++		goto free_out;
++	}
++
++free_out:
++	if (tmp)
++		free(tmp);
++	return ret;
++}
++
+diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
+index d25da65..d006b80 100644
+--- a/src/lxc/terminal.h
++++ b/src/lxc/terminal.h
+@@ -310,5 +310,6 @@ extern int lxc_terminal_map_ids(struct lxc_conf *c,
+ static bool lxc_terminal_is_fifo(int fd, struct lxc_list *list);
+ /* isulad: if fd == -1, means delete all the fifos*/
+ int lxc_terminal_delete_fifo(int fd, struct lxc_list *list);
++int lxc_terminal_add_fifos(struct lxc_conf *conf, const char *fifonames);
+ 
+ #endif /* __LXC_TERMINAL_H */
+-- 
+1.8.3.1
+

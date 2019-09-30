@@ -1,0 +1,538 @@
+From ca1b4a1738d4c409ddabbc5e75b8da7438b2792f Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Fri, 11 Jan 2019 21:52:11 -0500
+Subject: [PATCH 009/122] lxc_start: add default terminal fifos
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c            |   4 +
+ src/lxc/lxccontainer.c    |  30 +++++++
+ src/lxc/lxccontainer.h    |  10 +++
+ src/lxc/terminal.c        | 194 +++++++++++++++++++++++++++++++++++++++++++++-
+ src/lxc/terminal.h        |  16 ++++
+ src/lxc/tools/arguments.h |   5 ++
+ src/lxc/tools/lxc_start.c |  11 +++
+ src/lxc/utils.c           |  23 ++++++
+ src/lxc/utils.h           |   4 +
+ 9 files changed, 294 insertions(+), 3 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 37a5ff7..7b7f95b 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -2714,6 +2714,10 @@ struct lxc_conf *lxc_conf_init(void)
+ 	new->console.slave = -1;
+ 	new->console.name[0] = '\0';
+ 	memset(&new->console.ringbuf, 0, sizeof(struct lxc_ringbuf));
++	/* isulad init console fifos */
++	new->console.init_fifo[0] = NULL;
++	new->console.init_fifo[1] = NULL;
++	lxc_list_init(&new->console.fifos);
+ 	new->maincmd_fd = -1;
+ 	new->nbd_idx = -1;
+ 	new->rootfs.mount = strdup(default_rootfs_mount);
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 1d7f5be..318c71e 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -4961,6 +4961,33 @@ out:
+ 	return ret;
+ }
+ 
++/* isulad add set console fifos*/
++static bool do_lxcapi_set_terminal_default_fifos(struct lxc_container *c, const char *in, const char *out)
++{
++	struct lxc_conf *conf;
++
++	if (!c || !c->lxc_conf || !in || !out)
++		return false;
++	if (container_mem_lock(c)) {
++		ERROR("Error getting mem lock");
++		return false;
++	}
++
++	conf = c->lxc_conf;
++	if (conf->console.init_fifo[0])
++		free(conf->console.init_fifo[0]);
++	conf->console.init_fifo[0] = strdup(in);
++
++	if (conf->console.init_fifo[1])
++		free(conf->console.init_fifo[1]);
++	conf->console.init_fifo[1] = strdup(out);
++
++	container_mem_unlock(c);
++	return true;
++}
++
++WRAP_API_2(bool, lxcapi_set_terminal_default_fifos, const char *, const char *)
++
+ struct lxc_container *lxc_container_new(const char *name, const char *configpath)
+ {
+ 	struct lxc_container *c;
+@@ -5084,6 +5111,9 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
+ 	c->migrate = lxcapi_migrate;
+ 	c->console_log = lxcapi_console_log;
+ 
++	/* isulad add begin */
++	c->set_terminal_init_fifos = lxcapi_set_terminal_default_fifos;
++	/* isulad add end */
+ 	return c;
+ 
+ err:
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index 9e06215..486531e 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -847,6 +847,16 @@ struct lxc_container {
+ 	 * \return \c true if the container was rebooted successfully, else \c false.
+ 	 */
+ 	bool (*reboot2)(struct lxc_container *c, int timeout);
++
++	/*! isulad add
++	 * \brief An API call to change the path of the console default fifos
++	 *
++	 * \param c Container.
++	 * \param path Value of the console path.
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*set_terminal_init_fifos)(struct lxc_container *c, const char *in, const char *out);
+ };
+ 
+ /*!
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 4060e7f..c507712 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -364,6 +364,20 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
+ 	return bytes_read;
+ }
+ 
++/* isulad: forward data to all fifos */
++static void lxc_forward_data_to_fifo(struct lxc_list *list, char *buf, int r)
++{
++	struct lxc_list *it,*next;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, list, next) {
++		elem = it->elem;
++		lxc_write_nointr(elem->out_fd, buf, r);
++	}
++
++	return;
++}
++
+ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 		       struct lxc_epoll_descr *descr)
+ {
+@@ -384,7 +398,13 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 				terminal->tty_state = NULL;
+ 			}
+ 			terminal->peer = -EBADF;
+-		} else {
++			close(fd);
++			return LXC_MAINLOOP_CONTINUE; /* isulad: do not close mainloop when peer close*/
++		} else if (lxc_terminal_is_fifo(fd, &terminal->fifos)) {
++			/* isulad: delete fifos when the client close */
++			lxc_terminal_delete_fifo(fd, &terminal->fifos);
++			return LXC_MAINLOOP_CONTINUE;
++		}  else {
+ 			ERROR("Handler received unexpected file descriptor");
+ 		}
+ 		close(fd);
+@@ -392,7 +412,7 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 		return LXC_MAINLOOP_CLOSE;
+ 	}
+ 
+-	if (fd == terminal->peer)
++	if (fd == terminal->peer || lxc_terminal_is_fifo(fd, &terminal->fifos))
+ 		w = lxc_write_nointr(terminal->master, buf, r);
+ 
+ 	w_rbuf = w_log = 0;
+@@ -401,6 +421,9 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 		if (terminal->peer >= 0)
+ 			w = lxc_write_nointr(terminal->peer, buf, r);
+ 
++		/* isulad: forward data to fifos */
++		lxc_forward_data_to_fifo(&terminal->fifos, buf, r);
++
+ 		/* write to terminal ringbuffer */
+ 		if (terminal->buffer_size > 0)
+ 			w_rbuf = lxc_ringbuf_write(&terminal->ringbuf, buf, r);
+@@ -450,6 +473,27 @@ static int lxc_terminal_mainloop_add_peer(struct lxc_terminal *terminal)
+ 	return 0;
+ }
+ 
++/* isulad add fifo to mainloop */
++static int lxc_console_mainloop_add_fifo(struct lxc_terminal *terminal)
++{
++	int ret = 0;
++	struct lxc_list *it,*next;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, &terminal->fifos, next) {
++		elem = it->elem;
++		if (elem->in_fd >= 0) {
++			ret = lxc_mainloop_add_handler(terminal->descr, elem->in_fd,
++						     lxc_terminal_io_cb, terminal);
++			if (ret) {
++				ERROR("console fifo %s not added to mainloop", elem->in_fifo);
++				return -1;
++			}
++		}
++	}
++	return ret;
++}
++
+ int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
+ 			      struct lxc_terminal *terminal)
+ {
+@@ -473,7 +517,20 @@ int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
+ 	 */
+ 	terminal->descr = descr;
+ 
+-	return lxc_terminal_mainloop_add_peer(terminal);
++	ret = lxc_terminal_mainloop_add_peer(terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal peer to mainloop");
++		return -1;
++	}
++
++	/* isulad add fifo to mainloop */
++	ret = lxc_console_mainloop_add_fifo(terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal fifos to mainloop");
++		return -1;
++	}
++
++	return 0;
+ }
+ 
+ int lxc_setup_tios(int fd, struct termios *oldtios)
+@@ -812,6 +869,9 @@ void lxc_terminal_delete(struct lxc_terminal *terminal)
+ 	if (terminal->log_fd >= 0)
+ 		close(terminal->log_fd);
+ 	terminal->log_fd = -1;
++
++	/* isulad: delete all fifos */
++	lxc_terminal_delete_fifo(-1, &terminal->fifos);
+ }
+ 
+ /**
+@@ -880,6 +940,77 @@ int lxc_terminal_create_log_file(struct lxc_terminal *terminal)
+ 	return 0;
+ }
+ 
++/* isulad: open terminal fifos */
++static int terminal_fifo_open(const char *fifo_path, int flags)
++{
++	int fd = -1;
++
++	fd = open(fifo_path, flags);
++	if (fd < 0) {
++		WARN("Failed to open fifo %s to send message: %s.", fifo_path,
++		     strerror(errno));
++		return -1;
++	}
++
++	return fd;
++}
++
++/* isulad: set terminal fifos */
++static int lxc_terminal_set_fifo(struct lxc_terminal *console, const char *in, const char *out)
++{
++	int fifofd_in = -1, fifofd_out = -1;
++	struct lxc_fifos_fd *fifo_elem = NULL;
++
++	if (!in || !out)
++		return -1;
++
++	if (!fifo_exists(in) || !fifo_exists(out)) {
++		ERROR("File %s or %s does not refer to a FIFO", in, out);
++		return -1;
++	}
++
++	fifofd_in = terminal_fifo_open(in, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
++	if (fifofd_in < 0) {
++		ERROR("Failed to open FIFO: %s", in);
++		return -1;
++	}
++
++	fifofd_out = terminal_fifo_open(out, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
++	if (fifofd_out < 0) {
++		ERROR("Failed to open FIFO: %s", out);
++		close(fifofd_in);
++		return -1;
++	}
++
++	fifo_elem = malloc(sizeof(*fifo_elem));
++	if (!fifo_elem) {
++		close(fifofd_in);
++		close(fifofd_out);
++		return -1;
++	}
++	memset(fifo_elem, 0, sizeof(*fifo_elem));
++
++	fifo_elem->in_fifo = strdup(in);
++	fifo_elem->out_fifo = strdup(out);
++	fifo_elem->in_fd = fifofd_in;
++	fifo_elem->out_fd = fifofd_out;
++	lxc_list_add_elem(&fifo_elem->node, fifo_elem);
++	lxc_list_add_tail(&console->fifos, &fifo_elem->node);
++
++	return fifofd_in;
++}
++
++/* isulad: add default fifos */
++static int lxc_terminal_fifo_default(struct lxc_terminal *terminal)
++{
++	if (!terminal->init_fifo[0] || !terminal->init_fifo[1]) {
++		ERROR("Invalid default terminal fifos");
++		return -1;
++	}
++
++	return lxc_terminal_set_fifo(terminal, terminal->init_fifo[0], terminal->init_fifo[1]);
++}
++
+ int lxc_terminal_create(struct lxc_terminal *terminal)
+ {
+ 	int ret;
+@@ -902,6 +1033,13 @@ int lxc_terminal_create(struct lxc_terminal *terminal)
+ 		goto err;
+ 	}
+ 
++	/* isulad: make master NONBLOCK */
++	ret = fd_nonblock(terminal->master);
++	if (ret < 0) {
++		SYSERROR("Failed to set O_NONBLOCK flag on terminal master");
++		goto err;
++	}
++
+ 	ret = fd_cloexec(terminal->slave, true);
+ 	if (ret < 0) {
+ 		SYSERROR("Failed to set FD_CLOEXEC flag on terminal slave");
+@@ -914,6 +1052,13 @@ int lxc_terminal_create(struct lxc_terminal *terminal)
+ 		goto err;
+ 	}
+ 
++	/* isulad: open fifos */
++	ret = lxc_terminal_fifo_default(terminal);
++	if (ret < 0) {
++		ERROR("Failed to allocate fifo terminal");
++		goto err;
++	}
++
+ 	return 0;
+ 
+ err:
+@@ -1198,12 +1343,55 @@ void lxc_terminal_init(struct lxc_terminal *terminal)
+ 	lxc_terminal_info_init(&terminal->proxy);
+ }
+ 
++/* isulad: judge the fd whether is fifo */
++static bool lxc_terminal_is_fifo(int fd, struct lxc_list *list)
++{
++	struct lxc_list *it,*next;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, list, next) {
++		elem = it->elem;
++		if (elem->in_fd == fd)
++			return true;
++	}
++
++	return false;
++}
++
++/* isulad: if fd == -1, means delete all the fifos*/
++int lxc_terminal_delete_fifo(int fd, struct lxc_list *list)
++{
++	struct lxc_list *it,*next;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, list, next) {
++		elem = it->elem;
++		if (elem->in_fd == fd || -1 == fd) {
++			INFO("Delete fifo fd %d", fd);
++			lxc_list_del(it);
++			if (elem->in_fifo)
++				free(elem->in_fifo);
++			if (elem->out_fifo)
++				free(elem->out_fifo);
++			close(elem->in_fd);
++			close(elem->out_fd);
++			free(elem);
++		}
++	}
++
++	return 0;
++}
++
+ void lxc_terminal_conf_free(struct lxc_terminal *terminal)
+ {
+ 	free(terminal->log_path);
+ 	free(terminal->path);
+ 	if (terminal->buffer_size > 0 && terminal->ringbuf.addr)
+ 		lxc_ringbuf_release(&terminal->ringbuf);
++	/*isulad: free console fifos */
++	free(terminal->init_fifo[0]);
++	free(terminal->init_fifo[1]);
++	lxc_terminal_delete_fifo(-1, &terminal->fifos);
+ }
+ 
+ int lxc_terminal_map_ids(struct lxc_conf *c, struct lxc_terminal *terminal)
+diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
+index bfd271f..d25da65 100644
+--- a/src/lxc/terminal.h
++++ b/src/lxc/terminal.h
+@@ -115,6 +115,17 @@ struct lxc_terminal {
+ 		/* the in-memory ringbuffer */
+ 		struct lxc_ringbuf ringbuf;
+ 	};
++	char *init_fifo[2]; /* isulad: default fifos for the start */
++	struct lxc_list fifos; /* isulad: fifos used to forward teminal */
++};
++
++/* isulad: fifo struct */
++struct lxc_fifos_fd {
++	char *in_fifo;
++	char *out_fifo;
++	int in_fd;
++	int out_fd;
++	struct lxc_list node;
+ };
+ 
+ /**
+@@ -295,4 +306,9 @@ extern void lxc_terminal_init(struct lxc_terminal *terminal);
+ extern int lxc_terminal_map_ids(struct lxc_conf *c,
+ 				struct lxc_terminal *terminal);
+ 
++/* isulad: judge the fd whether is fifo*/
++static bool lxc_terminal_is_fifo(int fd, struct lxc_list *list);
++/* isulad: if fd == -1, means delete all the fifos*/
++int lxc_terminal_delete_fifo(int fd, struct lxc_list *list);
++
+ #endif /* __LXC_TERMINAL_H */
+diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
+index 810050a..b7af2b5 100644
+--- a/src/lxc/tools/arguments.h
++++ b/src/lxc/tools/arguments.h
+@@ -62,6 +62,7 @@ struct lxc_arguments {
+ 
+ 	/* for lxc-start */
+ 	const char *share_ns[32]; /* size must be greater than LXC_NS_MAX */
++	const char *terminal_fifos[2]; /* isulad add, fifos used to redirct stdin/out/err */
+ 
+ 	/* for lxc-console */
+ 	unsigned int ttynum;
+@@ -172,6 +173,10 @@ struct lxc_arguments {
+ #define OPT_SHARE_IPC OPT_USAGE - 4
+ #define OPT_SHARE_UTS OPT_USAGE - 5
+ #define OPT_SHARE_PID OPT_USAGE - 6
++/* isulad add begin */
++#define OPT_INPUT_FIFO OPT_USAGE - 7
++#define OPT_OUTPUT_FIFO OPT_USAGE - 8
++/* isulad add end*/
+ 
+ extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
+ 			       char *const argv[]);
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 4553cb5..8f03f11 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -69,6 +69,8 @@ static const struct option my_longopts[] = {
+ 	{"share-ipc", required_argument, 0, OPT_SHARE_IPC},
+ 	{"share-uts", required_argument, 0, OPT_SHARE_UTS},
+ 	{"share-pid", required_argument, 0, OPT_SHARE_PID},
++	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO},
++	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
+ 	LXC_COMMON_OPTIONS
+ };
+ 
+@@ -140,6 +142,12 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case OPT_SHARE_PID:
+ 		args->share_ns[LXC_NS_PID] = arg;
+ 		break;
++	case OPT_INPUT_FIFO:
++		args->terminal_fifos[0] = arg;
++		break;
++	case OPT_OUTPUT_FIFO:
++		args->terminal_fifos[1] = arg;
++		break;
+ 	}
+ 	return 0;
+ }
+@@ -322,6 +330,9 @@ int main(int argc, char *argv[])
+ 	if (my_args.close_all_fds)
+ 		c->want_close_all_fds(c, true);
+ 
++	if (my_args.terminal_fifos[0] && my_args.terminal_fifos[1])
++		c->set_terminal_init_fifos(c, my_args.terminal_fifos[0], my_args.terminal_fifos[1]);
++
+ 	if (args == default_args)
+ 		err = c->start(c, 0, NULL) ? EXIT_SUCCESS : EXIT_FAILURE;
+ 	else
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 6e9165a..67c3b3e 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -611,6 +611,19 @@ bool dir_exists(const char *path)
+ 	return S_ISDIR(sb.st_mode);
+ }
+ 
++bool fifo_exists(const char *path)
++{
++	struct stat sb;
++	int ret;
++
++	ret = stat(path, &sb);
++	if (ret < 0)
++		// could be something other than eexist, just say no
++		return false;
++	return S_ISFIFO(sb.st_mode);
++}
++
++
+ /* Note we don't use SHA-1 here as we don't want to depend on HAVE_GNUTLS.
+  * FNV has good anti collision properties and we're not worried
+  * about pre-image resistance or one-way-ness, we're just trying to make
+@@ -1715,6 +1728,16 @@ int fd_cloexec(int fd, bool cloexec)
+ 	return 0;
+ }
+ 
++/* isulad: fd_nonblock */
++int fd_nonblock(int fd)
++{
++	long flags;
++
++        flags = fcntl(fd, F_GETFL);
++
++	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
++}
++
+ int recursive_destroy(char *dirname)
+ {
+ 	int ret;
+diff --git a/src/lxc/utils.h b/src/lxc/utils.h
+index 94196d0..2d38178 100644
+--- a/src/lxc/utils.h
++++ b/src/lxc/utils.h
+@@ -147,6 +147,8 @@ extern gid_t get_ns_gid(gid_t orig);
+ 
+ extern bool dir_exists(const char *path);
+ 
++extern bool fifo_exists(const char *path);
++
+ #define FNV1A_64_INIT ((uint64_t)0xcbf29ce484222325ULL)
+ extern uint64_t fnv_64a_buf(void *buf, size_t len, uint64_t hval);
+ 
+@@ -242,4 +244,6 @@ extern int fd_cloexec(int fd, bool cloexec);
+ extern int recursive_destroy(char *dirname);
+ extern int lxc_setup_keyring(void);
+ 
++extern int fd_nonblock(int fd);
++
+ #endif /* __LXC_UTILS_H */
+-- 
+1.8.3.1
+

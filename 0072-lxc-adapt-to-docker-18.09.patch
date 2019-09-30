@@ -1,0 +1,66 @@
+From de35b7df30fbdbf10c0d55523b7fa3a15eb17623 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Mon, 25 Mar 2019 18:03:23 +0800
+Subject: [PATCH 072/122] lxc: adapt to docker-18.09
+
+1. adapt to docker-18.09
+2. fix strlcpy bug
+
+Signed-off-by: liuhao <liuhao27@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c  | 8 ++++----
+ src/lxc/start.c | 4 ++--
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index a6b9797..abfba04 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -4382,9 +4382,9 @@ static char* generate_json_str(const char *name, const char *lxcpath, const char
+ 		ERROR("Get container %s pid failed: %s", name, strerror(errno));
+ 		cpid = "-1";
+ 	}
+-	// {"ociVersion":"","id":"xxx","pid":777,"root":"xxx","bundlePath":"xxx"}
+-	size = 1 + 16 + 5 + strlen(name) + 3 + 6 + strlen(cpid) + 1
+-			  + 7 + strlen(rootfs) + 3 + 13 + strlen(lxcpath) + 1 + strlen(name) + 3 + 1;
++	// {"ociVersion":"","id":"xxx","pid":777,"root":"xxx","bundle":"xxx"}
++	size = strlen("{\"ociVersion\":\"\",\"id\":\"\",\"pid\":,\"root\":\"\",\"bundle\":\"\"}") +
++		strlen(name) + strlen(cpid) + strlen(rootfs) + strlen(lxcpath) + 1 + strlen(name) + 1;
+ 	inmsg = malloc(size);
+ 	if (!inmsg) {
+ 		ERROR("Out of memory");
+@@ -4392,7 +4392,7 @@ static char* generate_json_str(const char *name, const char *lxcpath, const char
+ 		goto out_free;
+ 	}
+ 	rc = snprintf(inmsg, size,
+-			  "{\"ociVersion\":\"\",\"id\":\"%s\",\"pid\":%s,\"root\":\"%s\",\"bundlePath\":\"%s/%s\"}",
++			  "{\"ociVersion\":\"\",\"id\":\"%s\",\"pid\":%s,\"root\":\"%s\",\"bundle\":\"%s/%s\"}",
+ 			  name, cpid, rootfs, lxcpath, name);
+ 	if (rc < 0 || rc >= size) {
+ 		ERROR("Create json string failed");
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 9243a6d..2fca4e1 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -2186,7 +2186,7 @@ static int lxc_spawn(struct lxc_handler *handler)
+ 	/* isulad: Run oci prestart hook at here */
+ 	char* oci_hook_args[1];
+ 	oci_hook_args[0] = alloca(strlen(lxcpath) + 1);
+-	(void)strlcpy(oci_hook_args[0], lxcpath, strlen(lxcpath));
++	(void)strlcpy(oci_hook_args[0], lxcpath, strlen(lxcpath) + 1);
+ 	ret = run_lxc_hooks(name, "oci-prestart", conf, oci_hook_args);
+ 	if (ret < 0) {
+ 		ERROR("Failed to run oci prestart hooks");
+@@ -2687,7 +2687,7 @@ int do_lxcapi_clean_resource(char *name, char *lxcpath, struct lxc_conf *conf, p
+ 
+ 	char* oci_hook_args[1];
+ 	oci_hook_args[0] = alloca(strlen(handler->lxcpath) + 1);
+-	(void)strlcpy(oci_hook_args[0], handler->lxcpath, strlen(handler->lxcpath));
++	(void)strlcpy(oci_hook_args[0], handler->lxcpath, strlen(handler->lxcpath) + 1);
+ 
+ 	if (run_lxc_hooks(handler->name, "oci-poststop", handler->conf, oci_hook_args)) {
+ 		ERROR("Failed to run lxc.hook.post-stop for container \"%s\".", handler->name);
+-- 
+1.8.3.1
+

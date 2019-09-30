@@ -1,0 +1,50 @@
+From c9dc04b4237ac01155a8ce37beae9db4ea7c2b1a Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 21 Feb 2019 05:37:05 -0500
+Subject: [PATCH 061/122] Fix hook: use the path, args, envs execvp dirctory
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c | 17 ++---------------
+ 1 file changed, 2 insertions(+), 15 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 67beefe..c2f3cf5 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -4467,9 +4467,6 @@ static struct lxc_popen_FILE *lxc_popen_ocihook(char *commandpath, char **args,
+ 
+ 	if (child_pid == 0) {
+ 		/* child */
+-		size_t result_capacity;
+-		int r;
+-		char **real_args;
+ 
+ 		close(pipe_msg[1]);
+ 		if (pipe_msg[0] != STDIN_FILENO)
+@@ -4514,20 +4511,10 @@ static struct lxc_popen_FILE *lxc_popen_ocihook(char *commandpath, char **args,
+ 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+ 		}
+ 
+-		result_capacity = args_len;
+-		real_args = malloc(sizeof(char *) * (result_capacity + 2 + 1));
+-		if (!real_args)
+-			_exit(EXIT_FAILURE);
+-		memset(real_args, 0, sizeof(char *) * (result_capacity + 2 + 1));
+-		real_args[0] = strdup("sh");
+-		real_args[1] = strdup(commandpath);
+-		for(r = 2; r < (args_len + 1); r++)
+-			real_args[r] = strdup(args[r-1]);
+-
+ 		if (env_len > 0)
+-			execvpe("/bin/sh", real_args, envs);
++			execvpe(commandpath, args, envs);
+ 		else
+-			execvp("/bin/sh", real_args);
++			execvp(commandpath, args);
+ 		exit(127);
+ 	}
+ 
+-- 
+1.8.3.1
+

@@ -1,0 +1,150 @@
+From 196510dd784d195dfc131b56249a5aac0b9eab54 Mon Sep 17 00:00:00 2001
+From: tanyifeng <tanyifeng1@huawei.com>
+Date: Sat, 20 Apr 2019 22:40:18 +0800
+Subject: [PATCH 086/122] confile: add support systemd
+
+lxc.isulad.systemd=true remount systemd cgroup path to rw
+
+Signed-off-by: zhangsong <zhangsong34@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 16 ++++++++++++++++
+ src/lxc/conf.c           |  1 +
+ src/lxc/conf.h           |  1 +
+ src/lxc/confile.c        | 30 ++++++++++++++++++++++++++++++
+ 4 files changed, 48 insertions(+)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index cc08737..b1f56b0 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1567,6 +1567,7 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
+ {
+ 	int i, ret;
+ 	char *tmpfspath = NULL;
++	char *systemdpath = NULL;
+ 	bool has_cgns = false, retval = false, wants_force_mount = false;
+ 	char **merged = NULL;
+ 
+@@ -1711,10 +1712,25 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
+ 			goto on_error;
+ 		}
+ 	}
++
++        // isulad: remount /sys/fs/cgroup/systemd to readwrite for system container
++        if (handler->conf->systemd != NULL && strcmp(handler->conf->systemd, "true") == 0) {
++                systemdpath = must_make_path(root, "/sys/fs/cgroup/systemd", NULL);
++                ret = mount(systemdpath, systemdpath, "bind",
++                            MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_RELATIME|MS_BIND|MS_REMOUNT, NULL);
++                if (ret < 0) {
++                        SYSERROR("Failed to remount /sys/fs/cgroup/systemd.");
++                        goto on_error;
++                }
++        }
++
+ 	retval = true;
+ 
+ on_error:
+ 	free(tmpfspath);
++        if (systemdpath != NULL) {
++                free(systemdpath);
++        }
+ 	lxc_free_array((void **)merged, free);
+ 	return retval;
+ }
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 20eb840..8cdccf1 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -5320,6 +5320,7 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 	if (conf->exit_fd != -1)
+ 		close(conf->exit_fd);
+ 	free(conf->errmsg);
++	free(conf->systemd);
+ 	lxc_close_error_pipe(conf->errpipe);
+ 	/* isulad add end */
+ 	free(conf);
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index 11cf596..fb3c156 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -430,6 +430,7 @@ struct lxc_conf {
+ 	char *errmsg; /* record error messages */
+ 	int errpipe[2];//pipdfd for get error message of child or grandchild process.
+ 	mode_t umask;  //umask value
++	char *systemd; //systemd value
+ 	/* isulad add end */
+ };
+ 
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 60e6c46..93936cc 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -157,6 +157,7 @@ lxc_config_define(init_args);
+ lxc_config_define(init_groups);
+ lxc_config_define(populate_device);
+ lxc_config_define(umask);
++lxc_config_define(systemd);
+ /*isulad add end*/
+ 
+ 
+@@ -251,6 +252,7 @@ static struct lxc_config_t config_jump_table[] = {
+ 	{ "lxc.isulad.rootfs.maskedpaths", set_config_rootfs_masked_paths,         get_config_rootfs_masked_paths,         clr_config_rootfs_masked_paths,       },
+ 	{ "lxc.isulad.rootfs.ropaths",     set_config_rootfs_ro_paths,             get_config_rootfs_ro_paths,             clr_config_rootfs_ro_paths,           },
+ 	{ "lxc.isulad.umask",              set_config_umask,                       get_config_umask,                       clr_config_umask,                     },
++	{ "lxc.isulad.systemd",            set_config_systemd,                     get_config_systemd,                     clr_config_systemd,                   },
+ 	/*isulad add end*/
+ };
+ 
+@@ -2433,6 +2435,18 @@ static int set_config_umask(const char *key, const char *value,
+ 	}
+ }
+ 
++/* isulad: set config for systemd */
++static int set_config_systemd(const char *key, const char *value,
++			      struct lxc_conf *lxc_conf, void *data)
++{
++	if (lxc_config_value_empty(value)) {
++		ERROR("Empty umask");
++		return -1;
++	}
++	lxc_conf->systemd = strdup(value);
++	return 0;
++}
++
+ struct parse_line_conf {
+ 	struct lxc_conf *conf;
+ 	bool from_include;
+@@ -3210,6 +3224,13 @@ static int get_config_umask(const char *key, char *retv, int inlen,
+ 	return lxc_get_conf_size_t(c, retv, inlen, c->umask);
+ }
+ 
++/* isulad add: get systemd value*/
++static int get_config_systemd(const char *key, char *retv, int inlen,
++			      struct lxc_conf *c, void *data)
++{
++	return lxc_get_conf_str(retv, inlen, c->systemd);
++}
++
+ static int get_config_tty_dir(const char *key, char *retv, int inlen,
+ 			     struct lxc_conf *c, void *data)
+ {
+@@ -4491,6 +4512,15 @@ static inline int clr_config_umask(const char *key, struct lxc_conf *c,
+ 	return 0;
+ }
+ 
++/* isulad add: clear systemd value */
++static inline int clr_config_systemd(const char *key, struct lxc_conf *c,
++				     void *data)
++{
++	free(c->systemd);
++	c->systemd = NULL;
++	return 0;
++}
++
+ static int get_config_includefiles(const char *key, char *retv, int inlen,
+ 				   struct lxc_conf *c, void *data)
+ {
+-- 
+1.8.3.1
+

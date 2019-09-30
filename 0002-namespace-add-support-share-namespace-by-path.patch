@@ -1,0 +1,35 @@
+From d1e8ab945fadac5ee11eb150b1cdfb6aeec407c2 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 10 Jan 2019 08:42:19 -0500
+Subject: [PATCH 002/122] namespace: add support share namespace by path
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/confile_utils.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/lxc/confile_utils.c b/src/lxc/confile_utils.c
+index 7280463..9049ce8 100644
+--- a/src/lxc/confile_utils.c
++++ b/src/lxc/confile_utils.c
+@@ -789,6 +789,17 @@ int lxc_inherit_namespace(const char *lxcname_or_pid, const char *lxcpath,
+ 	int fd, pid;
+ 	char *dup, *lastslash;
+ 
++	/* isulad: add support share namespace by path.
++	 * e.g. "lxc.namespace.share.net = /proc/PID/ns/net or /var/run/netns/net"
++	 */
++	if (file_exists(lxcname_or_pid) && !dir_exists(lxcname_or_pid)) {
++		fd = open(lxcname_or_pid, O_RDONLY | O_CLOEXEC);
++		if (fd < 0)
++			return -EINVAL;
++
++		return fd;
++	}
++
+ 	lastslash = strrchr(lxcname_or_pid, '/');
+ 	if (lastslash) {
+ 		dup = strdup(lxcname_or_pid);
+-- 
+1.8.3.1
+

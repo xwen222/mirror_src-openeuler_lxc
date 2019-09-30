@@ -1,0 +1,197 @@
+From 900c2f8fe30d4ffdaef93f2c01d711705ab8cff9 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Tue, 7 May 2019 12:55:03 +0800
+Subject: [PATCH 094/122] exec load uid gid and groups
+
+exec load uid gid and groups
+
+Signed-off-by: liuhao <liuhao27@huawei.com>
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/lxccontainer.c    | 69 +++++++++++++++++++++++++++++++++++++++++++++--
+ src/lxc/tools/lxc_start.c | 58 ---------------------------------------
+ 2 files changed, 67 insertions(+), 60 deletions(-)
+
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index fa13e52..e0c4de3 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -74,6 +74,7 @@
+ #include "terminal.h"
+ #include "utils.h"
+ #include "version.h"
++#include "container_start_generate_config.h"
+ 
+ /* major()/minor() */
+ #ifdef MAJOR_IN_MKDEV
+@@ -5252,6 +5253,65 @@ static bool do_lxcapi_add_terminal_fifo(struct lxc_container *c, const char *in_
+ 
+ WRAP_API_3(bool, lxcapi_add_terminal_fifo, const char *, const char *, const char *)
+ 
++static int set_start_extral_configs(struct lxc_container *c)
++{
++#define START_GENERATE_CONFIG "start_generate_config.json"
++	char fpath[PATH_MAX] = {0};
++	parser_error jerr = NULL;
++	int ret = -1;
++	container_start_generate_config *start_conf = NULL;
++	struct lxc_conf *lconf = c->lxc_conf;
++	size_t i = 0;
++
++    if (lconf == NULL) {
++        c->lxc_conf = malloc(sizeof(struct lxc_conf));
++        lconf = c->lxc_conf;
++        if (lconf == NULL) {
++            fprintf(stderr, "Out of memory\n");
++            return -1;
++        }
++    }
++	if (sprintf(fpath, "%s/%s/%s", c->config_path, c->name, START_GENERATE_CONFIG) < 0) {
++        fprintf(stderr, "Sprintf config path failed\n");
++		return -1;
++	}
++	if (!file_exists(fpath)) {
++		return 0;
++	}
++	start_conf = container_start_generate_config_parse_file(fpath, NULL, &jerr);
++	if (start_conf == NULL) {
++		fprintf(stderr, "Parse start generate config file: %s failed", fpath);
++		goto out;
++	}
++	if (start_conf->uid != 0) {
++		lconf->init_uid = start_conf->uid;
++	}
++	if (start_conf->gid != 0) {
++		lconf->init_gid = start_conf->gid;
++	}
++	if (start_conf->additional_gids != NULL && start_conf->additional_gids_len > 0) {
++		gid_t *tmp;
++		tmp = realloc(lconf->init_groups, (lconf->init_groups_len + start_conf->additional_gids_len) * sizeof(gid_t));
++		if (tmp == NULL) {
++			fprintf(stderr, "Out of memory");
++			goto out;
++		}
++		lconf->init_groups = tmp;
++		for (; i < start_conf->additional_gids_len; i++) {
++			tmp[lconf->init_groups_len] = start_conf->additional_gids[i];
++			lconf->init_groups_len++;
++		}
++	}
++
++	ret = 0;
++out:
++	free(jerr);
++	if (start_conf != NULL) {
++		free_container_start_generate_config(start_conf);
++	}
++	return ret;
++}
++
+ static struct lxc_container *do_lxc_container_new(const char *name, const char *configpath, bool load_config)
+ {
+ 	struct lxc_container *c;
+@@ -5309,11 +5369,16 @@ static struct lxc_container *do_lxc_container_new(const char *name, const char *
+ 		goto err;
+ 	}
+ 
+-	if (load_config) {
+-		if (file_exists(c->configfile) && !lxcapi_load_config(c, NULL)) {
++	if (load_config && file_exists(c->configfile)) {
++		if (!lxcapi_load_config(c, NULL)) {
+ 			fprintf(stderr, "Failed to load config for %s\n", name);
+ 			goto err;
+ 		}
++		/* isulad: load extral config for start container */
++		if (set_start_extral_configs(c) != 0) {
++			fprintf(stderr, "Failed to load extral config for container: %s\n", name);
++			goto err;
++		}
+ 	}
+ 
+ 	if (ongoing_create(c) == 2) {
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 4069204..af63f58 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -50,7 +50,6 @@
+ #include "confile.h"
+ #include "log.h"
+ #include "utils.h"
+-#include "container_start_generate_config.h"
+ 
+ lxc_log_define(lxc_start, lxc);
+ 
+@@ -214,57 +213,6 @@ static int ensure_path(char **confpath, const char *path)
+ 	return 0;
+ }
+ 
+-static int set_start_extral_configs(const char *lxcpath, const char *name, struct lxc_container *c)
+-{
+-#define START_GENERATE_CONFIG "start_generate_config.json"
+-	char fpath[PATH_MAX] = {0};
+-	parser_error jerr = NULL;
+-	int ret = -1;
+-	container_start_generate_config *start_conf = NULL;
+-	struct lxc_conf *lconf = c->lxc_conf;
+-	size_t i = 0;
+-
+-	if (sprintf(fpath, "%s/%s/%s", lxcpath, name, START_GENERATE_CONFIG) < 0) {
+-		ERROR("Sprintf config path failed");
+-		return -1;
+-	}
+-	if (!file_exists(fpath)) {
+-		return 0;
+-	}
+-	start_conf = container_start_generate_config_parse_file(fpath, NULL, &jerr);
+-	if (start_conf == NULL) {
+-		ERROR("Parse start generate config file: %s failed", fpath);
+-		goto out;
+-	}
+-	if (start_conf->uid != 0) {
+-		lconf->init_uid = start_conf->uid;
+-	}
+-	if (start_conf->gid != 0) {
+-		lconf->init_gid = start_conf->gid;
+-	}
+-	if (start_conf->additional_gids != NULL && start_conf->additional_gids_len > 0) {
+-		gid_t *tmp;
+-		tmp = realloc(lconf->init_groups, (lconf->init_groups_len + start_conf->additional_gids_len) * sizeof(gid_t));
+-		if (tmp == NULL) {
+-			ERROR("Out of memory");
+-			goto out;
+-		}
+-		lconf->init_groups = tmp;
+-		for (; i < start_conf->additional_gids_len; i++) {
+-			tmp[lconf->init_groups_len] = start_conf->additional_gids[i];
+-			lconf->init_groups_len++;
+-		}
+-	}
+-
+-	ret = 0;
+-out:
+-	free(jerr);
+-	if (start_conf != NULL) {
+-		free_container_start_generate_config(start_conf);
+-	}
+-	return ret;
+-}
+-
+ int main(int argc, char *argv[])
+ {
+ 	const char *lxcpath;
+@@ -410,12 +358,6 @@ int main(int argc, char *argv[])
+ 		}
+ 	}
+ 
+-	/* isulad: load extral config for start container */
+-	if (set_start_extral_configs(lxcpath, my_args.name, c) != 0) {
+-		ERROR("Failed to load extral config for container");
+-		goto out;
+-	}
+-
+ 	/* isulad: fifo used to monitor state of monitor process */
+ 	if (my_args.exit_monitor_fifo != NULL) {
+ 		c->exit_fifo = strdup(my_args.exit_monitor_fifo);
+-- 
+1.8.3.1
+
