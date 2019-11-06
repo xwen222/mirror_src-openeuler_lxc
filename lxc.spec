@@ -4,11 +4,11 @@
 
 Name:           lxc
 Version:        3.0.3
-Release:        %{_release}%{?dist}
+Release:        %{_release}
 Summary:        Linux Containers userspace tools
 License:        LGPLv2+
 URL:            http://linuxcontainers.org
-Source0:        http://linuxcontainers.org/downloads/%{name}-%{version}.tar.gz
+Source0:        http://linuxcontainers.org/downloads/lxc-3.0.3.tar.gz
 Patch6000:      lxc-2.0.7-fix-init.patch
 Patch6001:      lxc-2.0.6-fix-lxc-net.patch
 Patch6002:      lxc-CVE-2019-5736-runC-rexec-callers-as-memfd.patch
@@ -135,18 +135,12 @@ Patch9122:      0120-remove-unuse-unmount-namespace.patch
 Patch9123:      0121-optimize-log-when-root-path-is-invalid.patch
 Patch9124:      0122-lxc-fix-code-reivew-errors.patch
 
-BuildRequires:  systemd-units
-BuildRequires:  git libtool
-BuildRequires:  docbook2X doxygen
-BuildRequires:  chrpath
+BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 %if 0%{?with_seccomp}
 BuildRequires:  pkgconfig(libseccomp)
 %endif
-BuildRequires:  libcap libcap-devel
-BuildRequires:  libselinux-devel
-BuildRequires:  yajl yajl-devel
-BuildRequires:  libsecurec libsecurec-devel
-BuildRequires:  pkgconfig(bash-completion)
+BuildRequires:  libcap libcap-devel libselinux-devel yajl yajl-devel
+BuildRequires:  libsecurec libsecurec-devel pkgconfig(bash-completion)
 
 Requires:          rsync
 Requires(post):    systemd
@@ -155,7 +149,7 @@ Requires(postun):  systemd
 Requires(post):    /sbin/ldconfig
 Requires(postun):  /sbin/ldconfig
 
-%{!?_pkgdocdir: %global _pkgdocdir %{_docdir}/%{name}-%{version}}
+%{!?_pkgdocdir: %global _pkgdocdir %{_docdir}/lxc-3.0.3}
 
 %description
 Containers are insulated areas inside a system, which have their own namespace
@@ -163,29 +157,29 @@ for filesystem, network, PID, IPC, CPU and memory allocation and which can be
 created using the Control Group and Namespace features included in the Linux
 kernel.
 
-This package provides the lxc-* tools and libraries for running %{name}
+This package provides the lxc-* tools and libraries for running lxc
 applications, which can be used to start a single daemon in a container, or to
 boot an entire "containerized" system, and to manage and debug your containers.
 
 %package        devel
-Summary:        Development files for %{name}
-Requires:       %{name} = %{version}-%{release}
+Summary:        Development files for lxc
+Requires:       lxc = 3.0.3-%{release}
 Requires:       pkgconfig
 
 %description    devel
-The %{name}-devel package contains header files ,library and templates needed for
+The lxc-devel package contains header files ,library and templates needed for
 development of the Linux containers.
 
 
 %package        help
-Summary:        Documentation and templates for %{name}
+Summary:        Documentation and templates for lxc
 BuildArch:      noarch
 
 %description    help
-This package contains documentation for %{name} for creating containers.
+This package contains documentation for lxc for creating containers.
 
 %prep
-%setup -q -n %{name}-%{version}
+%setup -q -n lxc-3.0.3
 %patch6000 -p1
 %patch6001 -p1
 %patch6002 -p1
@@ -325,7 +319,7 @@ This package contains documentation for %{name} for creating containers.
 
 %install
 %{make_install}
-mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
+mkdir -p %{buildroot}%{_sharedstatedir}/lxc
 
 for file in $(find %{buildroot}/usr/bin/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
 do
@@ -354,7 +348,7 @@ cp -a AUTHORS README %{buildroot}%{_pkgdocdir}
 cp -a doc/api/html/* %{buildroot}%{_pkgdocdir}/api/
 
 # cache dir
-mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
+mkdir -p %{buildroot}%{_localstatedir}/cache/lxc
 
 # remove libtool .la file
 rm -rf %{buildroot}%{_libdir}/liblxc.la
@@ -364,65 +358,65 @@ make check
 
 %post
 %{?ldconfig}
-%systemd_post %{name}-net.service
-%systemd_post %{name}.service
-%systemd_post %{name}@.service
+%systemd_post lxc-net.service
+%systemd_post lxc.service
+%systemd_post lxc@.service
 
 %preun
-%systemd_preun %{name}-net.service
-%systemd_preun %{name}.service
-%systemd_preun %{name}@.service
+%systemd_preun lxc-net.service
+%systemd_preun lxc.service
+%systemd_preun lxc@.service
 
 %postun
 %{?ldconfig}
-%systemd_postun %{name}-net.service
-%systemd_postun %{name}.service
-%systemd_postun %{name}@.service
+%systemd_postun lxc-net.service
+%systemd_postun lxc.service
+%systemd_postun lxc@.service
 
 %files
 %defattr(-,root,root)
-%{_bindir}/%{name}-*
-%{_datadir}/%{name}/%{name}.functions
+%{_bindir}/lxc-*
+%{_datadir}/lxc/lxc.functions
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
-%{_datadir}/bash-completion/completions/%{name}
+%{_datadir}/bash-completion/completions/lxc
 %{_libdir}/liblxc.so
 %{_libdir}/liblxc.so.*
-%{_libdir}/%{name}
-%{_libexecdir}/%{name}
-%{_sbindir}/init.%{name}
-%{_sharedstatedir}/%{name}
-%dir %{_sysconfdir}/%{name}
-%config(noreplace) %{_sysconfdir}/%{name}/default.conf
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
+%{_libdir}/lxc
+%{_libexecdir}/lxc
+%{_sbindir}/init.lxc
+%{_sharedstatedir}/lxc
+%dir %{_sysconfdir}/lxc
+%config(noreplace) %{_sysconfdir}/lxc/default.conf
+%config(noreplace) %{_sysconfdir}/sysconfig/lxc
 %license COPYING
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/AUTHORS
 %{_pkgdocdir}/README
-%{_unitdir}/%{name}.service
-%{_unitdir}/%{name}@.service
-%{_unitdir}/%{name}-net.service
-%dir %{_localstatedir}/cache/%{name}
+%{_unitdir}/lxc.service
+%{_unitdir}/lxc@.service
+%{_unitdir}/lxc-net.service
+%dir %{_localstatedir}/cache/lxc
 
 %files devel
 %defattr(-,root,root)
-%{_includedir}/%{name}/*
-%{_libdir}/pkgconfig/%{name}.pc
-%dir %{_datadir}/%{name}
-%{_datadir}/%{name}/hooks
-%{_datadir}/%{name}/%{name}-patch.py*
-%{_datadir}/%{name}/selinux
-%dir %{_datadir}/%{name}/templates
-%{_datadir}/%{name}/templates/lxc-*
-%dir %{_datadir}/%{name}/config
-%{_datadir}/%{name}/config/*
+%{_includedir}/lxc/*
+%{_libdir}/pkgconfig/lxc.pc
+%dir %{_datadir}/lxc
+%{_datadir}/lxc/hooks
+%{_datadir}/lxc/lxc-patch.py*
+%{_datadir}/lxc/selinux
+%dir %{_datadir}/lxc/templates
+%{_datadir}/lxc/templates/lxc-*
+%dir %{_datadir}/lxc/config
+%{_datadir}/lxc/config/*
 
 %files help
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/*
-%{_mandir}/man1/%{name}*
-%{_mandir}/*/man1/%{name}*
-%{_mandir}/man5/%{name}*
-%{_mandir}/man7/%{name}*
-%{_mandir}/*/man5/%{name}*
-%{_mandir}/*/man7/%{name}*
+%{_mandir}/man1/lxc*
+%{_mandir}/*/man1/lxc*
+%{_mandir}/man5/lxc*
+%{_mandir}/man7/lxc*
+%{_mandir}/*/man5/lxc*
+%{_mandir}/*/man7/lxc*
