@@ -1,5 +1,5 @@
 %global with_seccomp 1
-%global _release 20190926
+%global _release 20191105
 %global debug_package %{nil}
 
 Name:           lxc
@@ -307,7 +307,7 @@ This package contains documentation for lxc for creating containers.
 %patch9124 -p1
 
 %build
-%configure --with-distro=fedora --enable-doc --enable-api-docs \
+%configure --enable-doc --enable-api-docs \
            --disable-silent-rules --docdir=%{_pkgdocdir} --disable-rpath \
            --disable-static --disable-apparmor --enable-selinux \
 %if 0%{?with_seccomp}
@@ -319,21 +319,21 @@ This package contains documentation for lxc for creating containers.
 
 %install
 %{make_install}
-mkdir -p %{buildroot}%{_sharedstatedir}/lxc
+mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
 
-for file in $(find %{buildroot}/usr/bin/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
+for file in $(find %{buildroot}/usr/bin/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
     strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
-for file in $(find %{buildroot}/usr/sbin/* -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
+for file in $(find %{buildroot}/usr/sbin/* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
     strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
-for file in $(find %{buildroot}/usr/libexec/lxc/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
+for file in $(find %{buildroot}/usr/libexec/lxc/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
     strip --strip-debug ${file}
     chrpath -d ${file}
@@ -348,7 +348,7 @@ cp -a AUTHORS README %{buildroot}%{_pkgdocdir}
 cp -a doc/api/html/* %{buildroot}%{_pkgdocdir}/api/
 
 # cache dir
-mkdir -p %{buildroot}%{_localstatedir}/cache/lxc
+mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
 
 # remove libtool .la file
 rm -rf %{buildroot}%{_libdir}/liblxc.la
@@ -357,66 +357,57 @@ rm -rf %{buildroot}%{_libdir}/liblxc.la
 make check
 
 %post
-%{?ldconfig}
-%systemd_post lxc-net.service
-%systemd_post lxc.service
-%systemd_post lxc@.service
 
 %preun
-%systemd_preun lxc-net.service
-%systemd_preun lxc.service
-%systemd_preun lxc@.service
 
 %postun
-%{?ldconfig}
-%systemd_postun lxc-net.service
-%systemd_postun lxc.service
-%systemd_postun lxc@.service
 
 %files
 %defattr(-,root,root)
-%{_bindir}/lxc-*
-%{_datadir}/lxc/lxc.functions
+%{_bindir}/%{name}-*
+%{_datadir}/%{name}/%{name}.functions
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
 %{_datadir}/bash-completion/completions/lxc
 %{_libdir}/liblxc.so
 %{_libdir}/liblxc.so.*
-%{_libdir}/lxc
-%{_libexecdir}/lxc
-%{_sbindir}/init.lxc
-%{_sharedstatedir}/lxc
-%dir %{_sysconfdir}/lxc
-%config(noreplace) %{_sysconfdir}/lxc/default.conf
-%config(noreplace) %{_sysconfdir}/sysconfig/lxc
+%{_libdir}/%{name}
+%{_libexecdir}/%{name}
+%{_sbindir}/init.%{name}
+%{_sharedstatedir}/%{name}
+%{_sbindir}/init.%{name}.static
+%dir %{_sysconfdir}/%{name}
+%config(noreplace) %{_sysconfdir}/%{name}/default.conf
+%config(noreplace) %{_sysconfdir}/default/%{name}
+
 %license COPYING
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/AUTHORS
 %{_pkgdocdir}/README
-%{_unitdir}/lxc.service
-%{_unitdir}/lxc@.service
-%{_unitdir}/lxc-net.service
-%dir %{_localstatedir}/cache/lxc
+%{_unitdir}/%{name}.service
+%{_unitdir}/%{name}@.service
+%{_unitdir}/%{name}-net.service
+%dir %{_localstatedir}/cache/%{name}
 
 %files devel
 %defattr(-,root,root)
-%{_includedir}/lxc/*
-%{_libdir}/pkgconfig/lxc.pc
-%dir %{_datadir}/lxc
-%{_datadir}/lxc/hooks
-%{_datadir}/lxc/lxc-patch.py*
-%{_datadir}/lxc/selinux
-%dir %{_datadir}/lxc/templates
-%{_datadir}/lxc/templates/lxc-*
-%dir %{_datadir}/lxc/config
-%{_datadir}/lxc/config/*
+%{_includedir}/%{name}/*
+%{_libdir}/pkgconfig/%{name}.pc
+%dir %{_datadir}/%{name}
+%{_datadir}/%{name}/hooks
+%{_datadir}/%{name}/lxc-patch.py*
+%{_datadir}/%{name}/selinux
+%dir %{_datadir}/%{name}/templates
+%{_datadir}/%{name}/templates/lxc-*
+%dir %{_datadir}/%{name}/config
+%{_datadir}/%{name}/config/*
 
 %files help
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/*
-%{_mandir}/man1/lxc*
-%{_mandir}/*/man1/lxc*
-%{_mandir}/man5/lxc*
-%{_mandir}/man7/lxc*
-%{_mandir}/*/man5/lxc*
-%{_mandir}/*/man7/lxc*
+%{_mandir}/man1/%{name}*
+%{_mandir}/*/man1/%{name}*
+%{_mandir}/man5/%{name}*
+%{_mandir}/man7/%{name}*
+%{_mandir}/*/man5/%{name}*
+%{_mandir}/*/man7/%{name}*
