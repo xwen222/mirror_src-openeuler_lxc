@@ -352,7 +352,8 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
 
 # remove libtool .la file
 rm -rf %{buildroot}%{_libdir}/liblxc.la
-
+rm -rf %{buildroot}%{_sbindir}/init.%{name}.static
+rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %check
 make check
 
@@ -375,10 +376,8 @@ make check
 %{_libexecdir}/%{name}
 %{_sbindir}/init.%{name}
 %{_sharedstatedir}/%{name}
-%{_sbindir}/init.%{name}.static
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/default.conf
-%config(noreplace) %{_sysconfdir}/default/%{name}
 
 %license COPYING
 %dir %{_pkgdocdir}
