@@ -1,19 +1,19 @@
-From 191cff886b75864a9304eb5e56fa29662978ffec Mon Sep 17 00:00:00 2001
+From d891502489641740373c74e761e3b615845e11a0 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 15 Jan 2019 22:55:06 -0500
-Subject: [PATCH 036/122] drop_caps: add drop caps of current process
+Subject: [PATCH 036/131] drop_caps: add drop caps of current process
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c         | 26 +++++++++++++---
- src/lxc/cgroups/cgfsng.c | 35 ++++++++++-----------
- src/lxc/conf.c           | 79 ++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/attach.c         | 26 ++++++++++---
+ src/lxc/cgroups/cgfsng.c | 35 +++++++++---------
+ src/lxc/conf.c           | 79 ++++++++++++++++++++++++++++++++++++++++
  src/lxc/conf.h           |  1 +
- src/lxc/start.c          | 16 ++++++++++
+ src/lxc/start.c          | 16 ++++++++
  5 files changed, 135 insertions(+), 22 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 8cbbf96..3f60fe1 100644
+index 8cbbf962..3f60fe10 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -936,11 +936,6 @@ static int attach_child_main(struct attach_clone_payload *payload)
@@ -60,7 +60,7 @@ index 8cbbf96..3f60fe1 100644
  	_exit(payload->exec_function(payload->exec_payload, msg_fd));
  
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 8b913a6..bc1481d 100644
+index 8b913a6b..bc1481d4 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -2664,11 +2664,11 @@ __cgfsng_ops static bool cgfsng_data_init(struct cgroup_ops *ops, struct lxc_han
@@ -116,7 +116,7 @@ index 8b913a6..bc1481d 100644
  }
  
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index fea0f59..6134ed3 100644
+index fea0f592..6134ed3b 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4220,6 +4220,85 @@ int lxc_setup(struct lxc_handler *handler)
@@ -206,7 +206,7 @@ index fea0f59..6134ed3 100644
  	defs_hook *ocihook;
  
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 44feb98..b92c48e 100644
+index 44feb986..b92c48e1 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -498,6 +498,7 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf);
@@ -218,7 +218,7 @@ index 44feb98..b92c48e 100644
  /* isulad add end */
  
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 040909c..357e81d 100644
+index 040909c3..357e81d2 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1411,6 +1411,11 @@ static int do_start(void *data)
@@ -252,5 +252,5 @@ index 040909c..357e81d 100644
  	 * as it execs.
  	 */
 -- 
-1.8.3.1
+2.23.0
 

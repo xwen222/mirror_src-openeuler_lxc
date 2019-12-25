@@ -1,7 +1,7 @@
-From 4fad66dc56b5863b3e272408b265eddf244434ef Mon Sep 17 00:00:00 2001
+From 7c8ec2cca91b15442f58a32c986f00b7064253ca Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Sat, 12 Jan 2019 14:42:27 +0800
-Subject: [PATCH 013/122] isulad: set env home in container
+Subject: [PATCH 013/131] isulad: set env home in container
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -14,7 +14,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  6 files changed, 45 insertions(+), 3 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index e7ba705..2bbf1eb 100644
+index e7ba705c..2bbf1eb5 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -876,6 +876,11 @@ static int attach_child_main(struct attach_clone_payload *payload)
@@ -30,7 +30,7 @@ index e7ba705..2bbf1eb 100644
  	     init_ctx->container->lxc_conf->no_new_privs) ||
  	    (options->attach_flags & LXC_ATTACH_NO_NEW_PRIVS)) {
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index aff2b5e..3e702b3 100644
+index aff2b5e1..3e702b34 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1704,8 +1704,9 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
@@ -46,7 +46,7 @@ index aff2b5e..3e702b3 100644
  		if (ret < 0) {
  			free(controllerpath);
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index bc45e44..5065e69 100644
+index bc45e448..5065e697 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -3680,7 +3680,7 @@ int lxc_setup(struct lxc_handler *handler)
@@ -59,7 +59,7 @@ index bc45e44..5065e69 100644
  		ret = setup_mount_entries(lxc_conf, &lxc_conf->rootfs,
  					  &lxc_conf->mount_list, name, lxcpath);
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 9365d11..b13326c 100644
+index 9365d116..b13326ce 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1398,6 +1398,10 @@ static int do_start(void *data)
@@ -74,7 +74,7 @@ index 9365d11..b13326c 100644
  	if (new_uid == nsuid)
  		new_uid = LXC_INVALID_UID;
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 4728284..74e74a1 100644
+index 4728284f..74e74a15 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -45,6 +45,7 @@
@@ -121,7 +121,7 @@ index 4728284..74e74a1 100644
  static int lxc_file2str(const char *filename, char ret[], int cap)
  {
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 8e4ed89..364bf67 100644
+index 8e4ed894..364bf672 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -309,6 +309,9 @@ extern int fd_cloexec(int fd, bool cloexec);
@@ -135,5 +135,5 @@ index 8e4ed89..364bf67 100644
  extern int unsigned long long lxc_get_process_startat(pid_t pid);
  
 -- 
-1.8.3.1
+2.23.0
 

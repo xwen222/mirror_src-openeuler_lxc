@@ -1,22 +1,22 @@
-From d6a38c35cb5986f1263e3dd1b6206217e34a2ec8 Mon Sep 17 00:00:00 2001
+From 1f5b601dcc5ccd9f2699495134d1adfc0473cb18 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 14 Jan 2019 02:18:26 -0500
-Subject: [PATCH 018/122] lxc-attach: add support terminal fifos
+Subject: [PATCH 018/131] lxc-attach: add support terminal fifos
 
 1. support terminal fifos to redirect terminal
 2. support lxc-attach run in background
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c           |  18 ++++-
+ src/lxc/attach.c           |  18 +++-
  src/lxc/attach_options.h   |   3 +
- src/lxc/terminal.c         |  27 +++++--
+ src/lxc/terminal.c         |  27 ++++--
  src/lxc/tools/arguments.h  |   2 +-
- src/lxc/tools/lxc_attach.c | 181 +++++++++++++++++++++++++++++++++++++++++----
+ src/lxc/tools/lxc_attach.c | 181 +++++++++++++++++++++++++++++++++----
  5 files changed, 204 insertions(+), 27 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 2bbf1eb..1886bde 100644
+index 2bbf1eb5..1886bdef 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -988,12 +988,23 @@ on_error:
@@ -71,7 +71,7 @@ index 2bbf1eb..1886bde 100644
  		if (ret < 0)
  			ERROR("Failed to exec");
 diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
-index 193fd7e..081618c 100644
+index 193fd7e7..081618cd 100644
 --- a/src/lxc/attach_options.h
 +++ b/src/lxc/attach_options.h
 @@ -135,6 +135,8 @@ typedef struct lxc_attach_options_t {
@@ -92,7 +92,7 @@ index 193fd7e..081618c 100644
  
  /*!
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 7aa4730..ee3aef2 100644
+index 7aa47309..ee3aef21 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -514,7 +514,7 @@ static int lxc_terminal_mainloop_add_peer(struct lxc_terminal *terminal)
@@ -155,7 +155,7 @@ index 7aa4730..ee3aef2 100644
  		return -1;
  
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index 61f4a0a..047e9f1 100644
+index 61f4a0a7..047e9f16 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -62,7 +62,7 @@ struct lxc_arguments {
@@ -168,7 +168,7 @@ index 61f4a0a..047e9f1 100644
  	const char *exit_monitor_fifo; /* isulad: fifo used to monitor state of monitor process */
  
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index 8c8e7d3..6d0ffe5 100644
+index 8c8e7d39..6d0ffe57 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -75,6 +75,8 @@ static const struct option my_longopts[] = {
@@ -406,5 +406,5 @@ index 8c8e7d3..6d0ffe5 100644
  
  	exit(EXIT_FAILURE);
 -- 
-1.8.3.1
+2.23.0
 

@@ -1,7 +1,7 @@
-From fe7032c4ed978c38beb00804abb46ad691c0a83c Mon Sep 17 00:00:00 2001
+From 885080c17444f473d65b9f9298eb0042b65d1421 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 2 Apr 2019 23:59:20 -0400
-Subject: [PATCH 077/122] lxc: set negative files.limit to max and fix bug of
+Subject: [PATCH 077/131] lxc: set negative files.limit to max and fix bug of
  setting homedir
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  3 files changed, 37 insertions(+), 16 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 62d58f9..cc08737 100644
+index 62d58f9a..cc087375 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -2259,19 +2259,30 @@ static bool __cg_legacy_setup_limits(struct cgroup_ops *ops,
@@ -52,7 +52,7 @@ index 62d58f9..cc08737 100644
  		if (strcmp(cg->subsystem, "cpu.shares") == 0) {
  			if (cg_legacy_get_data(ops, cg->subsystem, value, sizeof(value)) < 0) {
 diff --git a/src/lxc/storage/storage.c b/src/lxc/storage/storage.c
-index 88ed788..fa79762 100644
+index 88ed7884..fa797628 100644
 --- a/src/lxc/storage/storage.c
 +++ b/src/lxc/storage/storage.c
 @@ -611,9 +611,8 @@ bool storage_destroy(struct lxc_conf *conf)
@@ -68,7 +68,7 @@ index 88ed788..fa79762 100644
  
  	destroy_rv = r->ops->destroy(r);
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 69eb3e5..7b82d06 100644
+index 69eb3e52..7b82d060 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1873,20 +1873,31 @@ int lxc_setup_keyring(void)
@@ -113,5 +113,5 @@ index 69eb3e5..7b82d06 100644
  	if (setenv("HOME", homedir, 0) < 0) {
  		SYSERROR("Unable to set env 'HOME'");
 -- 
-1.8.3.1
+2.23.0
 

@@ -1,17 +1,17 @@
-From 5f9953ea9fffa99ca3838e3b59ab3ee170e62795 Mon Sep 17 00:00:00 2001
+From 259f249756e9e67827ab1d53ac31cd985cd7d539 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 22 May 2019 23:00:17 -0400
-Subject: [PATCH 100/122] start: add check save pid info file
+Subject: [PATCH 100/131] start: add check save pid info file
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/start.c | 72 +++++++++++++++++++++++++++++++++++++++++++++++++--------
+ src/lxc/start.c | 72 ++++++++++++++++++++++++++++++++++++++++++-------
  src/lxc/utils.c |  2 +-
  src/lxc/utils.h |  1 +
  3 files changed, 64 insertions(+), 11 deletions(-)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 3657d4e..4541793 100644
+index 3657d4eb..45417930 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1850,14 +1850,10 @@ static inline int do_share_ns(void *arg)
@@ -111,7 +111,7 @@ index 3657d4e..4541793 100644
   * exec()s the requested container binary.
   * Note that lxc_spawn() runs in the parent namespaces. Any operations performed
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index fd6075f..dc0e6c5 100644
+index fd6075f8..dc0e6c51 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1909,7 +1909,7 @@ set_env:
@@ -124,7 +124,7 @@ index fd6075f..dc0e6c5 100644
  	int fd, num_read;
  
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 20407af..4410ff2 100644
+index 20407af8..4410ff22 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -323,5 +323,6 @@ extern void lxc_write_error_message(int errfd, const char *format, ...);
@@ -135,5 +135,5 @@ index 20407af..4410ff2 100644
  
  #endif /* __LXC_UTILS_H */
 -- 
-1.8.3.1
+2.23.0
 

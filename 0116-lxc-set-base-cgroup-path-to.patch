@@ -1,7 +1,7 @@
-From 575a5f505195e9282b0cbffa3f8a446613252861 Mon Sep 17 00:00:00 2001
+From e384c4e2a1088b2456ef58ed932218f5be77d349 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Wed, 19 Jun 2019 16:48:50 +0800
-Subject: [PATCH 116/122] lxc: set base cgroup path to '/'
+Subject: [PATCH 116/131] lxc: set base cgroup path to '/'
 
 reason:base cgroup may be started with /system.slice when cg_hybrid_init
 read /proc/1/cgroup on host, and cgroup init will set all containers
@@ -16,7 +16,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 3 insertions(+)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 46f13f4..7c92abe 100644
+index 46f13f4d..7c92abe6 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -2545,6 +2545,9 @@ static bool cg_hybrid_init(struct cgroup_ops *ops)
@@ -30,5 +30,5 @@ index 46f13f4..7c92abe 100644
  			char *cgv2_ctrl_path;
  
 -- 
-1.8.3.1
+2.23.0
 

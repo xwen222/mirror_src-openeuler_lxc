@@ -1,7 +1,7 @@
-From 0aade3f699ec02ead3b4707be0e259ded5c1e9ec Mon Sep 17 00:00:00 2001
+From 2c693d3ec05daf3c647bf87fdc4f1fcab2f43741 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 2 Sep 2019 06:24:07 -0400
-Subject: [PATCH 118/122] fix sscanf return value check
+Subject: [PATCH 118/131] fix sscanf return value check
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 8 insertions(+), 4 deletions(-)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 00d478c..c1e0d5d 100644
+index 00d478c4..c1e0d5d2 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1904,7 +1904,7 @@ static int lxc_check_container_info(char *filename, pid_t pid, pid_t p_pid, unsi
@@ -23,7 +23,7 @@ index 00d478c..c1e0d5d 100644
  		ret = -1;
  		goto out;
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 1d2e9ee..c83c7a3 100644
+index 1d2e9ee4..c83c7a38 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1952,8 +1952,8 @@ static proc_t *lxc_stat2proc(const char *S)
@@ -51,5 +51,5 @@ index 1d2e9ee..c83c7a3 100644
  		P->tty = -1;  /* the old notty val, update elsewhere bef. moving to 0 */
  	return P;
 -- 
-1.8.3.1
+2.23.0
 

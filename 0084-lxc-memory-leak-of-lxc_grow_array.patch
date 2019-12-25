@@ -1,7 +1,7 @@
-From fd9efbdd077e8cc2a7b825e6f632b5bf4a3473e1 Mon Sep 17 00:00:00 2001
+From 2f31e50aa14fccd46387e40c312ea59c96dbc678 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 11 Apr 2019 22:36:42 +0800
-Subject: [PATCH 084/122] lxc: memory leak of lxc_grow_array
+Subject: [PATCH 084/131] lxc: memory leak of lxc_grow_array
 
 fix memory leak of lxc_grow_array
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/src/lxc/string_utils.c b/src/lxc/string_utils.c
-index 0d7538c..31c4340 100644
+index 0d7538c1..31c43407 100644
 --- a/src/lxc/string_utils.c
 +++ b/src/lxc/string_utils.c
 @@ -523,6 +523,7 @@ int lxc_grow_array(void ***array, size_t *capacity, size_t new_size, size_t capa
@@ -24,5 +24,5 @@ index 0d7538c..31c4340 100644
  		*capacity = 0;
  	}
 -- 
-1.8.3.1
+2.23.0
 

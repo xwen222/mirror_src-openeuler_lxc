@@ -1,7 +1,7 @@
-From d1ae3bc538d21355947a1d1695c22690bb9a68ae Mon Sep 17 00:00:00 2001
+From 814e6298692f74480fcd807eedc1588b94b3f961 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 22 Jan 2019 14:45:54 +0800
-Subject: [PATCH 053/122] destroy empty cgroup path return ture
+Subject: [PATCH 053/131] destroy empty cgroup path return ture
 
 destroy empty cgroup path return ture
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 4 insertions(+)
 
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index c8fb993..24e975b 100644
+index c8fb9931..24e975bc 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1776,6 +1776,10 @@ int recursive_destroy(char *dirname)
@@ -27,5 +27,5 @@ index c8fb993..24e975b 100644
  		return -1;
  	}
 -- 
-1.8.3.1
+2.23.0
 

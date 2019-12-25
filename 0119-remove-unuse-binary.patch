@@ -1,7 +1,7 @@
-From 787c3c652d02b6398d6b7fcf2a2f8c9e406552fb Mon Sep 17 00:00:00 2001
+From 37d15f82b25e21c466b6632d8e56b50d60cb0444 Mon Sep 17 00:00:00 2001
 From: LiuHao <liuhao27@huawei.com>
 Date: Wed, 4 Sep 2019 18:01:39 +0800
-Subject: [PATCH 119/122] remove unuse binary
+Subject: [PATCH 119/131] remove unuse binary
 
 Signed-off-by: LiuHao <liuhao27@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiuHao <liuhao27@huawei.com>
  1 file changed, 11 deletions(-)
 
 diff --git a/hooks/Makefile.am b/hooks/Makefile.am
-index 5ae73d7..f55c4a9 100644
+index 5ae73d72..f55c4a90 100644
 --- a/hooks/Makefile.am
 +++ b/hooks/Makefile.am
 @@ -10,15 +10,4 @@ hooks_SCRIPTS = \
@@ -29,5 +29,5 @@ index 5ae73d7..f55c4a9 100644
 -
  EXTRA_DIST=$(hooks_SCRIPTS)
 -- 
-1.8.3.1
+2.23.0
 

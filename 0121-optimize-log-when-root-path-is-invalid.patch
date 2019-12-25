@@ -1,7 +1,7 @@
-From a466acb2c1e5d54822e9a7b93f75e9ff93ad511a Mon Sep 17 00:00:00 2001
+From 326d45d73d0061431822040a37ced879f3c6b490 Mon Sep 17 00:00:00 2001
 From: TanYifeng <tanyifeng1@huawei.com>
 Date: Sat, 21 Sep 2019 06:19:25 -0400
-Subject: [PATCH 121/122] optimize log when root path is invalid
+Subject: [PATCH 121/131] optimize log when root path is invalid
 
 Signed-off-by: TanYifeng <tanyifeng1@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: TanYifeng <tanyifeng1@huawei.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 0b10a2d..5fd65e7 100644
+index 0b10a2dd..5fd65e73 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4881,7 +4881,7 @@ static char *get_root_path(const char *path, const char *backend)
@@ -22,5 +22,5 @@ index 0b10a2d..5fd65e7 100644
  		}
  		tmp++;
 -- 
-1.8.3.1
+2.23.0
 

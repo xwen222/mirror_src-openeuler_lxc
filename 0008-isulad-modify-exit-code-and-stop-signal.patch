@@ -1,7 +1,7 @@
-From a5754c856857cee09e307e4e8459e8e99167e46a Mon Sep 17 00:00:00 2001
+From ca497ede318c29a609f7d4bfe0747b6253cb77fc Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Fri, 11 Jan 2019 17:44:53 +0800
-Subject: [PATCH 008/122] isulad: modify exit code and stop signal
+Subject: [PATCH 008/131] isulad: modify exit code and stop signal
 
 1. modify default stop signal and disable reboot by signal.
 2. send '128 + signal' if container is killed by signal.
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 18 insertions(+), 21 deletions(-)
 
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index b4cacce..1d7f5be 100644
+index b4cacce2..1d7f5bea 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -2069,7 +2069,8 @@ static bool do_lxcapi_shutdown(struct lxc_container *c, int timeout)
@@ -39,7 +39,7 @@ index b4cacce..1d7f5be 100644
  	/* Add a new state client before sending the shutdown signal so that we
  	 * don't miss a state.
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 72e2de2..d64bdac 100644
+index 72e2de27..d64bdac1 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1893,11 +1893,14 @@ out_abort:
@@ -102,5 +102,5 @@ index 72e2de2..d64bdac 100644
  	if (error_num)
  		*error_num = handler->exit_status;
 -- 
-1.8.3.1
+2.23.0
 

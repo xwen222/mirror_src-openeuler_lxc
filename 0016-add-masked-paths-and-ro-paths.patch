@@ -1,17 +1,17 @@
-From 478dfb4eadd6812bd63fc0d37cf1acad21a58e6a Mon Sep 17 00:00:00 2001
+From 8ae551897a4ab1c56019767640d0600eaebc993d Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Sat, 12 Jan 2019 15:55:52 +0800
-Subject: [PATCH 016/122] add masked paths and ro paths
+Subject: [PATCH 016/131] add masked paths and ro paths
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/conf.c    | 135 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
- src/lxc/conf.h    |   8 ++++
- src/lxc/confile.c | 113 ++++++++++++++++++++++++++++++++++++++++++++-
+ src/lxc/conf.c    | 135 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/conf.h    |   8 +++
+ src/lxc/confile.c | 113 +++++++++++++++++++++++++++++++++++++-
  3 files changed, 255 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 5065e69..537f956 100644
+index 5065e697..537f956c 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -1343,6 +1343,95 @@ static int lxc_mount_rootfs(struct lxc_conf *conf)
@@ -185,7 +185,7 @@ index 5065e69..537f956 100644
  	if (conf->exit_fd != -1)
  		close(conf->exit_fd);
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 2d939cd..7927812 100644
+index 2d939cd2..79278128 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -160,6 +160,8 @@ struct lxc_tty_info {
@@ -218,7 +218,7 @@ index 2d939cd..7927812 100644
  /* isulad add end */
  
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index e782211..e199965 100644
+index e7822115..e1999656 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -139,6 +139,8 @@ lxc_config_define(pty_max);
@@ -377,5 +377,5 @@ index e782211..e199965 100644
  			      struct lxc_conf *c, void *data)
  {
 -- 
-1.8.3.1
+2.23.0
 

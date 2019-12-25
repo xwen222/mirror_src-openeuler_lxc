@@ -1,7 +1,7 @@
-From ff3a4e1e01afe4cabd6dfae8400b3bfa5803567d Mon Sep 17 00:00:00 2001
+From b088aaa97b760914234c8a16d89cea86ddb20cbd Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 8 Apr 2019 08:29:46 -0400
-Subject: [PATCH 080/122] lxc: fix compile error
+Subject: [PATCH 080/131] lxc: fix compile error
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 7b82d06..fd6075f 100644
+index 7b82d060..fd6075f8 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1874,7 +1874,6 @@ int lxc_setup_keyring(void)
@@ -31,5 +31,5 @@ index 7b82d06..fd6075f 100644
  	}
  
 -- 
-1.8.3.1
+2.23.0
 

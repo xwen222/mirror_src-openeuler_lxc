@@ -1,20 +1,20 @@
-From 5c599c0a93b66eea1633f54ac61bcd99142758e3 Mon Sep 17 00:00:00 2001
+From 4557f7475bb4000dfb19de4a5e85f1577f793955 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 25 Mar 2019 17:17:00 +0800
-Subject: [PATCH 073/122] lxc: support set additional groups
+Subject: [PATCH 073/131] lxc: support set additional groups
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c  |  8 ++++---
- src/lxc/conf.c    | 12 ++++++++++
+ src/lxc/attach.c  |  8 +++---
+ src/lxc/conf.c    | 12 +++++++++
  src/lxc/conf.h    |  3 +++
- src/lxc/confile.c | 66 ++++++++++++++++++++++++++++++++++++++++++++++++++++++-
- src/lxc/start.c   | 25 ++++++++++++---------
+ src/lxc/confile.c | 66 ++++++++++++++++++++++++++++++++++++++++++++++-
+ src/lxc/start.c   | 25 +++++++++++-------
  5 files changed, 100 insertions(+), 14 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index c979c85..618f2f1 100644
+index c979c85a..618f2f1c 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -903,9 +903,6 @@ static int attach_child_main(struct attach_clone_payload *payload)
@@ -40,7 +40,7 @@ index c979c85..618f2f1 100644
  		goto on_error;
  
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index abfba04..58fc059 100644
+index abfba042..58fc059c 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -5184,10 +5184,21 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
@@ -74,7 +74,7 @@ index abfba04..58fc059 100644
  	lxc_clear_rootfs_masked_paths(conf);
  	lxc_clear_rootfs_ro_paths(conf);
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 93cf15d..11cf596 100644
+index 93cf15dd..11cf5960 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -418,6 +418,8 @@ struct lxc_conf {
@@ -95,7 +95,7 @@ index 93cf15d..11cf596 100644
  int lxc_clear_rootfs_masked_paths(struct lxc_conf *c);
  int lxc_clear_rootfs_ro_paths(struct lxc_conf *c);
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 3940b32..60e6c46 100644
+index 3940b328..60e6c462 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -154,6 +154,7 @@ lxc_config_define(sysctl);
@@ -200,7 +200,7 @@ index 3940b32..60e6c46 100644
  static inline int clr_config_populate_device(const char *key, struct lxc_conf *c,
  				   void *data)
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 2fca4e1..ae92c13 100644
+index 2fca4e1a..ae92c133 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1666,6 +1666,20 @@ static int do_start(void *data)
@@ -243,5 +243,5 @@ index 2fca4e1..ae92c13 100644
  	ret = lxc_ambient_caps_down();
  	if (ret < 0) {
 -- 
-1.8.3.1
+2.23.0
 

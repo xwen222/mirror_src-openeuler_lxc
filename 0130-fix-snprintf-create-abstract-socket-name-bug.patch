@@ -1,0 +1,26 @@
+From 022bf651ae6a068f7cbaa608432fd3c09d783e03 Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Tue, 17 Dec 2019 21:24:24 +0800
+Subject: [PATCH 130/131] fix snprintf create abstract socket name bug
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ src/lxc/commands_utils.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lxc/commands_utils.c b/src/lxc/commands_utils.c
+index 56ecce7d..f48f1188 100644
+--- a/src/lxc/commands_utils.c
++++ b/src/lxc/commands_utils.c
+@@ -144,7 +144,7 @@ int lxc_make_abstract_socket_name(char *path, size_t pathlen,
+ 	}
+ 
+ 	ret = snprintf(offset, len, "%s/%s/%s", lxcpath, name, suffix);
+-	if (ret < 0 || ret >= len) {
++	if (ret < 0) {
+ 		ERROR("Failed to create abstract socket name");
+ 		return -1;
+ 	}
+-- 
+2.23.0
+

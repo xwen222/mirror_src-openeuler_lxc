@@ -1,7 +1,7 @@
-From 5c369714d1a1d74606e6ee44a3df4e1d159ee702 Mon Sep 17 00:00:00 2001
+From bbcab25bf3ade437e41728d6e5e2daf27bf637c3 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 21 Mar 2019 22:05:09 +0800
-Subject: [PATCH 071/122] lxc: get cgroup path according to cgroup mountpoint
+Subject: [PATCH 071/131] lxc: get cgroup path according to cgroup mountpoint
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -14,7 +14,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  5 files changed, 12 insertions(+), 12 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 5ceb06b..62d58f9 100644
+index 5ceb06b0..62d58f9a 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1852,7 +1852,7 @@ __cgfsng_ops static bool cgfsng_unfreeze(struct cgroup_ops *ops)
@@ -38,7 +38,7 @@ index 5ceb06b..62d58f9 100644
  
  /* Given a cgroup path returned from lxc_cmd_get_cgroup_path, build a full path,
 diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
-index b6116f6..edbb1e3 100644
+index b6116f68..edbb1e39 100644
 --- a/src/lxc/cgroups/cgroup.h
 +++ b/src/lxc/cgroups/cgroup.h
 @@ -129,7 +129,7 @@ struct cgroup_ops {
@@ -51,7 +51,7 @@ index b6116f6..edbb1e3 100644
  	int (*num_hierarchies)(struct cgroup_ops *ops);
  	bool (*get_hierarchies)(struct cgroup_ops *ops, int n, char ***out);
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index f0c95df..c74b8c1 100644
+index f0c95df7..c74b8c1f 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -481,9 +481,9 @@ static int lxc_cmd_get_cgroup_callback(int fd, struct lxc_cmd_req *req,
@@ -76,7 +76,7 @@ index f0c95df..c74b8c1 100644
  
  		if (cgroup_ops->unfreeze(cgroup_ops))
 diff --git a/src/lxc/criu.c b/src/lxc/criu.c
-index bb97859..5c77979 100644
+index bb97859b..5c779790 100644
 --- a/src/lxc/criu.c
 +++ b/src/lxc/criu.c
 @@ -332,7 +332,7 @@ static void exec_criu(struct cgroup_ops *cgroup_ops, struct lxc_conf *conf,
@@ -89,7 +89,7 @@ index bb97859..5c77979 100644
  				ERROR("failed to get cgroup path for %s", controllers[0]);
  				goto err;
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index b14e46f..9243a6d 100644
+index b14e46fd..9243a6d5 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1032,17 +1032,15 @@ static int _recursive_read_cgroup_procs(const char *dirpath, pid_t **pids, size_
@@ -122,5 +122,5 @@ index b14e46f..9243a6d 100644
  	free(fullpath);
  	return ret;
 -- 
-1.8.3.1
+2.23.0
 

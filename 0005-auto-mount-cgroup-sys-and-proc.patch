@@ -1,7 +1,7 @@
-From f3c5a99c7bd1ecef02051489a97cbe0a1def254f Mon Sep 17 00:00:00 2001
+From 5dfe223c483c298557604c2314ef757d4c147b66 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 10 Jan 2019 20:40:19 +0800
-Subject: [PATCH 005/122] auto mount cgroup sys and proc
+Subject: [PATCH 005/131] auto mount cgroup sys and proc
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 18 insertions(+), 5 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index acc6c30..aff2b5e 100644
+index acc6c309..aff2b5e1 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1648,6 +1648,10 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
@@ -36,7 +36,7 @@ index acc6c30..aff2b5e 100644
  		if (ret < 0) {
  			free(controllerpath);
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 20b7aba..18753d1 100644
+index 20b7abab..18753d18 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -670,8 +670,8 @@ static int lxc_mount_auto_mounts(struct lxc_conf *conf, int flags, struct lxc_ha
@@ -76,5 +76,5 @@ index 20b7aba..18753d1 100644
  			r = 0;
  		} else if (r < 0) {
 -- 
-1.8.3.1
+2.23.0
 

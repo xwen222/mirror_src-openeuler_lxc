@@ -1,7 +1,7 @@
-From c9dc04b4237ac01155a8ce37beae9db4ea7c2b1a Mon Sep 17 00:00:00 2001
+From 48f6b2e54616c2dbb421374092502704201dfab9 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 21 Feb 2019 05:37:05 -0500
-Subject: [PATCH 061/122] Fix hook: use the path, args, envs execvp dirctory
+Subject: [PATCH 061/131] Fix hook: use the path, args, envs execvp dirctory
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 2 insertions(+), 15 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 67beefe..c2f3cf5 100644
+index 67beefe4..c2f3cf56 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4467,9 +4467,6 @@ static struct lxc_popen_FILE *lxc_popen_ocihook(char *commandpath, char **args,
@@ -46,5 +46,5 @@ index 67beefe..c2f3cf5 100644
  	}
  
 -- 
-1.8.3.1
+2.23.0
 

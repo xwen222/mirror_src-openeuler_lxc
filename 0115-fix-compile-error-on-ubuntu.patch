@@ -1,7 +1,7 @@
-From 7fb5e2b059486b8bd466e2bcb9294653cc62c6d0 Mon Sep 17 00:00:00 2001
+From b1f801be29895369ae393b334005ad3bf87e371f Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 11 Jul 2019 17:42:00 +0800
-Subject: [PATCH 115/122] fix compile error on ubuntu
+Subject: [PATCH 115/131] fix compile error on ubuntu
 
 fix compile error on ubuntu
 
@@ -9,20 +9,20 @@ Signed-off-by: liuhao <liuhao27@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  configure.ac           |  1 -
- src/lxc/Makefile.am    | 10 ++++--
+ src/lxc/Makefile.am    | 10 ++++-
  src/lxc/conf.c         |  2 +-
  src/lxc/confile.c      |  2 +-
- src/lxc/isulad_utils.c | 87 ++++++++++++++++++++++++++++++++++++++++++++++++++
- src/lxc/isulad_utils.h | 13 ++++++++
+ src/lxc/isulad_utils.c | 87 ++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/isulad_utils.h | 13 +++++++
  src/lxc/path.c         |  2 +-
- src/lxc/utils.c        | 82 +----------------------------------------------
- src/lxc/utils.h        |  6 +---
+ src/lxc/utils.c        | 82 +--------------------------------------
+ src/lxc/utils.h        |  6 +--
  9 files changed, 113 insertions(+), 92 deletions(-)
  create mode 100644 src/lxc/isulad_utils.c
  create mode 100644 src/lxc/isulad_utils.h
 
 diff --git a/configure.ac b/configure.ac
-index 5963fab..dc85f74 100644
+index 5963fab1..dc85f746 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -706,7 +706,6 @@ AX_CHECK_LINK_FLAG([-z relro], [LDFLAGS="$LDFLAGS -z relro"],,[])
@@ -34,7 +34,7 @@ index 5963fab..dc85f74 100644
  CFLAGS="$CFLAGS -Wvla -std=gnu11 -D_FORTIFY_SOURCE=2 -Wall -fPIC -fPIE -pie"
  if test "x$enable_werror" = "xyes"; then
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index b24fcfd..27240cc 100644
+index b24fcfdb..27240cc4 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -50,6 +50,7 @@ noinst_HEADERS = attach.h \
@@ -96,7 +96,7 @@ index b24fcfd..27240cc 100644
  			  namespace.c namespace.h \
  			  string_utils.c string_utils.h
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index e22e13e..d9a7aae 100644
+index e22e13e8..d9a7aae1 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4934,7 +4934,7 @@ static int do_run_oci_hooks(const char *name, const char *lxcpath, struct lxc_co
@@ -109,7 +109,7 @@ index e22e13e..d9a7aae 100644
  		break;
  	case OCI_HOOK_POSTSTOP:
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 0537ebc..01fc944 100644
+index 0537ebcf..01fc9443 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -2212,7 +2212,7 @@ static int set_config_init_args(const char *key, const char *value,
@@ -123,7 +123,7 @@ index 0537ebc..01fc944 100644
  	ret = set_config_string_item(&new_value, value);
 diff --git a/src/lxc/isulad_utils.c b/src/lxc/isulad_utils.c
 new file mode 100644
-index 0000000..66516a8
+index 00000000..66516a80
 --- /dev/null
 +++ b/src/lxc/isulad_utils.c
 @@ -0,0 +1,87 @@
@@ -216,7 +216,7 @@ index 0000000..66516a8
 +}
 diff --git a/src/lxc/isulad_utils.h b/src/lxc/isulad_utils.h
 new file mode 100644
-index 0000000..852d956
+index 00000000..852d9562
 --- /dev/null
 +++ b/src/lxc/isulad_utils.h
 @@ -0,0 +1,13 @@
@@ -234,7 +234,7 @@ index 0000000..852d956
 +
 +#endif
 diff --git a/src/lxc/path.c b/src/lxc/path.c
-index df285f5..7a5dce9 100644
+index df285f54..7a5dce95 100644
 --- a/src/lxc/path.c
 +++ b/src/lxc/path.c
 @@ -10,7 +10,7 @@
@@ -247,7 +247,7 @@ index df285f5..7a5dce9 100644
  lxc_log_define(lxc_path_ui, lxc);
  
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 656df4a..1d2e9ee 100644
+index 656df4a3..1d2e9ee4 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -57,6 +57,7 @@
@@ -344,7 +344,7 @@ index 656df4a..1d2e9ee 100644
 -}
 -
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 0b33f69..1c9bf41 100644
+index 0b33f690..1c9bf418 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -42,6 +42,7 @@
@@ -367,5 +367,5 @@ index 0b33f69..1c9bf41 100644
  
  #endif /* __LXC_UTILS_H */
 -- 
-1.8.3.1
+2.23.0
 

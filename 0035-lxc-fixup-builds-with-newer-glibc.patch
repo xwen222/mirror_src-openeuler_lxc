@@ -1,7 +1,7 @@
-From b84e0641198d562f8da88dcf98e24f55358523c7 Mon Sep 17 00:00:00 2001
+From ff2e749f043f49a4a10d849a56de258a8bfebb56 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 16 Jan 2019 20:53:25 +0800
-Subject: [PATCH 035/122] lxc: fixup builds with newer glibc
+Subject: [PATCH 035/131] lxc: fixup builds with newer glibc
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 120a13d..c8fb993 100644
+index 120a13d7..c8fb9931 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -44,6 +44,7 @@
@@ -21,5 +21,5 @@ index 120a13d..c8fb993 100644
  #include <pwd.h>
  
 -- 
-1.8.3.1
+2.23.0
 

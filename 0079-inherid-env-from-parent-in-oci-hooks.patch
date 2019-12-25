@@ -1,7 +1,7 @@
-From b19fca11de19c05c4035fd98842810dfb102aa7b Mon Sep 17 00:00:00 2001
+From b7c3e38d912794fcbba5a3fc4ed185adff58c72d Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 4 Apr 2019 17:21:56 +0800
-Subject: [PATCH 079/122] inherid env from parent in oci hooks
+Subject: [PATCH 079/131] inherid env from parent in oci hooks
 
 env: LD_LIBRAY_PAHT and PATH
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index a9421c5..20eb840 100644
+index a9421c5f..20eb8408 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4420,7 +4420,7 @@ static char **merge_ocihook_env(char **oldenvs, size_t env_len, size_t *merge_en
@@ -25,5 +25,5 @@ index a9421c5..20eb840 100644
  	char *lxcenv_buf;
  
 -- 
-1.8.3.1
+2.23.0
 

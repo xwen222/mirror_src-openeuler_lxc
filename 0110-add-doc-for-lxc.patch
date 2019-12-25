@@ -1,7 +1,7 @@
-From 4fcbbaad8e41594629cda4694e0f2b4b5850f398 Mon Sep 17 00:00:00 2001
+From 25640fa1a09fade4ae15ba9a14a110f4a36cd0c8 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Fri, 21 Jun 2019 17:20:43 +0800
-Subject: [PATCH 110/122] add doc for lxc
+Subject: [PATCH 110/131] add doc for lxc
 
 add doc for lxc
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index a714779..5963fab 100644
+index a7147794..5963fab1 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -206,8 +206,8 @@ AM_CONDITIONAL([ENABLE_RPATH], [test "x$enable_rpath" = "xyes"])
@@ -27,5 +27,5 @@ index a714779..5963fab 100644
  if test "x$enable_doc" = "xyes" -o "x$enable_doc" = "xauto"; then
  	db2xman=""
 -- 
-1.8.3.1
+2.23.0
 

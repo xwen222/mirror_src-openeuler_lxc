@@ -1,19 +1,19 @@
-From 900c2f8fe30d4ffdaef93f2c01d711705ab8cff9 Mon Sep 17 00:00:00 2001
+From 11edc9a59a72540f06ccb1bcfb43cc2d81b7e873 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 7 May 2019 12:55:03 +0800
-Subject: [PATCH 094/122] exec load uid gid and groups
+Subject: [PATCH 094/131] exec load uid gid and groups
 
 exec load uid gid and groups
 
 Signed-off-by: liuhao <liuhao27@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/lxccontainer.c    | 69 +++++++++++++++++++++++++++++++++++++++++++++--
- src/lxc/tools/lxc_start.c | 58 ---------------------------------------
+ src/lxc/lxccontainer.c    | 69 +++++++++++++++++++++++++++++++++++++--
+ src/lxc/tools/lxc_start.c | 58 --------------------------------
  2 files changed, 67 insertions(+), 60 deletions(-)
 
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index fa13e52..e0c4de3 100644
+index fa13e522..e0c4de3e 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -74,6 +74,7 @@
@@ -110,7 +110,7 @@ index fa13e52..e0c4de3 100644
  
  	if (ongoing_create(c) == 2) {
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index 4069204..af63f58 100644
+index 4069204f..af63f581 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -50,7 +50,6 @@
@@ -193,5 +193,5 @@ index 4069204..af63f58 100644
  	if (my_args.exit_monitor_fifo != NULL) {
  		c->exit_fifo = strdup(my_args.exit_monitor_fifo);
 -- 
-1.8.3.1
+2.23.0
 

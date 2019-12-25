@@ -1,21 +1,21 @@
-From 205213bbf95886772aa0b8974507741d5012dd45 Mon Sep 17 00:00:00 2001
+From 472aa08222783b4255b60a4dd7a10197711bf703 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 20:12:06 +0800
-Subject: [PATCH 024/122] isulad: support symlink in mount entry, and not
+Subject: [PATCH 024/131] isulad: support symlink in mount entry, and not
  permit mount to /proc
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/Makefile.am |   2 +
- src/lxc/conf.c      | 108 ++++++++++-
- src/lxc/path.c      | 546 ++++++++++++++++++++++++++++++++++++++++++++++++++++
- src/lxc/path.h      |  70 +++++++
+ src/lxc/conf.c      | 108 ++++++++-
+ src/lxc/path.c      | 546 ++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/path.h      |  70 ++++++
  4 files changed, 721 insertions(+), 5 deletions(-)
  create mode 100644 src/lxc/path.c
  create mode 100644 src/lxc/path.h
 
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index 08e2fab..f2928b7 100644
+index 08e2fab6..f2928b7d 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -12,6 +12,7 @@ noinst_HEADERS = attach.h \
@@ -35,7 +35,7 @@ index 08e2fab..f2928b7 100644
  		    criu.c criu.h \
  		    error.c error.h \
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 55d1e45..800573a 100644
+index 55d1e453..800573a8 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -77,6 +77,7 @@
@@ -189,7 +189,7 @@ index 55d1e45..800573a 100644
  
 diff --git a/src/lxc/path.c b/src/lxc/path.c
 new file mode 100644
-index 0000000..e917dcb
+index 00000000..e917dcb8
 --- /dev/null
 +++ b/src/lxc/path.c
 @@ -0,0 +1,546 @@
@@ -742,7 +742,7 @@ index 0000000..e917dcb
 \ No newline at end of file
 diff --git a/src/lxc/path.h b/src/lxc/path.h
 new file mode 100644
-index 0000000..e3a04cc
+index 00000000..e3a04cc5
 --- /dev/null
 +++ b/src/lxc/path.h
 @@ -0,0 +1,70 @@
@@ -817,5 +817,5 @@ index 0000000..e3a04cc
 +
 +#endif
 -- 
-1.8.3.1
+2.23.0
 

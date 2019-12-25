@@ -1,7 +1,7 @@
-From 5a3c172215974dccf41e456b39c8174aaa580cc8 Mon Sep 17 00:00:00 2001
+From 1c9ffd2e51f0c525125103b172f2b03fc6a9aa83 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 4 Apr 2019 11:19:48 +0800
-Subject: [PATCH 076/122] lxc: delete unused variable
+Subject: [PATCH 076/131] lxc: delete unused variable
 
 Signed-off-by: wujing <wujing50@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 deletion(-)
 
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index 2861ef4..440c0bc 100644
+index 2861ef4d..440c0bcb 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -62,7 +62,6 @@ static char **extra_env;
@@ -22,5 +22,5 @@ index 2861ef4..440c0bc 100644
  static const struct option my_longopts[] = {
  	{"elevated-privileges", optional_argument, 0, 'e'},
 -- 
-1.8.3.1
+2.23.0
 

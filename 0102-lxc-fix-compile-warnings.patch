@@ -1,7 +1,7 @@
-From 1693410ec532fb2197ae8f7152409ee4c29180a3 Mon Sep 17 00:00:00 2001
+From 7fbfd6a0e45744d9f779da857ddcf82e5eb92a30 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 3 Jun 2019 06:19:07 -0400
-Subject: [PATCH 102/122] lxc: fix compile warnings
+Subject: [PATCH 102/131] lxc: fix compile warnings
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  3 files changed, 1 insertion(+), 7 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index ec1667d..e7df336 100644
+index ec1667d4..e7df3363 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4992,7 +4992,6 @@ int run_lxc_hooks(const char *name, char *hookname, struct lxc_conf *conf,
@@ -23,7 +23,7 @@ index ec1667d..e7df336 100644
  
  	if (strcmp(hookname, "oci-prestart") == 0) {
 diff --git a/src/lxc/path.c b/src/lxc/path.c
-index 45ab4c3..92692de 100644
+index 45ab4c3b..92692dea 100644
 --- a/src/lxc/path.c
 +++ b/src/lxc/path.c
 @@ -141,7 +141,6 @@ int do_clean_path(const char *respath, const char *limit_respath,
@@ -67,7 +67,7 @@ index 45ab4c3..92692de 100644
  	if (fullpath == NULL || rootpath == NULL) {
  		return NULL;
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 9ce2473..e674947 100644
+index 9ce24739..e6749471 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -2106,7 +2106,7 @@ void *lxc_common_calloc_s(size_t size)
@@ -80,5 +80,5 @@ index 9ce2473..e674947 100644
  		goto err_out;
  	}
 -- 
-1.8.3.1
+2.23.0
 

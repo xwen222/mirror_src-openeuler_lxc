@@ -1,7 +1,7 @@
-From d1e8ab945fadac5ee11eb150b1cdfb6aeec407c2 Mon Sep 17 00:00:00 2001
+From 342207f0766c7937082e0fca7375acd54c77f03b Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 10 Jan 2019 08:42:19 -0500
-Subject: [PATCH 002/122] namespace: add support share namespace by path
+Subject: [PATCH 002/131] namespace: add support share namespace by path
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 11 insertions(+)
 
 diff --git a/src/lxc/confile_utils.c b/src/lxc/confile_utils.c
-index 7280463..9049ce8 100644
+index 7280463f..9049ce82 100644
 --- a/src/lxc/confile_utils.c
 +++ b/src/lxc/confile_utils.c
 @@ -789,6 +789,17 @@ int lxc_inherit_namespace(const char *lxcname_or_pid, const char *lxcpath,
@@ -31,5 +31,5 @@ index 7280463..9049ce8 100644
  	if (lastslash) {
  		dup = strdup(lxcname_or_pid);
 -- 
-1.8.3.1
+2.23.0
 

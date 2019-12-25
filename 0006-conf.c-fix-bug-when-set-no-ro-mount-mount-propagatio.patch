@@ -1,7 +1,7 @@
-From 32f9ca00819b53c1f3bc933da8d489b3766c184d Mon Sep 17 00:00:00 2001
+From d0ea541f9360eed1cb6beb91a0e69f1afa0b5031 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Fri, 11 Jan 2019 16:55:01 +0800
-Subject: [PATCH 006/122] conf.c: fix bug when set no ro mount, mount
+Subject: [PATCH 006/131] conf.c: fix bug when set no ro mount, mount
  propagation will be skipped
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 18753d1..37a5ff7 100644
+index 18753d18..37a5ff79 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2087,6 +2087,9 @@ static int mount_entry(const char *fsname, const char *target,
@@ -35,5 +35,5 @@ index 18753d1..37a5ff7 100644
  	      srcpath ? srcpath : "(null)", target, fstype);
  
 -- 
-1.8.3.1
+2.23.0
 

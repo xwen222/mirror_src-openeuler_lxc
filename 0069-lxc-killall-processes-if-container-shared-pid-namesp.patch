@@ -1,18 +1,18 @@
-From f6877ff5a4ca2bb0e7556b0b17690290888021f5 Mon Sep 17 00:00:00 2001
+From ce57a45c1132b1595b43751f86f3be505107dae8 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 21 Mar 2019 15:48:02 +0800
-Subject: [PATCH 069/122] lxc: killall processes if container shared pid
+Subject: [PATCH 069/131] lxc: killall processes if container shared pid
  namespace
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/cgroups/cgfsng.c |   2 +-
- src/lxc/start.c          | 160 +++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/start.c          | 160 +++++++++++++++++++++++++++++++++++++++
  2 files changed, 161 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index e513218..ab7ca35 100644
+index e5132182..ab7ca35e 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1056,7 +1056,7 @@ static int cgroup_rmdir(struct hierarchy **hierarchies,
@@ -25,7 +25,7 @@ index e513218..ab7ca35 100644
  		}
  
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index cad0d76..1c9eb0a 100644
+index cad0d769..1c9eb0ab 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2494,6 +2494,162 @@ static void clean_resource_set_env(struct lxc_handler *handler)
@@ -203,5 +203,5 @@ index cad0d76..1c9eb0a 100644
  	char* oci_hook_args[1];
  	oci_hook_args[0] = alloca(strlen(handler->lxcpath) + 1);
 -- 
-1.8.3.1
+2.23.0
 

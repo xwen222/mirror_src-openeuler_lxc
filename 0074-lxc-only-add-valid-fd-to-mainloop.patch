@@ -1,7 +1,7 @@
-From df20c5c153b342c2aa49ebafbef8c1e334668e9a Mon Sep 17 00:00:00 2001
+From 0db36a212db180c7370adaddb427ec5d0a192486 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 26 Mar 2019 16:11:13 +0800
-Subject: [PATCH 074/122] lxc: only add valid fd to mainloop
+Subject: [PATCH 074/131] lxc: only add valid fd to mainloop
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 3 insertions(+)
 
 diff --git a/src/lxc/mainloop.c b/src/lxc/mainloop.c
-index b169aa6..9603d1e 100644
+index b169aa6f..9603d1ee 100644
 --- a/src/lxc/mainloop.c
 +++ b/src/lxc/mainloop.c
 @@ -85,6 +85,9 @@ int lxc_mainloop_add_handler(struct lxc_epoll_descr *descr, int fd,
@@ -24,5 +24,5 @@ index b169aa6..9603d1e 100644
  	if (!handler)
  		return -1;
 -- 
-1.8.3.1
+2.23.0
 

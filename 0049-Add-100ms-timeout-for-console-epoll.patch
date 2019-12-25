@@ -1,7 +1,7 @@
-From 81e84198f02323caabcab2200f2bedf9212a87d7 Mon Sep 17 00:00:00 2001
+From 68b20e1e3571bdaf1d454bf23e649474d5675dfd Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Sat, 19 Jan 2019 02:05:17 -0500
-Subject: [PATCH 049/122] Add 100ms timeout for console epoll
+Subject: [PATCH 049/131] Add 100ms timeout for console epoll
 
 add 100ms timeout for console epoll to avoid lose console
 
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 7bbcb00..daf2af4 100644
+index 7bbcb009..daf2af4d 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -643,7 +643,7 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
@@ -24,5 +24,5 @@ index 7bbcb00..daf2af4 100644
  out_mainloop_console:
  	if (has_console) {
 -- 
-1.8.3.1
+2.23.0
 

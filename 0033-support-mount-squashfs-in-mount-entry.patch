@@ -1,19 +1,19 @@
-From e7f83b7c8b21942051e86e094d867cc79ff93524 Mon Sep 17 00:00:00 2001
+From fcfc10ab645e152899225bdfa9d74acedb739afd Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 15 Jan 2019 19:54:13 +0800
-Subject: [PATCH 033/122] support mount squashfs in mount entry
+Subject: [PATCH 033/131] support mount squashfs in mount entry
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/conf.c                  | 88 +++++++++++++++++++++++++++++++++++++++--
- src/lxc/storage/loop.c          | 36 ++++++++++++++---
- src/lxc/storage/storage_utils.c | 36 ++++++++++++++++-
- src/lxc/utils.c                 | 33 ++++++++++++++--
+ src/lxc/conf.c                  | 88 +++++++++++++++++++++++++++++++--
+ src/lxc/storage/loop.c          | 36 ++++++++++++--
+ src/lxc/storage/storage_utils.c | 36 +++++++++++++-
+ src/lxc/utils.c                 | 33 +++++++++++--
  src/lxc/utils.h                 |  1 +
  5 files changed, 181 insertions(+), 13 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 54b967b..fea0f59 100644
+index 54b967b4..fea0f592 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -78,6 +78,7 @@
@@ -133,7 +133,7 @@ index 54b967b..fea0f59 100644
  {
  	int ret;
 diff --git a/src/lxc/storage/loop.c b/src/lxc/storage/loop.c
-index 35cb13e..760def8 100644
+index 35cb13e0..760def81 100644
 --- a/src/lxc/storage/loop.c
 +++ b/src/lxc/storage/loop.c
 @@ -41,6 +41,7 @@
@@ -214,7 +214,7 @@ index 35cb13e..760def8 100644
  
  int loop_umount(struct lxc_storage *bdev)
 diff --git a/src/lxc/storage/storage_utils.c b/src/lxc/storage/storage_utils.c
-index b4dcb57..0a87778 100644
+index b4dcb57c..0a87778e 100644
 --- a/src/lxc/storage/storage_utils.c
 +++ b/src/lxc/storage/storage_utils.c
 @@ -339,10 +339,14 @@ int is_blktype(struct lxc_storage *b)
@@ -293,7 +293,7 @@ index b4dcb57..0a87778 100644
  	}
  
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index d1a22f7..120a13d 100644
+index d1a22f73..120a13d7 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1053,7 +1053,7 @@ static int open_if_safe(int dirfd, const char *nextpath)
@@ -353,7 +353,7 @@ index d1a22f7..120a13d 100644
  on_error:
  	close(fd_ctl);
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index abc88ca..4313942 100644
+index abc88ca5..43139424 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -224,6 +224,7 @@ extern bool cgns_supported(void);
@@ -365,5 +365,5 @@ index abc88ca..4313942 100644
  		      unsigned long flags, const void *data,
  		      const char *rootfs);
 -- 
-1.8.3.1
+2.23.0
 

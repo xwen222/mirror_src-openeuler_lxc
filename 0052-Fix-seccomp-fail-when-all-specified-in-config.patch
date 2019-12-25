@@ -1,15 +1,15 @@
-From bbefc33a969a7cf0d4f671d96030fb044593a71a Mon Sep 17 00:00:00 2001
+From fb356f57bc8783e28c611a25877f3a9d47218264 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 21 Jan 2019 23:28:43 -0500
-Subject: [PATCH 052/122] Fix seccomp fail when [all] specified in config
+Subject: [PATCH 052/131] Fix seccomp fail when [all] specified in config
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/seccomp.c | 56 +++++++++++++++++++++++++++----------------------------
+ src/lxc/seccomp.c | 56 +++++++++++++++++++++++------------------------
  1 file changed, 28 insertions(+), 28 deletions(-)
 
 diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
-index 4a9143b..3218a60 100644
+index 4a9143bb..3218a603 100644
 --- a/src/lxc/seccomp.c
 +++ b/src/lxc/seccomp.c
 @@ -346,7 +346,7 @@ int get_hostarch(void)
@@ -188,5 +188,5 @@ index 4a9143b..3218a60 100644
  				if (!do_resolve_add_rule(ctx.architectures[0], line,
  							 ctx.contexts[0], &rule))
 -- 
-1.8.3.1
+2.23.0
 

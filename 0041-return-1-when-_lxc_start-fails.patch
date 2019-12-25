@@ -1,7 +1,7 @@
-From ea7fe5755309e9054ac06542b8fc0abb25039b7e Mon Sep 17 00:00:00 2001
+From 6153c99f9dad1499a5ac9b64def6cbb0f7aeeadc Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 16 Jan 2019 05:53:36 -0500
-Subject: [PATCH 041/122] return -1 when _lxc_start fails
+Subject: [PATCH 041/131] return -1 when _lxc_start fails
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 3e6854f..7bbcb00 100644
+index 3e6854fa..7bbcb009 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2175,6 +2175,7 @@ int __lxc_start(const char *name, struct lxc_handler *handler,
@@ -21,5 +21,5 @@ index 3e6854f..7bbcb00 100644
  	}
  
 -- 
-1.8.3.1
+2.23.0
 

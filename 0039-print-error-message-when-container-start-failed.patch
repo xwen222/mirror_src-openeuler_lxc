@@ -1,26 +1,26 @@
-From b8925094ceb77cc94c8305725aae4877636c13c1 Mon Sep 17 00:00:00 2001
+From 0032e0ea93b38d9f869683ac08328ab1ca029f4d Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 16 Jan 2019 14:38:38 +0800
-Subject: [PATCH 039/122] print error message when container start failed
+Subject: [PATCH 039/131] print error message when container start failed
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c          |   6 +--
- src/lxc/cgroups/cgfsng.c  |  22 +++++++--
+ src/lxc/attach.c          |   6 +-
+ src/lxc/cgroups/cgfsng.c  |  22 +++++--
  src/lxc/cgroups/cgroup.c  |   4 +-
  src/lxc/cgroups/cgroup.h  |   2 +
- src/lxc/conf.c            | 122 ++++++++++++++++++++++++++--------------------
+ src/lxc/conf.c            | 122 ++++++++++++++++++++++----------------
  src/lxc/conf.h            |   5 +-
  src/lxc/execute.c         |   3 +-
- src/lxc/lxccontainer.c    |  37 ++++++++++++--
- src/lxc/start.c           |  14 ++++--
+ src/lxc/lxccontainer.c    |  37 +++++++++++-
+ src/lxc/start.c           |  14 +++--
  src/lxc/start.h           |   2 +-
- src/lxc/tools/lxc_start.c |   3 ++
+ src/lxc/tools/lxc_start.c |   3 +
  11 files changed, 147 insertions(+), 73 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 4ccdd74..b44ea74 100644
+index 4ccdd74b..b44ea746 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -1396,7 +1396,7 @@ int lxc_attach(const char *name, const char *lxcpath,
@@ -44,7 +44,7 @@ index 4ccdd74..b44ea74 100644
  	SYSERROR("Failed to exec \"%s\"", cmd->program);
  	return ret;
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index bc1481d..47b12a6 100644
+index bc1481d4..47b12a64 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1236,7 +1236,7 @@ static int mkdir_eexist_on_last(const char *dir, mode_t mode)
@@ -122,7 +122,7 @@ index bc1481d..47b12a6 100644
  	cgfsng_ops->destroy = cgfsng_payload_destroy;
  	cgfsng_ops->payload_create = cgfsng_payload_create;
 diff --git a/src/lxc/cgroups/cgroup.c b/src/lxc/cgroups/cgroup.c
-index 8e7aef9..7442c31 100644
+index 8e7aef96..7442c310 100644
 --- a/src/lxc/cgroups/cgroup.c
 +++ b/src/lxc/cgroups/cgroup.c
 @@ -38,13 +38,13 @@
@@ -142,7 +142,7 @@ index 8e7aef9..7442c31 100644
  		ERROR("Failed to initialize cgroup driver");
  		return NULL;
 diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
-index fa4871e..b6116f6 100644
+index fa4871ed..b6116f68 100644
 --- a/src/lxc/cgroups/cgroup.h
 +++ b/src/lxc/cgroups/cgroup.h
 @@ -92,6 +92,8 @@ struct cgroup_ops {
@@ -155,7 +155,7 @@ index fa4871e..b6116f6 100644
  	/* @hierarchies
  	 * - A NULL-terminated array of struct hierarchy, one per legacy
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 88cebfd..8fa63f7 100644
+index 88cebfd5..8fa63f7c 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2414,6 +2414,8 @@ static int mount_entry_create_dir_file(const struct mntent *mntent,
@@ -544,7 +544,7 @@ index 88cebfd..8fa63f7 100644
  		goto print_hook;
  	}
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index b92c48e..88f5b41 100644
+index b92c48e1..88f5b417 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -175,6 +175,8 @@ struct lxc_rootfs {
@@ -574,7 +574,7 @@ index b92c48e..88f5b41 100644
  /* isulad add end */
  
 diff --git a/src/lxc/execute.c b/src/lxc/execute.c
-index d388e63..3fc46c6 100644
+index d388e633..3fc46c6e 100644
 --- a/src/lxc/execute.c
 +++ b/src/lxc/execute.c
 @@ -40,7 +40,7 @@
@@ -595,7 +595,7 @@ index d388e63..3fc46c6 100644
  	free(argv);
  out1:
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index e99c41c..d641851 100644
+index e99c41cb..d6418510 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -916,7 +916,9 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
@@ -711,7 +711,7 @@ index e99c41c..d641851 100644
  				  sizeof(keepfds) / sizeof(keepfds[0]));
  	if (ret < 0) {
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index ec61b32..3e6854f 100644
+index ec61b322..3e6854fa 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -892,6 +892,7 @@ int lxc_init(const char *name, struct lxc_handler *handler)
@@ -785,7 +785,7 @@ index ec61b32..3e6854f 100644
  }
  
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index 1d84325..ab72e6e 100644
+index 1d84325b..ab72e6e0 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -145,7 +145,7 @@ struct execute_args {
@@ -798,7 +798,7 @@ index 1d84325..ab72e6e 100644
  };
  
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index f37f8a6..ec48701 100644
+index f37f8a6a..ec487018 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -392,6 +392,9 @@ int main(int argc, char *argv[])
@@ -812,5 +812,5 @@ index f37f8a6..ec48701 100644
  
  		if (my_args.daemonize)
 -- 
-1.8.3.1
+2.23.0
 

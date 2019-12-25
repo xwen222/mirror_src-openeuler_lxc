@@ -1,17 +1,17 @@
-From 8a8f3a04e8a6f3494a072ffe0cc9124049c5ba63 Mon Sep 17 00:00:00 2001
+From 5229766b8f1ef3802ae4ae3d44da693b25155113 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Fri, 11 Jan 2019 01:51:25 -0500
-Subject: [PATCH 003/122] confile: add lxc.isulad.populate.device interface
+Subject: [PATCH 003/131] confile: add lxc.isulad.populate.device interface
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/conf.c    | 125 +++++++++++++++++++++++++++++++++++++++++++++++++++---
- src/lxc/conf.h    |  28 +++++++++++-
- src/lxc/confile.c | 124 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/conf.c    | 125 +++++++++++++++++++++++++++++++++++++++++++---
+ src/lxc/conf.h    |  28 ++++++++++-
+ src/lxc/confile.c | 124 +++++++++++++++++++++++++++++++++++++++++++++
  3 files changed, 269 insertions(+), 8 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index f20d629..20b7aba 100644
+index f20d6297..20b7abab 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2745,6 +2745,10 @@ struct lxc_conf *lxc_conf_init(void)
@@ -184,13 +184,14 @@ index f20d629..20b7aba 100644
  }
  
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 95c3027..cced868 100644
+index 95c30270..cced868c 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
-@@ -171,6 +171,26 @@ struct lxc_rootfs {
+@@ -170,6 +170,26 @@ struct lxc_rootfs {
+ 	char *data;
  };
  
- /*
++/*
 + * iSulad: Defines a structure to store the devices which will
 + * be attached in container
 + * @name       : the target device name in container
@@ -210,10 +211,9 @@ index 95c3027..cced868 100644
 +};
 +
 +
-+/*
+ /*
   * Automatic mounts for LXC to perform inside the container
   */
- enum {
 @@ -377,9 +397,13 @@ struct lxc_conf {
  	/* procs */
  	struct lxc_list procs;
@@ -239,7 +239,7 @@ index 95c3027..cced868 100644
  
  #endif /* __LXC_CONF_H */
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 7297b35..e3212d3 100644
+index 7297b358..e3212d3d 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -152,6 +152,7 @@ lxc_config_define(sysctl);
@@ -402,5 +402,5 @@ index 7297b35..e3212d3 100644
  			      struct lxc_conf *c, void *data)
  {
 -- 
-1.8.3.1
+2.23.0
 

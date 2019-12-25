@@ -1,7 +1,7 @@
-From 767d1b2f9bb323de16658a080b314c5f8feaec67 Mon Sep 17 00:00:00 2001
+From 89a39ea2597bb5e6f3c4cad04828337c717ea30d Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 11 Apr 2019 15:27:31 +0800
-Subject: [PATCH 082/122] lxc: fix memory leak cause by setenv
+Subject: [PATCH 082/131] lxc: fix memory leak cause by setenv
 
 isulad will call do_lxcapi_clean_resource(), so setenv at here, will
 change env of isulad.
@@ -9,11 +9,11 @@ change env of isulad.
 Signed-off-by: liuhao <liuhao27@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/start.c | 107 ++++++++++++++++++++++++++++++++++++++++----------------
+ src/lxc/start.c | 107 ++++++++++++++++++++++++++++++++++--------------
  1 file changed, 76 insertions(+), 31 deletions(-)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 10f922d..87e07d3 100644
+index 10f922d0..87e07d33 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2635,44 +2635,85 @@ on_error:
@@ -146,5 +146,5 @@ index 10f922d..87e07d3 100644
  	if (handler->conf->ns_share[LXC_NS_PID] != NULL) {
  		signal_all_processes(handler);
 -- 
-1.8.3.1
+2.23.0
 

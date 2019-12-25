@@ -1,5 +1,4 @@
-%global with_seccomp 1
-%global _release 20191105
+%global _release 20191218
 %global debug_package %{nil}
 
 Name:           lxc
@@ -134,11 +133,18 @@ Patch9121:      0119-remove-unuse-binary.patch
 Patch9122:      0120-remove-unuse-unmount-namespace.patch
 Patch9123:      0121-optimize-log-when-root-path-is-invalid.patch
 Patch9124:      0122-lxc-fix-code-reivew-errors.patch
+Patch9125:      0123-in-accordance-with-hook-spec-in-oci.patch
+Patch9126:      0124-lxc-close-maincmd-fd-before-destroy-cgroup.patch
+Patch9127:      0125-lxc-fix-strcat-bug-in-cleanpath.patch
+Patch9128:      0126-add-user-option-for-lxc-attach.patch
+Patch9129:      0127-log-only-write-size-begin-if-buffer-is-full.patch
+Patch9130:      0128-link-proc-mounts-to-etc-mtab.patch
+Patch9131:      0129-cgfsng-add-retry-for-enter-cgroup.patch
+Patch9132:      0130-fix-snprintf-create-abstract-socket-name-bug.patch
+Patch9133:      0131-fix-commands-and-terminal-memory-leak-bug.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
-%if 0%{?with_seccomp}
 BuildRequires:  pkgconfig(libseccomp)
-%endif
 BuildRequires:  libcap libcap-devel libselinux-devel yajl yajl-devel
 BuildRequires:  libsecurec libsecurec-devel pkgconfig(bash-completion)
 
@@ -148,6 +154,9 @@ Requires(preun):   systemd
 Requires(postun):  systemd
 Requires(post):    /sbin/ldconfig
 Requires(postun):  /sbin/ldconfig
+
+Provides: lxc-libs
+Obsoletes: lxc-libs
 
 %{!?_pkgdocdir: %global _pkgdocdir %{_docdir}/lxc-3.0.3}
 
@@ -179,140 +188,13 @@ BuildArch:      noarch
 This package contains documentation for lxc for creating containers.
 
 %prep
-%setup -q -n lxc-3.0.3
-%patch6000 -p1
-%patch6001 -p1
-%patch6002 -p1
-%patch9003 -p1
-%patch9004 -p1
-%patch9005 -p1
-%patch9006 -p1
-%patch9007 -p1
-%patch9008 -p1
-%patch9009 -p1
-%patch9010 -p1
-%patch9011 -p1
-%patch9012 -p1
-%patch9013 -p1
-%patch9014 -p1
-%patch9015 -p1
-%patch9016 -p1
-%patch9017 -p1
-%patch9018 -p1
-%patch9019 -p1
-%patch9020 -p1
-%patch9021 -p1
-%patch9022 -p1
-%patch9023 -p1
-%patch9024 -p1
-%patch9025 -p1
-%patch9026 -p1
-%patch9027 -p1
-%patch9028 -p1
-%patch9029 -p1
-%patch9030 -p1
-%patch9031 -p1
-%patch9032 -p1
-%patch9033 -p1
-%patch9034 -p1
-%patch9035 -p1
-%patch9036 -p1
-%patch9037 -p1
-%patch9038 -p1
-%patch9039 -p1
-%patch9040 -p1
-%patch9041 -p1
-%patch9042 -p1
-%patch9043 -p1
-%patch9044 -p1
-%patch9045 -p1
-%patch9046 -p1
-%patch9047 -p1
-%patch9048 -p1
-%patch9049 -p1
-%patch9050 -p1
-%patch9051 -p1
-%patch9052 -p1
-%patch9053 -p1
-%patch9054 -p1
-%patch9055 -p1
-%patch9056 -p1
-%patch9057 -p1
-%patch9058 -p1
-%patch9059 -p1
-%patch9060 -p1
-%patch9061 -p1
-%patch9062 -p1
-%patch9063 -p1
-%patch9064 -p1
-%patch9065 -p1
-%patch9066 -p1
-%patch9067 -p1
-%patch9068 -p1
-%patch9069 -p1
-%patch9070 -p1
-%patch9071 -p1
-%patch9072 -p1
-%patch9073 -p1
-%patch9074 -p1
-%patch9075 -p1
-%patch9076 -p1
-%patch9077 -p1
-%patch9078 -p1
-%patch9079 -p1
-%patch9080 -p1
-%patch9081 -p1
-%patch9082 -p1
-%patch9083 -p1
-%patch9084 -p1
-%patch9085 -p1
-%patch9086 -p1
-%patch9087 -p1
-%patch9088 -p1
-%patch9089 -p1
-%patch9090 -p1
-%patch9091 -p1
-%patch9092 -p1
-%patch9093 -p1
-%patch9094 -p1
-%patch9095 -p1
-%patch9096 -p1
-%patch9097 -p1
-%patch9098 -p1
-%patch9099 -p1
-%patch9100 -p1
-%patch9101 -p1
-%patch9102 -p1
-%patch9103 -p1
-%patch9104 -p1
-%patch9105 -p1
-%patch9106 -p1
-%patch9107 -p1
-%patch9108 -p1
-%patch9109 -p1
-%patch9110 -p1
-%patch9111 -p1
-%patch9112 -p1
-%patch9113 -p1
-%patch9114 -p1
-%patch9115 -p1
-%patch9116 -p1
-%patch9117 -p1
-%patch9118 -p1
-%patch9119 -p1
-%patch9120 -p1
-%patch9121 -p1
-%patch9122 -p1
-%patch9123 -p1
-%patch9124 -p1
+%autosetup -n lxc-3.0.3 -Sgit -p1
 
 %build
 %configure --enable-doc --enable-api-docs \
            --disable-silent-rules --docdir=%{_pkgdocdir} --disable-rpath \
            --disable-static --disable-apparmor --enable-selinux \
-%if 0%{?with_seccomp}
            --enable-seccomp \
-%endif
            --with-init-script=systemd --disable-werror
 
 %{make_build}
@@ -410,3 +292,7 @@ make check
 %{_mandir}/man7/%{name}*
 %{_mandir}/*/man5/%{name}*
 %{_mandir}/*/man7/%{name}*
+
+%changelog
+* Thu Dec 19 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-20191218
+- Package init

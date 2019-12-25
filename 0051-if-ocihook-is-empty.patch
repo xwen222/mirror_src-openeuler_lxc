@@ -1,7 +1,7 @@
-From 4fc938241a649307d87700e90dc380651da4c550 Mon Sep 17 00:00:00 2001
+From 273a33174a35d31b7d56f99a9ce2a958d1ef3b17 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 22 Jan 2019 11:25:45 +0800
-Subject: [PATCH 051/122] if ocihook is empty
+Subject: [PATCH 051/131] if ocihook is empty
 
 return success
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 48e31af..6ea8f9c 100644
+index 48e31aff..6ea8f9c1 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4782,9 +4782,12 @@ static int run_oci_hooks(const char *name, const char *lxcpath, struct lxc_conf
@@ -30,5 +30,5 @@ index 48e31af..6ea8f9c 100644
  	rootpath = get_root_path(lc->rootfs.path, lc->rootfs.bdev_type);
  	if (!rootpath) {
 -- 
-1.8.3.1
+2.23.0
 

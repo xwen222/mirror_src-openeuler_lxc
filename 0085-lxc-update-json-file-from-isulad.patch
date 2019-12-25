@@ -1,21 +1,21 @@
-From c378f6d33dc28604b317eb93f040ce371ceb152c Mon Sep 17 00:00:00 2001
+From 4b5e1b21b30deeb9744066bda231c3bdd1b1fdb6 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Fri, 12 Apr 2019 06:06:12 -0400
-Subject: [PATCH 085/122] lxc: update json file from isulad
+Subject: [PATCH 085/131] lxc: update json file from isulad
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/json/defs.c              |  38 +++++-----
- src/lxc/json/json_common.c       | 160 +++++++++++++++++++--------------------
+ src/lxc/json/defs.c              |  38 ++++----
+ src/lxc/json/json_common.c       | 160 +++++++++++++++----------------
  src/lxc/json/json_common.h       |   2 +-
- src/lxc/json/logger_json_file.c  |  50 ++++++------
+ src/lxc/json/logger_json_file.c  |  50 +++++-----
  src/lxc/json/oci_runtime_hooks.c |   3 +-
- src/lxc/json/oci_runtime_spec.c  |  32 ++++----
+ src/lxc/json/oci_runtime_spec.c  |  32 +++----
  6 files changed, 142 insertions(+), 143 deletions(-)
 
 diff --git a/src/lxc/json/defs.c b/src/lxc/json/defs.c
-index 38df2f7..e7d9a09 100644
+index 38df2f7a..e7d9a092 100644
 --- a/src/lxc/json/defs.c
 +++ b/src/lxc/json/defs.c
 @@ -15,20 +15,20 @@ defs_hook *make_defs_hook(yajl_val tree, struct parser_context *ctx, parser_erro
@@ -158,7 +158,7 @@ index 38df2f7..e7d9a09 100644
          }
          stat = reformat_int(g, num);
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
-index e339ab3..54b7b61 100755
+index e339ab3a..54b7b610 100755
 --- a/src/lxc/json/json_common.c
 +++ b/src/lxc/json/json_common.c
 @@ -111,7 +111,7 @@ int common_safe_double(const char *numstr, double *converted) {
@@ -763,7 +763,7 @@ index e339ab3..54b7b61 100755
      }
  
 diff --git a/src/lxc/json/json_common.h b/src/lxc/json/json_common.h
-index eb8281c..218a837 100755
+index eb8281c7..218a8371 100755
 --- a/src/lxc/json/json_common.h
 +++ b/src/lxc/json/json_common.h
 @@ -27,7 +27,7 @@ extern "C" {
@@ -776,7 +776,7 @@ index eb8281c..218a837 100755
                  *(err) = safe_strdup("error allocating memory"); \
              } \
 diff --git a/src/lxc/json/logger_json_file.c b/src/lxc/json/logger_json_file.c
-index 4d78103..6433b04 100644
+index 4d781032..6433b042 100644
 --- a/src/lxc/json/logger_json_file.c
 +++ b/src/lxc/json/logger_json_file.c
 @@ -15,32 +15,32 @@ logger_json_file *make_logger_json_file(yajl_val tree, struct parser_context *ct
@@ -955,7 +955,7 @@ index 4d78103..6433b04 100644
          goto free_out;
      }
 diff --git a/src/lxc/json/oci_runtime_hooks.c b/src/lxc/json/oci_runtime_hooks.c
-index 3aa134e..43ff8d7 100644
+index 3aa134ef..43ff8d7f 100644
 --- a/src/lxc/json/oci_runtime_hooks.c
 +++ b/src/lxc/json/oci_runtime_hooks.c
 @@ -46,8 +46,7 @@ oci_runtime_spec_hooks *oci_runtime_spec_hooks_parse_file(const char *filename,
@@ -969,7 +969,7 @@ index 3aa134e..43ff8d7 100644
      return ptr;
  }
 diff --git a/src/lxc/json/oci_runtime_spec.c b/src/lxc/json/oci_runtime_spec.c
-index 1f6073c..4ccb635 100644
+index 1f6073c9..4ccb6358 100644
 --- a/src/lxc/json/oci_runtime_spec.c
 +++ b/src/lxc/json/oci_runtime_spec.c
 @@ -15,7 +15,7 @@ oci_runtime_spec_hooks *make_oci_runtime_spec_hooks(yajl_val tree, struct parser
@@ -1085,5 +1085,5 @@ index 1f6073c..4ccb635 100644
          }
          if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
 -- 
-1.8.3.1
+2.23.0
 

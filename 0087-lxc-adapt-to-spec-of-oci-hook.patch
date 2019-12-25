@@ -1,7 +1,7 @@
-From 917a306cfab2e0cef3a666b23bf7c788bcf466d3 Mon Sep 17 00:00:00 2001
+From e58415ad4f1e118a54c5d773e9873f65aa4f44c9 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Wed, 24 Apr 2019 22:22:55 +0800
-Subject: [PATCH 087/122] lxc: adapt to spec of oci hook
+Subject: [PATCH 087/131] lxc: adapt to spec of oci hook
 
 poststart failed do not cause run failed
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 8cdccf1..a1d77eb 100644
+index 8cdccf13..a1d77ebc 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4782,6 +4782,7 @@ static int run_oci_hooks(const char *name, const char *lxcpath, struct lxc_conf
@@ -37,5 +37,5 @@ index 8cdccf1..a1d77eb 100644
  			break;
  		case OCI_HOOK_POSTSTOP:
 -- 
-1.8.3.1
+2.23.0
 

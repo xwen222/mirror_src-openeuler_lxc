@@ -1,23 +1,23 @@
-From 1e1274c4202cb8aac8395586f163d6b27b31ff28 Mon Sep 17 00:00:00 2001
+From 69d69a842a06671bc095bd4692dd8ea265cf6755 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 30 Jan 2019 17:44:19 +0800
-Subject: [PATCH 060/122] using json-file to write console log of container
+Subject: [PATCH 060/131] using json-file to write console log of container
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/Makefile.am             |   2 +
- src/lxc/json/json_common.c      |  14 ++-
+ src/lxc/json/json_common.c      |  14 +-
  src/lxc/json/json_common.h      |   2 +
- src/lxc/json/logger_json_file.c | 243 ++++++++++++++++++++++++++++++++++++++++
- src/lxc/json/logger_json_file.h |  45 ++++++++
- src/lxc/terminal.c              | 166 +++++++++++++++++++++++++--
+ src/lxc/json/logger_json_file.c | 243 ++++++++++++++++++++++++++++++++
+ src/lxc/json/logger_json_file.h |  45 ++++++
+ src/lxc/terminal.c              | 166 ++++++++++++++++++++--
  6 files changed, 457 insertions(+), 15 deletions(-)
  create mode 100644 src/lxc/json/logger_json_file.c
  create mode 100644 src/lxc/json/logger_json_file.h
 
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index 260a7eb..698f8f9 100644
+index 260a7eb0..698f8f95 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -47,6 +47,7 @@ noinst_HEADERS = attach.h \
@@ -37,7 +37,7 @@ index 260a7eb..698f8f9 100644
  		    json/read-file.c json/read-file.h \
  		    $(LSM_SOURCES)
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
-index 8b91844..e339ab3 100755
+index 8b91844d..e339ab3a 100755
 --- a/src/lxc/json/json_common.c
 +++ b/src/lxc/json/json_common.c
 @@ -86,7 +86,7 @@ bool json_gen_init(yajl_gen *g, struct parser_context *ctx) {
@@ -81,7 +81,7 @@ index 8b91844..e339ab3 100755
 +}
 \ No newline at end of file
 diff --git a/src/lxc/json/json_common.h b/src/lxc/json/json_common.h
-index 904fe3c..eb8281c 100755
+index 904fe3cd..eb8281c7 100755
 --- a/src/lxc/json/json_common.h
 +++ b/src/lxc/json/json_common.h
 @@ -23,6 +23,8 @@ extern "C" {
@@ -95,7 +95,7 @@ index 904fe3c..eb8281c 100755
          if (!*(err)) {\
 diff --git a/src/lxc/json/logger_json_file.c b/src/lxc/json/logger_json_file.c
 new file mode 100644
-index 0000000..4d78103
+index 00000000..4d781032
 --- /dev/null
 +++ b/src/lxc/json/logger_json_file.c
 @@ -0,0 +1,243 @@
@@ -344,7 +344,7 @@ index 0000000..4d78103
 +}
 diff --git a/src/lxc/json/logger_json_file.h b/src/lxc/json/logger_json_file.h
 new file mode 100644
-index 0000000..ad5af7b
+index 00000000..ad5af7b4
 --- /dev/null
 +++ b/src/lxc/json/logger_json_file.h
 @@ -0,0 +1,45 @@
@@ -394,7 +394,7 @@ index 0000000..ad5af7b
 +
 +#endif
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 252a644..602d43d 100644
+index 252a644f..602d43d7 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -47,6 +47,7 @@
@@ -606,5 +606,5 @@ index 252a644..602d43d 100644
  			if (terminal->tty_state) {
  				lxc_terminal_signal_fini(terminal->tty_state);
 -- 
-1.8.3.1
+2.23.0
 

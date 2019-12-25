@@ -1,7 +1,7 @@
-From 83136d88470202915844a0bb0413af70fcd18efc Mon Sep 17 00:00:00 2001
+From 720b4a937fcd74bfdd1bd07e68b80eaa566bd6ee Mon Sep 17 00:00:00 2001
 From: maoweiyong <maoweiyong@huawei.com>
 Date: Thu, 25 Apr 2019 21:21:12 +0800
-Subject: [PATCH 090/122] lxc: remove unused variable
+Subject: [PATCH 090/131] lxc: remove unused variable
 
 Signed-off-by: maoweiyong <maoweiyong@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: maoweiyong <maoweiyong@huawei.com>
  1 file changed, 2 deletions(-)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 2b0d43e..3657d4e 100644
+index 2b0d43ea..3657d4eb 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2824,8 +2824,6 @@ int do_lxcapi_get_pids(char *name, char *lxcpath, struct lxc_conf *conf, pid_t *
@@ -22,5 +22,5 @@ index 2b0d43e..3657d4e 100644
  
  	handler = lxc_init_pids_handler(name, lxcpath, conf);
 -- 
-1.8.3.1
+2.23.0
 

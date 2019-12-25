@@ -1,0 +1,26 @@
+From 331f06d4322e17db05949ee29cd1fe92217b73f5 Mon Sep 17 00:00:00 2001
+From: TanYifeng <tanyifeng1@huawei.com>
+Date: Tue, 3 Dec 2019 22:43:25 -0500
+Subject: [PATCH 127/131] log: only write (size - begin) if buffer is full
+
+Signed-off-by: TanYifeng <tanyifeng1@huawei.com>
+---
+ src/lxc/terminal.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index e81f57ee..b547013c 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -538,7 +538,7 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, const char
+ 	 * noting that it's a partial log line. */
+ 	if (buf == NULL || (begin == 0 && size == __BUF_CACHE_SIZE)) {
+ 		if (begin < size) {
+-			ret = lxc_logger_write(terminal, type, cache + begin, index - begin + 1);
++			ret = lxc_logger_write(terminal, type, cache + begin, size - begin);
+ 			if (ret < 0) {
+ 				WARN("Failed to log msg");
+ 			}
+-- 
+2.23.0
+

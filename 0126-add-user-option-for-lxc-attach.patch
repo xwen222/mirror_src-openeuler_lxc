@@ -1,0 +1,134 @@
+From 37a243271540f6f5be2a5cdd01460cf68b92bcf3 Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Wed, 30 Oct 2019 18:41:02 +0800
+Subject: [PATCH 126/131] add user option for lxc-attach
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ src/lxc/tools/lxc_attach.c | 75 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 75 insertions(+)
+
+diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
+index 7d51ad72..0d401555 100644
+--- a/src/lxc/tools/lxc_attach.c
++++ b/src/lxc/tools/lxc_attach.c
+@@ -62,6 +62,8 @@ static char **extra_env;
+ static ssize_t extra_env_size;
+ static char **extra_keep;
+ static ssize_t extra_keep_size;
++static uid_t custom_uid = (uid_t)-1;
++static gid_t custom_gid = (gid_t)-1;
+ 
+ static const struct option my_longopts[] = {
+ 	{"elevated-privileges", optional_argument, 0, 'e'},
+@@ -75,6 +77,7 @@ static const struct option my_longopts[] = {
+ 	{"set-var", required_argument, 0, 'v'},
+ 	{"pty-log", required_argument, 0, 'L'},
+ 	{"rcfile", required_argument, 0, 'f'},
++	{"user", required_argument, 0, 'u'},
+ 	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO}, /* isulad add terminal fifos*/
+ 	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
+ 	{"err-fifo", required_argument, 0, OPT_STDERR_FIFO},
+@@ -130,6 +133,7 @@ Options :\n\
+   -f, --rcfile=FILE\n\
+                     Load configuration file FILE\n\
+         --timeout   Timeout in seconds (default: 0)\n\
++  -u, --user        User ID (format: UID[:GID])\n\
+ ",
+ 	.options      = my_longopts,
+ 	.parser       = my_parser,
+@@ -141,6 +145,69 @@ Options :\n\
+ // isulad: send '128 + signal' if container is killed by signal.
+ #define ExitSignalOffset 128
+ 
++static int parse_user_id(const char *username, char **uid, char **gid, char **tmp_dup)
++{
++	char *tmp = NULL;
++	char *pdot = NULL;
++
++	if (uid == NULL || gid == NULL || tmp_dup == NULL) {
++		return -1;
++	}
++
++	if (username != NULL) {
++		tmp = strdup(username);
++		if (tmp == NULL) {
++			ERROR("Failed to duplicate user name");
++			return -1;
++		}
++
++		// for free tmp in caller
++		*tmp_dup = tmp;
++		pdot = strstr(tmp, ":");
++		if (pdot != NULL) {
++			*pdot = '\0';
++			if (pdot != tmp) {
++				// uid found
++				*uid = tmp;
++			}
++
++			if (*(pdot + 1) != '\0') {
++				// gid found
++				*gid = pdot + 1;
++			}
++		} else {
++			// No : found
++			if (*tmp != '\0') {
++				*uid = tmp;
++			}
++		}
++	}
++
++	return 0;
++}
++
++static int get_attach_uid_gid(uid_t *user_id, gid_t *group_id, const char *username)
++{
++	char *tmp = NULL;
++	char *uid = NULL;
++	char *gid = NULL;
++
++	// parse uid and gid by username
++	if (parse_user_id(username, &uid, &gid, &tmp) != 0) {
++		return -1;
++	}
++
++	if (uid != NULL) {
++		*user_id = (unsigned int)atoll(uid);
++	}
++	if (gid != NULL) {
++		*group_id = (unsigned int)atoll(gid);
++	}
++
++	free(tmp);
++	return 0;
++}
++
+ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ {
+ 	int ret;
+@@ -198,6 +265,12 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case 'f':
+ 		args->rcfile = arg;
+ 		break;
++	case 'u':
++		if (get_attach_uid_gid(&custom_uid, &custom_gid, arg) != 0) {
++			ERROR("Failed to get attach user U/GID");
++			return -1;
++		}
++		break;
+ 	case OPT_INPUT_FIFO:
+ 		args->terminal_fifos[0] = arg;
+ 		break;
+@@ -488,6 +561,8 @@ int main(int argc, char *argv[])
+ 	attach_options.extra_env_vars = extra_env;
+ 	attach_options.extra_keep_env = extra_keep;
+ 	attach_options.timeout = my_args.attach_timeout;
++	attach_options.uid = custom_uid;
++	attach_options.gid = custom_gid;
+ 
+ 	if (my_args.argc > 0) {
+ 		command.program = my_args.argv[0];
+-- 
+2.23.0
+

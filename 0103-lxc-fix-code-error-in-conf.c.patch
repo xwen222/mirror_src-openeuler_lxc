@@ -1,7 +1,7 @@
-From d3f6e8e611dd6b3160d58159e99565c3686e6398 Mon Sep 17 00:00:00 2001
+From ea13ba8a5d6958f6302482ca5a3d718381bca657 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 3 Jun 2019 11:14:22 -0400
-Subject: [PATCH 103/122] lxc: fix code error in conf.c
+Subject: [PATCH 103/131] lxc: fix code error in conf.c
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 17 insertions(+), 6 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index e7df336..127ef77 100644
+index e7df3363..127ef77b 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2446,7 +2446,8 @@ static int check_mount_destination(const char *rootfs, const char *dest)
@@ -92,7 +92,7 @@ index e7df336..127ef77 100644
  
  	return 0;
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 26bb70f..e4bfc48 100644
+index 26bb70fa..e4bfc48f 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -445,7 +445,7 @@ extern struct lxc_conf *current_config;
@@ -105,5 +105,5 @@ index 26bb70f..e4bfc48 100644
  extern int detect_shared_rootfs(void);
  extern struct lxc_conf *lxc_conf_init(void);
 -- 
-1.8.3.1
+2.23.0
 

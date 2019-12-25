@@ -1,7 +1,7 @@
-From a32efb4b476da94f343aa56e400b180a7686079e Mon Sep 17 00:00:00 2001
+From 6ebea2ab8e91d294ba2d8d2821937a770f27fcb4 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Mon, 14 Jan 2019 17:47:17 +0800
-Subject: [PATCH 025/122] support oci hooks
+Subject: [PATCH 025/131] support oci hooks
 
 support oci hooks
 
@@ -9,22 +9,22 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  configure.ac                     |    3 +
  src/lxc/Makefile.am              |   13 +-
- src/lxc/conf.c                   |  528 ++++++++++++++++-
+ src/lxc/conf.c                   |  528 ++++++++++++-
  src/lxc/conf.h                   |    9 +
- src/lxc/json/defs.c              |  198 +++++++
- src/lxc/json/defs.h              |   37 ++
- src/lxc/json/json_common.c       | 1196 ++++++++++++++++++++++++++++++++++++++
- src/lxc/json/json_common.h       |  185 ++++++
+ src/lxc/json/defs.c              |  198 +++++
+ src/lxc/json/defs.h              |   37 +
+ src/lxc/json/json_common.c       | 1196 ++++++++++++++++++++++++++++++
+ src/lxc/json/json_common.h       |  185 +++++
  src/lxc/json/oci_runtime_hooks.c |   53 ++
  src/lxc/json/oci_runtime_hooks.h |   15 +
- src/lxc/json/oci_runtime_spec.c  |  196 +++++++
- src/lxc/json/oci_runtime_spec.h  |   37 ++
+ src/lxc/json/oci_runtime_spec.c  |  196 +++++
+ src/lxc/json/oci_runtime_spec.h  |   37 +
  src/lxc/json/read-file.c         |   94 +++
  src/lxc/json/read-file.h         |   11 +
- src/lxc/lxccontainer.c           |   66 +++
+ src/lxc/lxccontainer.c           |   66 ++
  src/lxc/lxccontainer.h           |    7 +
  src/lxc/start.c                  |   17 +
- src/lxc/utils.c                  |   66 ++-
+ src/lxc/utils.c                  |   66 +-
  src/lxc/utils.h                  |    2 +
  19 files changed, 2716 insertions(+), 17 deletions(-)
  create mode 100644 src/lxc/json/defs.c
@@ -39,7 +39,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  create mode 100644 src/lxc/json/read-file.h
 
 diff --git a/configure.ac b/configure.ac
-index 950c8dd..4da52a2 100644
+index 950c8dde..4da52a27 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -120,6 +120,9 @@ AM_CONDITIONAL([DISTRO_UBUNTU], [test "x$with_distro" = "xubuntu"])
@@ -53,7 +53,7 @@ index 950c8dd..4da52a2 100644
  AC_MSG_CHECKING([for init system type])
  AC_ARG_WITH([init-script],
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index f2928b7..5678b8d 100644
+index f2928b7d..5678b8da 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -43,6 +43,11 @@ noinst_HEADERS = attach.h \
@@ -98,7 +98,7 @@ index f2928b7..5678b8d 100644
  liblxc_la_LIBADD = $(CAP_LIBS) \
  		   $(GNUTLS_LIBS) \
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 800573a..6a14de1 100644
+index 800573a8..6a14de1f 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -53,6 +53,7 @@
@@ -664,7 +664,7 @@ index 800573a..6a14de1 100644
  	free(conf->rootfs.mount);
  	free(conf->rootfs.bdev_type);
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 7393dbf..2263e47 100644
+index 7393dbfe..2263e47e 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -35,6 +35,7 @@
@@ -699,7 +699,7 @@ index 7393dbf..2263e47 100644
  	char *lsm_se_context;
 diff --git a/src/lxc/json/defs.c b/src/lxc/json/defs.c
 new file mode 100644
-index 0000000..38df2f7
+index 00000000..38df2f7a
 --- /dev/null
 +++ b/src/lxc/json/defs.c
 @@ -0,0 +1,198 @@
@@ -903,7 +903,7 @@ index 0000000..38df2f7
 +}
 diff --git a/src/lxc/json/defs.h b/src/lxc/json/defs.h
 new file mode 100644
-index 0000000..0bbd8ac
+index 00000000..0bbd8ac8
 --- /dev/null
 +++ b/src/lxc/json/defs.h
 @@ -0,0 +1,37 @@
@@ -946,7 +946,7 @@ index 0000000..0bbd8ac
 +#endif
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
 new file mode 100755
-index 0000000..8b91844
+index 00000000..8b91844d
 --- /dev/null
 +++ b/src/lxc/json/json_common.c
 @@ -0,0 +1,1196 @@
@@ -2148,7 +2148,7 @@ index 0000000..8b91844
 +}
 diff --git a/src/lxc/json/json_common.h b/src/lxc/json/json_common.h
 new file mode 100755
-index 0000000..904fe3c
+index 00000000..904fe3cd
 --- /dev/null
 +++ b/src/lxc/json/json_common.h
 @@ -0,0 +1,185 @@
@@ -2340,7 +2340,7 @@ index 0000000..904fe3c
 \ No newline at end of file
 diff --git a/src/lxc/json/oci_runtime_hooks.c b/src/lxc/json/oci_runtime_hooks.c
 new file mode 100644
-index 0000000..3aa134e
+index 00000000..3aa134ef
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_hooks.c
 @@ -0,0 +1,53 @@
@@ -2399,7 +2399,7 @@ index 0000000..3aa134e
 +}
 diff --git a/src/lxc/json/oci_runtime_hooks.h b/src/lxc/json/oci_runtime_hooks.h
 new file mode 100644
-index 0000000..bf570c9
+index 00000000..bf570c9e
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_hooks.h
 @@ -0,0 +1,15 @@
@@ -2420,7 +2420,7 @@ index 0000000..bf570c9
 +#endif
 diff --git a/src/lxc/json/oci_runtime_spec.c b/src/lxc/json/oci_runtime_spec.c
 new file mode 100644
-index 0000000..1f6073c
+index 00000000..1f6073c9
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_spec.c
 @@ -0,0 +1,196 @@
@@ -2622,7 +2622,7 @@ index 0000000..1f6073c
 +}
 diff --git a/src/lxc/json/oci_runtime_spec.h b/src/lxc/json/oci_runtime_spec.h
 new file mode 100644
-index 0000000..ef3f161
+index 00000000..ef3f1619
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_spec.h
 @@ -0,0 +1,37 @@
@@ -2665,7 +2665,7 @@ index 0000000..ef3f161
 +#endif
 diff --git a/src/lxc/json/read-file.c b/src/lxc/json/read-file.c
 new file mode 100644
-index 0000000..ad0eda1
+index 00000000..ad0eda1e
 --- /dev/null
 +++ b/src/lxc/json/read-file.c
 @@ -0,0 +1,94 @@
@@ -2765,7 +2765,7 @@ index 0000000..ad0eda1
 +}
 diff --git a/src/lxc/json/read-file.h b/src/lxc/json/read-file.h
 new file mode 100644
-index 0000000..5d6e0eb
+index 00000000..5d6e0eb6
 --- /dev/null
 +++ b/src/lxc/json/read-file.h
 @@ -0,0 +1,11 @@
@@ -2781,7 +2781,7 @@ index 0000000..5d6e0eb
 +
 +#endif
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 31f4819..68134d8 100644
+index 31f4819e..68134d87 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -271,6 +271,9 @@ static void lxc_container_free(struct lxc_container *c)
@@ -2886,25 +2886,25 @@ index 31f4819..68134d8 100644
  		fprintf(stderr, "Failed to load config for %s\n", name);
  		goto err;
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index 503038a..5d23cc7 100644
+index 503038af..5d23cc7e 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
-@@ -77,6 +77,13 @@ struct lxc_container {
+@@ -75,6 +75,13 @@ struct lxc_container {
+ 	 */
+ 	char *configfile;
  
- 	/*!
- 	 * \private
++	/*!
++	 * \private
 +	 * isulad: support oci hook from json file
 +	 * full path of json file
 +	 * */
 +	char *ocihookfile;
 +
-+	/*!
-+	 * \private
+ 	/*!
+ 	 * \private
  	 * File to store pid.
- 	 */
- 	char *pidfile;
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index b13326c..63f5af8 100644
+index b13326ce..63f5af88 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1887,6 +1887,16 @@ static int lxc_spawn(struct lxc_handler *handler)
@@ -2939,7 +2939,7 @@ index b13326c..63f5af8 100644
  	if (ret < 0) {
  		ERROR("Failed to set state to \"%s\"", lxc_state2str(RUNNING));
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 8ec9f46..d1a22f7 100644
+index 8ec9f461..d1a22f73 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1864,11 +1864,11 @@ static int lxc_file2str(const char *filename, char ret[], int cap)
@@ -3072,7 +3072,7 @@ index 8ec9f46..d1a22f7 100644
 +	return alive;
 +}
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 3d56fd9..abc88ca 100644
+index 3d56fd93..abc88ca5 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -316,4 +316,6 @@ extern int fd_nonblock(int fd);
@@ -3083,5 +3083,5 @@ index 3d56fd9..abc88ca 100644
 +
  #endif /* __LXC_UTILS_H */
 -- 
-1.8.3.1
+2.23.0
 

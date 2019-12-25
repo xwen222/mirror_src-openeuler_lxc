@@ -1,7 +1,7 @@
-From de35b7df30fbdbf10c0d55523b7fa3a15eb17623 Mon Sep 17 00:00:00 2001
+From 0aadbbe890ac6d558b037308a9522ef3bd5f5f17 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Mon, 25 Mar 2019 18:03:23 +0800
-Subject: [PATCH 072/122] lxc: adapt to docker-18.09
+Subject: [PATCH 072/131] lxc: adapt to docker-18.09
 
 1. adapt to docker-18.09
 2. fix strlcpy bug
@@ -14,7 +14,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index a6b9797..abfba04 100644
+index a6b97975..abfba042 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4382,9 +4382,9 @@ static char* generate_json_str(const char *name, const char *lxcpath, const char
@@ -40,7 +40,7 @@ index a6b9797..abfba04 100644
  	if (rc < 0 || rc >= size) {
  		ERROR("Create json string failed");
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 9243a6d..2fca4e1 100644
+index 9243a6d5..2fca4e1a 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2186,7 +2186,7 @@ static int lxc_spawn(struct lxc_handler *handler)
@@ -62,5 +62,5 @@ index 9243a6d..2fca4e1 100644
  	if (run_lxc_hooks(handler->name, "oci-poststop", handler->conf, oci_hook_args)) {
  		ERROR("Failed to run lxc.hook.post-stop for container \"%s\".", handler->name);
 -- 
-1.8.3.1
+2.23.0
 

@@ -1,7 +1,7 @@
-From ec896c711806cad0fa852ea1695361441e840132 Mon Sep 17 00:00:00 2001
+From 1a34ec5bddd89074575a985c87cec360eb4adc8c Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Sun, 10 Mar 2019 00:47:05 +0800
-Subject: [PATCH 064/122] lxc: Reduce seccomp processing log level
+Subject: [PATCH 064/131] lxc: Reduce seccomp processing log level
 
 Signed-off-by: wujing <wujing50@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
-index 26eac90..7f10777 100644
+index 26eac907..7f107778 100644
 --- a/src/lxc/seccomp.c
 +++ b/src/lxc/seccomp.c
 @@ -507,14 +507,14 @@ bool do_resolve_add_rule(uint32_t arch, char *line, scmp_filter_ctx ctx,
@@ -42,5 +42,5 @@ index 26eac90..7f10777 100644
  		return true;
  	}
 -- 
-1.8.3.1
+2.23.0
 

@@ -1,21 +1,21 @@
-From a6f57fc8bbe7b0e2d2d77f300c3c84a2956634b6 Mon Sep 17 00:00:00 2001
+From 093ea5bade9dbe2bf585b3627a21f144a3a9cd35 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 10 Jan 2019 06:54:37 -0500
-Subject: [PATCH 001/122] confile: add lxc.isulad.init.args config interface
+Subject: [PATCH 001/131] confile: add lxc.isulad.init.args config interface
 
 lxc.isulad.init.args config interface is used to specify the args for
 the container.
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/conf.c         | 13 +++++++++++
- src/lxc/conf.h         |  8 +++++++
- src/lxc/confile.c      | 61 ++++++++++++++++++++++++++++++++++++++++++++++++++
- src/lxc/lxccontainer.c | 30 +++++++++++++++++++++++++
+ src/lxc/conf.c         | 13 +++++++++
+ src/lxc/conf.h         |  8 ++++++
+ src/lxc/confile.c      | 61 ++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/lxccontainer.c | 30 +++++++++++++++++++++
  4 files changed, 112 insertions(+)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index d95bc4c..f20d629 100644
+index d95bc4c7..f20d6297 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4014,6 +4014,18 @@ void lxc_clear_includes(struct lxc_conf *conf)
@@ -46,7 +46,7 @@ index d95bc4c..f20d629 100644
  	free(conf->cgroup_meta.controllers);
  	free(conf);
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 41f67cf..95c3027 100644
+index 41f67cff..95c30270 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -376,6 +376,10 @@ struct lxc_conf {
@@ -70,7 +70,7 @@ index 41f67cf..95c3027 100644
 +
  #endif /* __LXC_CONF_H */
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 05c6823..7297b35 100644
+index 05c68231..7297b358 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -150,6 +150,10 @@ lxc_config_define(tty_dir);
@@ -170,7 +170,7 @@ index 05c6823..7297b35 100644
  			      struct lxc_conf *c, void *data)
  {
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index ad70886..b4cacce 100644
+index ad70886e..b4cacce2 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -847,6 +847,31 @@ static bool wait_on_daemonized_start(struct lxc_handler *handler, int pid)
@@ -218,5 +218,5 @@ index ad70886..b4cacce 100644
  	if (!argv) {
  		if (useinit) {
 -- 
-1.8.3.1
+2.23.0
 

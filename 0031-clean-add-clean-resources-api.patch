@@ -1,21 +1,21 @@
-From 37d787b93122a6b61d99a3d71f6101f405031a95 Mon Sep 17 00:00:00 2001
+From 136011fb9e859ce315139d2c176d9db505d591c6 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 15 Jan 2019 04:20:57 -0500
-Subject: [PATCH 031/122] clean: add clean resources api
+Subject: [PATCH 031/131] clean: add clean resources api
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/cgroups/cgfsng.c | 124 +++++++++++++++++------------------------
+ src/lxc/cgroups/cgfsng.c | 124 +++++++++++++++-------------------
  src/lxc/cgroups/cgroup.c |   2 +-
  src/lxc/cgroups/cgroup.h |   4 +-
- src/lxc/lxccontainer.c   |  18 ++++++
- src/lxc/lxccontainer.h   |  10 ++++
- src/lxc/start.c          | 141 +++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/lxccontainer.c   |  18 +++++
+ src/lxc/lxccontainer.h   |  10 +++
+ src/lxc/start.c          | 141 +++++++++++++++++++++++++++++++++++++++
  src/lxc/start.h          |   4 ++
  7 files changed, 228 insertions(+), 75 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 7f2a200..8b913a6 100644
+index 7f2a200a..8b913a6b 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1050,12 +1050,15 @@ static int cgroup_rmdir(struct hierarchy **hierarchies,
@@ -230,7 +230,7 @@ index 7f2a200..8b913a6 100644
  	cgfsng_ops->payload_enter = cgfsng_payload_enter;
  	cgfsng_ops->escape = cgfsng_escape;
 diff --git a/src/lxc/cgroups/cgroup.c b/src/lxc/cgroups/cgroup.c
-index 04e0311..8e7aef9 100644
+index 04e0311d..8e7aef96 100644
 --- a/src/lxc/cgroups/cgroup.c
 +++ b/src/lxc/cgroups/cgroup.c
 @@ -50,7 +50,7 @@ struct cgroup_ops *cgroup_init(struct lxc_handler *handler)
@@ -243,7 +243,7 @@ index 04e0311..8e7aef9 100644
  
  	TRACE("Initialized cgroup driver %s", cgroup_ops->driver);
 diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
-index ba4c153..fa4871e 100644
+index ba4c1532..fa4871ed 100644
 --- a/src/lxc/cgroups/cgroup.h
 +++ b/src/lxc/cgroups/cgroup.h
 @@ -123,8 +123,8 @@ struct cgroup_ops {
@@ -258,7 +258,7 @@ index ba4c153..fa4871e 100644
  	bool (*payload_enter)(struct cgroup_ops *ops, pid_t pid);
  	const char *(*get_cgroup)(struct cgroup_ops *ops, const char *controller);
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index beae459..38059fa 100644
+index beae459b..38059faf 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -5116,6 +5116,23 @@ static bool do_lxcapi_set_start_timeout(struct lxc_container *c,  unsigned int s
@@ -294,7 +294,7 @@ index beae459..38059fa 100644
  	return c;
  
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index 77de704..679ca42 100644
+index 77de7040..679ca42c 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -896,6 +896,16 @@ struct lxc_container {
@@ -315,7 +315,7 @@ index 77de704..679ca42 100644
  
  /*!
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index f7be9e4..08d753a 100644
+index f7be9e43..08d753ab 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1895,6 +1895,11 @@ static int lxc_spawn(struct lxc_handler *handler)
@@ -471,7 +471,7 @@ index f7be9e4..08d753a 100644
 +}
 +
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index a96f2ae..1d84325 100644
+index a96f2aed..1d84325b 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -180,4 +180,8 @@ extern int __lxc_start(const char *name, struct lxc_handler *handler,
@@ -484,5 +484,5 @@ index a96f2ae..1d84325 100644
 +
  #endif
 -- 
-1.8.3.1
+2.23.0
 

@@ -1,16 +1,16 @@
-From bd056022ef54a8dc6a859495f0edde96471bd7e5 Mon Sep 17 00:00:00 2001
+From 9a6ef0c1f9a7d91b7b4362082ad7ae05cc8a1e6b Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 13:51:01 +0800
-Subject: [PATCH 019/122] remount cgroup readonly and make soft link of
+Subject: [PATCH 019/131] remount cgroup readonly and make soft link of
  subcgroup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/cgroups/cgfsng.c | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/cgroups/cgfsng.c | 44 ++++++++++++++++++++++++++++++++++++++++
  1 file changed, 44 insertions(+)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index ab5732b..705985f 100644
+index ab5732ba..705985f2 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1621,6 +1621,7 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
@@ -83,5 +83,5 @@ index ab5732b..705985f 100644
  }
  
 -- 
-1.8.3.1
+2.23.0
 

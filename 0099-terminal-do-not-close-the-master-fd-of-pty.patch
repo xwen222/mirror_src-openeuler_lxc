@@ -1,7 +1,7 @@
-From d5d48aa449d782dce754ee87c6a3ee1706c1f967 Mon Sep 17 00:00:00 2001
+From 604a90c65668840645abfc852e26b35d4e24b81d Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 21 May 2019 04:53:16 -0400
-Subject: [PATCH 099/122] terminal: do not close the master fd of pty
+Subject: [PATCH 099/131] terminal: do not close the master fd of pty
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 4 insertions(+)
 
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index dfce92e..88653b4 100644
+index dfce92ed..88653b4f 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -595,6 +595,10 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
@@ -24,5 +24,5 @@ index dfce92e..88653b4 100644
  			if (terminal->tty_state) {
  				lxc_terminal_signal_fini(terminal->tty_state);
 -- 
-1.8.3.1
+2.23.0
 

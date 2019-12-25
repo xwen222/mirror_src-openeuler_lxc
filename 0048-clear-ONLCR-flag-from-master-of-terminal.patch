@@ -1,7 +1,7 @@
-From 26125894df9e3297f34c02d62ae5271b5ec88348 Mon Sep 17 00:00:00 2001
+From 933790143774db4c848cf1fafc79dcfa627ee298 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 17 Jan 2019 20:46:33 +0800
-Subject: [PATCH 048/122] clear ONLCR flag from master of terminal
+Subject: [PATCH 048/131] clear ONLCR flag from master of terminal
 
 clear ONLCR flag from master of terminal
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 25 insertions(+)
 
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index a33830d..95140e0 100644
+index a33830dd..95140e0b 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -1066,6 +1066,24 @@ static int lxc_terminal_fifo_default(struct lxc_terminal *terminal)
@@ -55,5 +55,5 @@ index a33830d..95140e0 100644
  	if (ret < 0) {
  		SYSERROR("Failed to set FD_CLOEXEC flag on terminal master");
 -- 
-1.8.3.1
+2.23.0
 

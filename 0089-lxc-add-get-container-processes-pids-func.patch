@@ -1,18 +1,18 @@
-From 4241f51abad788017ca5a0da5946ccc2672bdc3b Mon Sep 17 00:00:00 2001
+From bdc424289b3ad959bf55af176f5466b56a447e09 Mon Sep 17 00:00:00 2001
 From: maoweiyong <maoweiyong@huawei.com>
 Date: Tue, 23 Apr 2019 12:12:55 +0800
-Subject: [PATCH 089/122] lxc:add get container processes pids func
+Subject: [PATCH 089/131] lxc:add get container processes pids func
 
 Signed-off-by: maoweiyong <maoweiyong@huawei.com>
 ---
- src/lxc/lxccontainer.c | 18 ++++++++++++
- src/lxc/lxccontainer.h | 11 ++++++++
- src/lxc/start.c        | 76 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/lxccontainer.c | 18 ++++++++++
+ src/lxc/lxccontainer.h | 11 ++++++
+ src/lxc/start.c        | 76 ++++++++++++++++++++++++++++++++++++++++++
  src/lxc/start.h        |  2 ++
  4 files changed, 107 insertions(+)
 
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 8a3724c..fa13e52 100644
+index 8a3724c6..fa13e522 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -5212,6 +5212,23 @@ static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pi
@@ -48,7 +48,7 @@ index 8a3724c..fa13e52 100644
  	return c;
  
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index c3368e4..608f815 100644
+index c3368e4f..608f8158 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -947,6 +947,17 @@ struct lxc_container {
@@ -70,7 +70,7 @@ index c3368e4..608f815 100644
  
  /*!
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index f1cd7fa..2b0d43e 100644
+index f1cd7fa3..2b0d43ea 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2638,6 +2638,55 @@ on_error:
@@ -161,7 +161,7 @@ index f1cd7fa..2b0d43e 100644
 +}
 +
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index 0298991..20e667c 100644
+index 02989919..20e667c1 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -188,5 +188,7 @@ extern int resolve_clone_flags(struct lxc_handler *handler);
@@ -173,5 +173,5 @@ index 0298991..20e667c 100644
  
  #endif
 -- 
-1.8.3.1
+2.23.0
 

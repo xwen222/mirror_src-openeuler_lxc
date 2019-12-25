@@ -1,7 +1,7 @@
-From ca1c7f86ddadd194c2347e2ccd6b216f1403e273 Mon Sep 17 00:00:00 2001
+From 59ee57ce2c6b7d8b3054a2c52657b6667faf868c Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 3 Apr 2019 23:36:04 -0400
-Subject: [PATCH 078/122] Run pre-start hook before chroot
+Subject: [PATCH 078/131] Run pre-start hook before chroot
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  3 files changed, 15 insertions(+)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 58fc059..a9421c5 100644
+index 58fc059c..a9421c5f 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -82,6 +82,7 @@
@@ -36,7 +36,7 @@ index 58fc059..a9421c5 100644
  	if (ret < 0) {
  		ERROR("Failed to pivot root into rootfs");
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index ae92c13..10f922d 100644
+index ae92c133..10f922d0 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2204,6 +2204,12 @@ static int lxc_spawn(struct lxc_handler *handler)
@@ -53,7 +53,7 @@ index ae92c13..10f922d 100644
  	 * or return an error. (The child will never return
  	 * LXC_SYNC_READY_START+1. It will either close the sync pipe, causing
 diff --git a/src/lxc/sync.h b/src/lxc/sync.h
-index 5c0fb34..787911d 100644
+index 5c0fb343..787911dd 100644
 --- a/src/lxc/sync.h
 +++ b/src/lxc/sync.h
 @@ -31,6 +31,8 @@ enum {
@@ -66,5 +66,5 @@ index 5c0fb34..787911d 100644
  	LXC_SYNC_READY_START,
  	LXC_SYNC_RESTART,
 -- 
-1.8.3.1
+2.23.0
 
