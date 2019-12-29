@@ -1,4 +1,4 @@
-%global _release 20191218
+%global _release 20191226
 %global debug_package %{nil}
 
 Name:           lxc
@@ -146,7 +146,7 @@ Patch9133:      0131-fix-commands-and-terminal-memory-leak-bug.patch
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
 BuildRequires:  libcap libcap-devel libselinux-devel yajl yajl-devel
-BuildRequires:  libsecurec libsecurec-devel pkgconfig(bash-completion)
+BuildRequires:  pkgconfig(bash-completion)
 
 Requires:          rsync
 Requires(post):    systemd
