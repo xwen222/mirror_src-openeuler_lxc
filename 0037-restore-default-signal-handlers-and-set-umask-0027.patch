@@ -1,7 +1,7 @@
-From 3c281973b8d068164a2276a823f06a5087b285c1 Mon Sep 17 00:00:00 2001
+From f4a12bc311b3c3a9710948fd65ed7a7addbe183d Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 15 Jan 2019 23:14:14 -0500
-Subject: [PATCH 037/131] restore default signal handlers and set umask 0027
+Subject: [PATCH 037/138] restore default signal handlers and set umask 0027
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  3 files changed, 41 insertions(+), 2 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 3f60fe10..4ccdd74b 100644
+index 3f60fe1..4ccdd74 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -750,7 +750,7 @@ static void lxc_put_attach_clone_payload(struct attach_clone_payload *p)
@@ -56,7 +56,7 @@ index 3f60fe10..4ccdd74b 100644
  	 * lxc-attach(1) manual page. We have to remount here and not in the
  	 * parent process, otherwise /proc may not properly reflect the new pid
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 6134ed3b..88cebfd5 100644
+index 6134ed3..88cebfd 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4180,6 +4180,9 @@ int lxc_setup(struct lxc_handler *handler)
@@ -70,7 +70,7 @@ index 6134ed3b..88cebfd5 100644
  	if (ret < 0) {
  		ERROR("Failed to set personality");
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 357e81d2..708ab7f5 100644
+index 357e81d..708ab7f 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1103,7 +1103,7 @@ void lxc_abort(const char *name, struct lxc_handler *handler)
@@ -109,5 +109,5 @@ index 357e81d2..708ab7f5 100644
  	 * we set the parent death signal, we will detect its death with the
  	 * synchro right after, otherwise we have a window where the parent can
 -- 
-2.23.0
+1.8.3.1
 

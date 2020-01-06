@@ -1,7 +1,7 @@
-From 5f78820667b5b19368d7d2255de95a4f1f4a0561 Mon Sep 17 00:00:00 2001
+From 7ba873cf2e58458f4faf58ec98912d7d635f73b5 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 29 Apr 2019 04:13:52 -0400
-Subject: [PATCH 092/131] lxc: add output error when create unified cgroup
+Subject: [PATCH 092/138] lxc: add output error when create unified cgroup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index b1f56b07..2bf142f9 100644
+index b1f56b0..2bf142f 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1132,7 +1132,7 @@ __cgfsng_ops static bool cgfsng_payload_destroy(struct cgroup_ops *ops,
@@ -41,5 +41,5 @@ index b1f56b07..2bf142f9 100644
  
  /* isulad: create hierarchies path, if fail, return the error */
 -- 
-2.23.0
+1.8.3.1
 

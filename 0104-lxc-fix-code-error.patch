@@ -1,7 +1,7 @@
-From 79a38af7d57e0ec7e527d1d28e8575c3fcfa4a45 Mon Sep 17 00:00:00 2001
+From a66a6ed6220c13187150ab33560df76cdf4e15b6 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 3 Jun 2019 11:27:34 -0400
-Subject: [PATCH 104/131] lxc: fix code error
+Subject: [PATCH 104/138] lxc: fix code error
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -15,7 +15,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  6 files changed, 31 insertions(+), 14 deletions(-)
 
 diff --git a/src/lxc/af_unix.c b/src/lxc/af_unix.c
-index 4c45946d..1fc8ab0e 100644
+index 4c45946..1fc8ab0 100644
 --- a/src/lxc/af_unix.c
 +++ b/src/lxc/af_unix.c
 @@ -204,12 +204,18 @@ int lxc_abstract_unix_recv_fds_timeout(int fd, int *recvfds, int num_recvfds,
@@ -39,7 +39,7 @@ index 4c45946d..1fc8ab0e 100644
  	if (!cmsgbuf) {
  		errno = ENOMEM;
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 67c7a0ee..46f13f4d 100644
+index 67c7a0e..46f13f4 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1688,7 +1688,7 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
@@ -68,7 +68,7 @@ index 67c7a0ee..46f13f4d 100644
  
  	p = strchr(controller, '.');
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index e32f524d..72417ed6 100644
+index e32f524..72417ed 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -1208,6 +1208,7 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
@@ -88,7 +88,7 @@ index e32f524d..72417ed6 100644
  on_error:
  	if (c->pidfile) {
 diff --git a/src/lxc/path.c b/src/lxc/path.c
-index 92692dea..36d5e0be 100644
+index 92692de..36d5e0b 100644
 --- a/src/lxc/path.c
 +++ b/src/lxc/path.c
 @@ -31,6 +31,7 @@ bool specify_current_dir(const char *path)
@@ -100,7 +100,7 @@ index 92692dea..36d5e0be 100644
  		return false;
  	}
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 802bf392..a8a0dc97 100644
+index 802bf39..a8a0dc9 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -231,7 +231,7 @@ static int lxc_terminal_truncate_log_file(struct lxc_terminal *terminal)
@@ -145,7 +145,7 @@ index 802bf392..a8a0dc97 100644
  }
  
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index e6749471..9db762fb 100644
+index e674947..9db762f 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1769,11 +1769,11 @@ int fd_cloexec(int fd, bool cloexec)
@@ -175,5 +175,5 @@ index e6749471..9db762fb 100644
  }
  
 -- 
-2.23.0
+1.8.3.1
 

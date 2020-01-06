@@ -1,4 +1,4 @@
-%global _release 20191226
+%global _release 20200106
 %global debug_package %{nil}
 
 Name:           lxc
@@ -142,6 +142,13 @@ Patch9130:      0128-link-proc-mounts-to-etc-mtab.patch
 Patch9131:      0129-cgfsng-add-retry-for-enter-cgroup.patch
 Patch9132:      0130-fix-snprintf-create-abstract-socket-name-bug.patch
 Patch9133:      0131-fix-commands-and-terminal-memory-leak-bug.patch
+Patch9134:      0132-lxc-fix-bug-in-cgroup-parent.patch
+Patch9135:      0133-lxc-fix-bug-in-cgfsng.patch
+Patch9136:      0134-lxc-do-cpuset-same-as-runc.patch
+Patch9137:      0135-lxc-fix-code-warnings-for-cgfsng.c.patch
+Patch9138:      0136-lxc-fix-retry-bug-in-cgroup.patch
+Patch9139:      0137-lxc-fix-bug-in-read-proc.patch
+Patch9140:      0138-resize-implement-resize-function-in-exec-start.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)

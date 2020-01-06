@@ -1,7 +1,7 @@
-From 4891152f9c76e68ae32c36f4af7262117ca3a3bd Mon Sep 17 00:00:00 2001
+From fce70a877da27262b274e56e5b31fbd16753adff Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Sat, 26 Jan 2019 02:22:48 -0500
-Subject: [PATCH 056/131] [caps]: use _LINUX_CAPABILITY_VERSION_3 to set cap
+Subject: [PATCH 056/138] [caps]: use _LINUX_CAPABILITY_VERSION_3 to set cap
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 4 insertions(+), 5 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 4800943c..0c6aa28d 100644
+index 4800943..0c6aa28 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4322,13 +4322,13 @@ int lxc_drop_caps(struct lxc_conf *conf)
@@ -32,7 +32,7 @@ index 4800943c..0c6aa28d 100644
  	}
  
 diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
-index 3218a603..4a5b3d0b 100644
+index 3218a60..4a5b3d0 100644
 --- a/src/lxc/seccomp.c
 +++ b/src/lxc/seccomp.c
 @@ -706,7 +706,6 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
@@ -44,5 +44,5 @@ index 3218a603..4a5b3d0b 100644
  		ctx.contexts[0] = get_new_ctx(lxc_seccomp_arch_mipsel,
  					      default_policy_action, &ctx.architectures[0]);
 -- 
-2.23.0
+1.8.3.1
 

@@ -1,7 +1,7 @@
-From 366ac099187f128958f1d59123ae6148d0bec731 Mon Sep 17 00:00:00 2001
+From 3744b844951dff491d0bc4c5381790880d5d2199 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 17 Jan 2019 10:18:23 +0800
-Subject: [PATCH 044/131] support space in --volume, --mount and --env
+Subject: [PATCH 044/138] support space in --volume, --mount and --env
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  4 files changed, 28 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 8fa63f7c..48e31aff 100644
+index 8fa63f7..48e31af 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -54,6 +54,7 @@
@@ -54,7 +54,7 @@ index 8fa63f7c..48e31aff 100644
  			return -1;
  	}
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index db63b550..7e9d5c85 100644
+index db63b55..7e9d5c8 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -1036,6 +1036,7 @@ static int set_config_environment(const char *key, const char *value,
@@ -88,7 +88,7 @@ index db63b550..7e9d5c85 100644
  	}
  
 diff --git a/src/lxc/namespace.h b/src/lxc/namespace.h
-index ab583da7..9caaf89d 100644
+index ab583da..9caaf89 100644
 --- a/src/lxc/namespace.h
 +++ b/src/lxc/namespace.h
 @@ -26,6 +26,7 @@
@@ -100,7 +100,7 @@ index ab583da7..9caaf89d 100644
  #ifndef CLONE_PARENT_SETTID
  #define CLONE_PARENT_SETTID 0x00100000
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 43139424..73ffdd97 100644
+index 4313942..73ffdd9 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -43,6 +43,9 @@
@@ -114,5 +114,5 @@ index 43139424..73ffdd97 100644
  extern int lxc_rmdir_onedev(const char *path, const char *exclude);
  extern int get_u16(unsigned short *val, const char *arg, int base);
 -- 
-2.23.0
+1.8.3.1
 

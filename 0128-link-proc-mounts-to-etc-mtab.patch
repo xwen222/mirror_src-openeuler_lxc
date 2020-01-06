@@ -1,7 +1,7 @@
-From 9735e11b3ecbaab9c3028d467c2b1706bcaff7bc Mon Sep 17 00:00:00 2001
+From a2c36d77465b337a2172ca7d1fee3b4918eaf550 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Tue, 10 Dec 2019 21:28:47 +0800
-Subject: [PATCH 128/131] link /proc/mounts to /etc/mtab
+Subject: [PATCH 128/138] link /proc/mounts to /etc/mtab
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: wujing <wujing50@huawei.com>
  1 file changed, 38 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 21ec340f..b66e7bcf 100644
+index 21ec340..b66e7bc 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4101,6 +4101,37 @@ static int setup_rootfs_mountopts(const struct lxc_rootfs *rootfs)
@@ -73,5 +73,5 @@ index 21ec340f..b66e7bcf 100644
  		if (!lxc_list_empty(&lxc_conf->caps)) {
  			ERROR("Container requests lxc.cap.drop and "
 -- 
-2.23.0
+1.8.3.1
 

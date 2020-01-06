@@ -1,23 +1,23 @@
-From 9e139dac0cbfc7252b672a23cfc54d62e1989223 Mon Sep 17 00:00:00 2001
+From 384d6f6e29e2c8e46db765382fa3e1f94c9d0a4e Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 14 Jan 2019 21:38:07 -0500
-Subject: [PATCH 029/131] add start timeout to limit start time
+Subject: [PATCH 029/138] add start timeout to limit start time
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/conf.c            |   6 +--
  src/lxc/execute.c         |   4 +-
- src/lxc/lxc.h             |   8 +--
- src/lxc/lxccontainer.c    |  21 +++++++-
- src/lxc/lxccontainer.h    |  16 ++++++
- src/lxc/start.c           | 106 ++++++++++++++++++++++++++++++++++++--
+ src/lxc/lxc.h             |   8 ++--
+ src/lxc/lxccontainer.c    |  21 ++++++++-
+ src/lxc/lxccontainer.h    |  16 +++++++
+ src/lxc/start.c           | 106 +++++++++++++++++++++++++++++++++++++++++++---
  src/lxc/start.h           |   6 +--
  src/lxc/tools/arguments.h |   2 +
- src/lxc/tools/lxc_start.c |  26 ++++++++++
+ src/lxc/tools/lxc_start.c |  26 ++++++++++++
  9 files changed, 175 insertions(+), 20 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index f429491e..439353b2 100644
+index f429491..439353b 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4381,14 +4381,12 @@ void* wait_ocihook_timeout(void *arg)
@@ -38,7 +38,7 @@ index f429491e..439353b2 100644
  		}
  
 diff --git a/src/lxc/execute.c b/src/lxc/execute.c
-index 45ca67e3..d388e633 100644
+index 45ca67e..d388e63 100644
 --- a/src/lxc/execute.c
 +++ b/src/lxc/execute.c
 @@ -111,12 +111,12 @@ static struct lxc_operations execute_start_ops = {
@@ -57,7 +57,7 @@ index 45ca67e3..d388e633 100644
 +			   daemonize, error_num, start_timeout);
  }
 diff --git a/src/lxc/lxc.h b/src/lxc/lxc.h
-index 22e35096..687b4b28 100644
+index 22e3509..687b4b2 100644
 --- a/src/lxc/lxc.h
 +++ b/src/lxc/lxc.h
 @@ -55,7 +55,7 @@ struct lxc_handler;
@@ -83,7 +83,7 @@ index 22e35096..687b4b28 100644
  /*
   * Close the fd associated with the monitoring
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index e6272fcd..beae459b 100644
+index e6272fc..beae459 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -1169,10 +1169,10 @@ reboot:
@@ -131,7 +131,7 @@ index e6272fcd..beae459b 100644
  	return c;
  
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index 5d23cc7e..77de7040 100644
+index 5d23cc7..77de704 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -94,6 +94,12 @@ struct lxc_container {
@@ -165,7 +165,7 @@ index 5d23cc7e..77de7040 100644
  
  /*!
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 63f5af88..f7be9e43 100644
+index 63f5af8..f7be9e4 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -93,7 +93,22 @@ extern void mod_all_rdeps(struct lxc_container *c, bool inc);
@@ -330,7 +330,7 @@ index 63f5af88..f7be9e43 100644
  
  static void lxc_destroy_container_on_signal(struct lxc_handler *handler,
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index f59bf549..a96f2aed 100644
+index f59bf54..a96f2ae 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -174,9 +174,9 @@ extern void lxc_fini(const char *name, struct lxc_handler *handler);
@@ -347,7 +347,7 @@ index f59bf549..a96f2aed 100644
  extern int resolve_clone_flags(struct lxc_handler *handler);
  
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index 047e9f16..afab9f54 100644
+index 047e9f1..afab9f5 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -65,6 +65,7 @@ struct lxc_arguments {
@@ -367,7 +367,7 @@ index 047e9f16..afab9f54 100644
  
  extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index 60c7d70b..f37f8a6a 100644
+index 60c7d70..f37f8a6 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -40,6 +40,7 @@
@@ -432,5 +432,5 @@ index 60c7d70b..f37f8a6a 100644
  		if (!c->set_config_item(c, "lxc.console.path", my_args.console))
  			goto out;
 -- 
-2.23.0
+1.8.3.1
 

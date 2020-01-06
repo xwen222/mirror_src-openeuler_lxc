@@ -1,17 +1,17 @@
-From c556e8d4bebcde1ce34168fbac2d22328e19e36a Mon Sep 17 00:00:00 2001
+From 4a00131ad51ab942e847a19192becac112830be4 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Fri, 18 Jan 2019 02:11:11 -0500
-Subject: [PATCH 050/131] seccomp: add rules for specified architecture only
+Subject: [PATCH 050/138] seccomp: add rules for specified architecture only
 
 LXC MR: https://github.com/lxc/lxc/pull/2786
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/seccomp.c | 234 ++++++++++++++++++++++++++--------------------
+ src/lxc/seccomp.c | 234 ++++++++++++++++++++++++++++++------------------------
  1 file changed, 132 insertions(+), 102 deletions(-)
 
 diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
-index 27bdc223..4a9143bb 100644
+index 27bdc22..4a9143b 100644
 --- a/src/lxc/seccomp.c
 +++ b/src/lxc/seccomp.c
 @@ -291,7 +291,7 @@ on_error:
@@ -404,5 +404,5 @@ index 27bdc223..4a9143bb 100644
  	return 0;
  
 -- 
-2.23.0
+1.8.3.1
 

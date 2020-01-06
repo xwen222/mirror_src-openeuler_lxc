@@ -1,7 +1,7 @@
-From 0398da2058282e3627ec7fc3922b439c1541078c Mon Sep 17 00:00:00 2001
+From 6153cd585089e51b3a6f2f2f982e864a3270e868 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 4 Jul 2019 11:08:26 +0800
-Subject: [PATCH 112/131] fix secure errors
+Subject: [PATCH 112/138] fix secure errors
 
 1. use snprintf replace sprintf
 2. use malloc replace alloca
@@ -17,7 +17,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  5 files changed, 64 insertions(+), 31 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 1dfdaf31..996d2671 100644
+index 1dfdaf3..996d267 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4543,18 +4543,20 @@ static char **merge_ocihook_env(char **oldenvs, size_t env_len, size_t *merge_en
@@ -44,7 +44,7 @@ index 1dfdaf31..996d2671 100644
  				continue;
  			}
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 8262d1e3..8a082d55 100644
+index 8262d1e..8a082d5 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -3802,9 +3802,11 @@ static int get_config_no_new_privs(const char *key, char *retv, int inlen,
@@ -115,7 +115,7 @@ index 8262d1e3..8a082d55 100644
  			strprint(retv, inlen, "%s", buf);
  		}
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
-index bea9b14d..5da1e6de 100755
+index bea9b14..5da1e6d 100755
 --- a/src/lxc/json/json_common.c
 +++ b/src/lxc/json/json_common.c
 @@ -16,7 +16,7 @@ yajl_gen_status reformat_uint(void *ctx, long long unsigned int num) {
@@ -171,7 +171,7 @@ index bea9b14d..5da1e6de 100755
 \ No newline at end of file
 +}
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index ede4c885..3b2c5af2 100644
+index ede4c88..3b2c5af 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -3196,7 +3196,11 @@ static bool container_destroy(struct lxc_container *c,
@@ -197,7 +197,7 @@ index ede4c885..3b2c5af2 100644
  		return -1;
  	}
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 970db694..b9b65c6f 100644
+index 970db69..b9b65c6 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -241,13 +241,13 @@ static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
@@ -274,5 +274,5 @@ index 970db694..b9b65c6f 100644
  	return true;
  }
 -- 
-2.23.0
+1.8.3.1
 

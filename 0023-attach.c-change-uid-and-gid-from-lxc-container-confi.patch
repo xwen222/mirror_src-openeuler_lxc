@@ -1,7 +1,7 @@
-From 4952a0eadbe150322b295c124db10e02518d0515 Mon Sep 17 00:00:00 2001
+From 166964c25070bfb6055d380cca6b52782d097826 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 17:09:57 +0800
-Subject: [PATCH 023/131] attach.c: change uid and gid from lxc container
+Subject: [PATCH 023/138] attach.c: change uid and gid from lxc container
  config
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 570b9d0e..e6e4b0d1 100644
+index 570b9d0..e6e4b0d 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -1146,6 +1146,12 @@ int lxc_attach(const char *name, const char *lxcpath,
@@ -27,5 +27,5 @@ index 570b9d0e..e6e4b0d1 100644
  		WARN("Failed to get seccomp policy");
  
 -- 
-2.23.0
+1.8.3.1
 

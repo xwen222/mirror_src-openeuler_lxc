@@ -1,7 +1,7 @@
-From b8b947bb46f94f46433568f9206648f8f889b0b3 Mon Sep 17 00:00:00 2001
+From 784667557d28af0e18296cff022e69632a85f706 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 12 Feb 2019 14:36:35 +0800
-Subject: [PATCH 059/131] delete unused variable ppid
+Subject: [PATCH 059/138] delete unused variable ppid
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 0aa87aa4..91ba4935 100644
+index 0aa87aa..91ba493 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1716,7 +1716,7 @@ uint64_t lxc_find_next_power2(uint64_t n)
@@ -23,5 +23,5 @@ index 0aa87aa4..91ba4935 100644
  	ret = prctl(PR_SET_PDEATHSIG, prctl_arg(signal), prctl_arg(0),
  		    prctl_arg(0), prctl_arg(0));
 -- 
-2.23.0
+1.8.3.1
 

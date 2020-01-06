@@ -1,7 +1,7 @@
-From 61e763bceb56821eb36b4c8efda510e1a55394ff Mon Sep 17 00:00:00 2001
+From afce33825ae2368d613617d3483000c7dc785930 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 26 Sep 2019 07:47:19 -0400
-Subject: [PATCH 122/131] lxc: fix code reivew errors
+Subject: [PATCH 122/138] lxc: fix code reivew errors
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -15,7 +15,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  7 files changed, 19 insertions(+), 20 deletions(-)
 
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index fa02a4b7..7d6cf6f3 100644
+index fa02a4b..7d6cf6f 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -1083,7 +1083,7 @@ int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath, const char
@@ -28,7 +28,7 @@ index fa02a4b7..7d6cf6f3 100644
  
  	struct lxc_cmd_rr cmd = {
 diff --git a/src/lxc/commands_utils.c b/src/lxc/commands_utils.c
-index f48f1188..56ecce7d 100644
+index f48f118..56ecce7 100644
 --- a/src/lxc/commands_utils.c
 +++ b/src/lxc/commands_utils.c
 @@ -144,7 +144,7 @@ int lxc_make_abstract_socket_name(char *path, size_t pathlen,
@@ -41,7 +41,7 @@ index f48f1188..56ecce7d 100644
  		return -1;
  	}
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 3a02e099..3eaae4a9 100644
+index 3a02e09..3eaae4a 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -3834,7 +3834,7 @@ static int get_config_prlimit(const char *key, char *retv, int inlen,
@@ -63,7 +63,7 @@ index 3a02e099..3eaae4a9 100644
  				}
  			}
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
-index ed2fe834..ec20c598 100755
+index ed2fe83..ec20c59 100755
 --- a/src/lxc/json/json_common.c
 +++ b/src/lxc/json/json_common.c
 @@ -17,7 +17,7 @@ yajl_gen_status reformat_uint(void *ctx, long long unsigned int num) {
@@ -124,7 +124,7 @@ index ed2fe834..ec20c598 100755
                  *(err) = safe_strdup("error allocating memory");
              }
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 5a724838..9f9cbfc3 100644
+index 5a72483..9f9cbfc 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -3200,7 +3200,7 @@ static bool container_destroy(struct lxc_container *c,
@@ -155,7 +155,7 @@ index 5a724838..9f9cbfc3 100644
  		return -1;
  	}
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 32c69a49..e81f57ee 100644
+index 32c69a4..e81f57e 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -242,13 +242,13 @@ static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
@@ -193,7 +193,7 @@ index 32c69a49..e81f57ee 100644
  	}
  
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index c83c7a38..31bcac71 100644
+index c83c7a3..31bcac7 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -2041,7 +2041,7 @@ void lxc_write_error_message(int errfd, const char *format, ...)
@@ -206,5 +206,5 @@ index c83c7a38..31bcac71 100644
  	sret = write(errfd, errbuf, strlen(errbuf));
  	if (sret < 0)
 -- 
-2.23.0
+1.8.3.1
 

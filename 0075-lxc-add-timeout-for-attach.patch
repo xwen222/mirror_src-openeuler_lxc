@@ -1,22 +1,22 @@
-From 7ac4cd6176a273a8e7cd146fd189dc2e07d582c8 Mon Sep 17 00:00:00 2001
+From 070fe7892e591a7c5836511dd2d0b9e969a18798 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 3 Apr 2019 19:54:36 +0800
-Subject: [PATCH 075/131] lxc: add timeout for attach
+Subject: [PATCH 075/138] lxc: add timeout for attach
 
 Signed-off-by: wujing <wujing50@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c           | 79 ++++++++++++++++++++++++++++++++++++++
+ src/lxc/attach.c           | 79 ++++++++++++++++++++++++++++++++++++++++++++++
  src/lxc/attach_options.h   |  1 +
- src/lxc/tools/arguments.h  |  4 ++
- src/lxc/tools/lxc_attach.c | 11 ++++++
- src/lxc/tools/lxc_start.c  | 13 +------
- src/lxc/utils.c            | 13 +++++++
- src/lxc/utils.h            |  2 +
+ src/lxc/tools/arguments.h  |  4 +++
+ src/lxc/tools/lxc_attach.c | 11 +++++++
+ src/lxc/tools/lxc_start.c  | 13 +-------
+ src/lxc/utils.c            | 13 ++++++++
+ src/lxc/utils.h            |  2 ++
  7 files changed, 111 insertions(+), 12 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 618f2f1c..79049c3d 100644
+index 618f2f1..79049c3 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -69,6 +69,20 @@
@@ -127,7 +127,7 @@ index 618f2f1c..79049c3d 100644
  		if (options->attach_flags & LXC_ATTACH_TERMINAL)
  			lxc_mainloop_close(&descr);
 diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
-index 71c1739d..5e279baf 100644
+index 71c1739..5e279ba 100644
 --- a/src/lxc/attach_options.h
 +++ b/src/lxc/attach_options.h
 @@ -137,6 +137,7 @@ typedef struct lxc_attach_options_t {
@@ -139,7 +139,7 @@ index 71c1739d..5e279baf 100644
  
  /*! Default attach options to use */
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index d03f8a42..2fc90ad9 100644
+index d03f8a4..2fc90ad 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -69,6 +69,9 @@ struct lxc_arguments {
@@ -161,7 +161,7 @@ index d03f8a42..2fc90ad9 100644
  /* isulad add end*/
  
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index 674050de..2861ef4d 100644
+index 674050d..2861ef4 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -62,6 +62,7 @@ static char **extra_env;
@@ -211,7 +211,7 @@ index 674050de..2861ef4d 100644
  	if (my_args.argc > 0) {
  		command.program = my_args.argv[0];
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index 183fafcb..af63f581 100644
+index 183fafc..af63f58 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -49,6 +49,7 @@
@@ -242,7 +242,7 @@ index 183fafcb..af63f581 100644
  {
  	switch (c) {
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 480e6d0a..69eb3e52 100644
+index 480e6d0..69eb3e5 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -2069,3 +2069,16 @@ out:
@@ -263,7 +263,7 @@ index 480e6d0a..69eb3e52 100644
 +}
 +
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 73ffdd97..20407af8 100644
+index 73ffdd9..20407af 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -322,4 +322,6 @@ extern void lxc_write_error_message(int errfd, const char *format, ...);
@@ -274,5 +274,5 @@ index 73ffdd97..20407af8 100644
 +
  #endif /* __LXC_UTILS_H */
 -- 
-2.23.0
+1.8.3.1
 

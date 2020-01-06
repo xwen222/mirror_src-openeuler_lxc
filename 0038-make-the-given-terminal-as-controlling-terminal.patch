@@ -1,7 +1,7 @@
-From 7db0308d2d89a5b6ae91408258c31d2ebb8c17b6 Mon Sep 17 00:00:00 2001
+From 28a1cd4ca1f09ad2179954cf210c2a0e4deae47e Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 15 Jan 2019 23:24:21 -0500
-Subject: [PATCH 038/131] make the given terminal as controlling terminal
+Subject: [PATCH 038/138] make the given terminal as controlling terminal
 
 Avoid warning when start cmd /bin/sh :
 sh: cannot set terminal process group (-1): Inappropriate ioctl for device
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 8 insertions(+), 2 deletions(-)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 708ab7f5..ec61b322 100644
+index 708ab7f..ec61b32 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1330,7 +1330,15 @@ static int do_start(void *data)
@@ -42,5 +42,5 @@ index 708ab7f5..ec61b322 100644
  		/* isulad: try to craete workdir if not exist */
  		struct stat st;
 -- 
-2.23.0
+1.8.3.1
 

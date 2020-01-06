@@ -1,7 +1,7 @@
-From 2e2f66f4d2dc0eec584cb701649e20d9cf6eebc5 Mon Sep 17 00:00:00 2001
+From aed5ecb69d2256933b431eac01e83e69bb72c753 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 10 Dec 2019 05:40:20 -0500
-Subject: [PATCH 129/131] cgfsng: add retry for enter cgroup
+Subject: [PATCH 129/138] cgfsng: add retry for enter cgroup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 25 insertions(+)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index c96285e1..50bdc771 100644
+index c96285e..50bdc77 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1300,11 +1300,23 @@ __cgfsng_ops static bool cgfsng_payload_enter(struct cgroup_ops *ops, pid_t pid)
@@ -66,5 +66,5 @@ index c96285e1..50bdc771 100644
  		                        "%s:%d: setting cgroup config for ready process caused \"failed to write %s to %s: %s\".",
  		                        __FILE__, __LINE__, value, fullpath, strerror(errno));
 -- 
-2.23.0
+1.8.3.1
 

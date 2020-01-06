@@ -1,7 +1,7 @@
-From 75df0fd2adec8d697fc3d96df21dcdd74cb6f98e Mon Sep 17 00:00:00 2001
+From 87d3b15c4b8c4070470f2491c0811cc6e6385de3 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 20 Jun 2019 17:46:40 +0800
-Subject: [PATCH 109/131] add secure compile flags to lxc
+Subject: [PATCH 109/138] add secure compile flags to lxc
 
 add secure compile flags to lxc
 
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 24 insertions(+), 6 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 4da52a27..a7147794 100644
+index 4da52a2..a714779 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -44,6 +44,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror -Wno-portability subdir-objects])
@@ -78,7 +78,7 @@ index 4da52a27..a7147794 100644
  	[AC_HELP_STRING([--enable-thread-safety], [enforce thread-safety otherwise fail the build [default=yes]])],
  	[], [enable_thread_safety=yes])
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index 4ec20812..b24fcfdb 100644
+index 4ec2081..b24fcfd 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -233,12 +233,17 @@ endif
@@ -100,5 +100,5 @@ index 4ec20812..b24fcfdb 100644
  		    -version-info @LXC_ABI_MAJOR@ @YAJL_LIBS@
  
 -- 
-2.23.0
+1.8.3.1
 

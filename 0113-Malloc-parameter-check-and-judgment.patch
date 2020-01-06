@@ -1,28 +1,28 @@
-From c9bcf39716f166bc44e3d1d1cd65a246646a7bb4 Mon Sep 17 00:00:00 2001
+From f7edf9518a6b11de69d8cfe2c1dbf9bf3a1dacbb Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 4 Jul 2019 12:08:17 +0800
-Subject: [PATCH 113/131] Malloc parameter check and judgment
+Subject: [PATCH 113/138] Malloc parameter check and judgment
 
 Signed-off-by: wujing <wujing50@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c                              |  2 +-
- src/lxc/commands.c                            |  9 +-
- src/lxc/conf.c                                | 20 ++--
- src/lxc/confile.c                             |  8 +-
- .../json/container_start_generate_config.c    | 12 ++-
- src/lxc/json/defs.c                           |  8 ++
- src/lxc/json/json_common.c                    | 97 +++++++------------
- src/lxc/json/logger_json_file.c               |  6 +-
- src/lxc/lxccontainer.c                        | 12 ++-
- src/lxc/path.c                                |  8 +-
- src/lxc/start.c                               |  6 +-
- src/lxc/terminal.c                            |  2 +-
- src/lxc/utils.c                               |  4 +-
+ src/lxc/attach.c                               |  2 +-
+ src/lxc/commands.c                             |  9 ++-
+ src/lxc/conf.c                                 | 20 ++++--
+ src/lxc/confile.c                              |  8 +--
+ src/lxc/json/container_start_generate_config.c | 12 +++-
+ src/lxc/json/defs.c                            |  8 +++
+ src/lxc/json/json_common.c                     | 97 +++++++++-----------------
+ src/lxc/json/logger_json_file.c                |  6 +-
+ src/lxc/lxccontainer.c                         | 12 +++-
+ src/lxc/path.c                                 |  8 ++-
+ src/lxc/start.c                                |  6 +-
+ src/lxc/terminal.c                             |  2 +-
+ src/lxc/utils.c                                |  4 +-
  13 files changed, 104 insertions(+), 90 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index d7b16e34..ac4bd390 100644
+index d7b16e3..ac4bd39 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -1188,7 +1188,7 @@ static int create_attach_timeout_thread(int64_t attach_timeout, pid_t pid)
@@ -35,7 +35,7 @@ index d7b16e34..ac4bd390 100644
  		ret = -1;
  		goto out;
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index 0802a167..fa02a4b7 100644
+index 0802a16..fa02a4b 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -1075,11 +1075,16 @@ int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath, const char
@@ -58,7 +58,7 @@ index 0802a167..fa02a4b7 100644
  	struct lxc_cmd_rr cmd = {
  		.req = {
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 996d2671..3ecccbd6 100644
+index 996d267..3ecccbd 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4393,7 +4393,11 @@ int lxc_drop_caps(struct lxc_conf *conf)
@@ -126,7 +126,7 @@ index 996d2671..3ecccbd6 100644
  		goto on_error;
  	}
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 8a082d55..a75e023b 100644
+index 8a082d5..a75e023 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -2318,13 +2318,13 @@ static int set_config_populate_device(const char *key, const char *value,
@@ -164,7 +164,7 @@ index 8a082d55..a75e023b 100644
  
  	list_item->elem = safe_strdup(value);
 diff --git a/src/lxc/json/container_start_generate_config.c b/src/lxc/json/container_start_generate_config.c
-index 5ec83114..3748973c 100644
+index 5ec8311..3748973 100644
 --- a/src/lxc/json/container_start_generate_config.c
 +++ b/src/lxc/json/container_start_generate_config.c
 @@ -41,6 +41,11 @@ container_start_generate_config *make_container_start_generate_config(yajl_val t
@@ -195,7 +195,7 @@ index 5ec83114..3748973c 100644
  
  free_out:
 diff --git a/src/lxc/json/defs.c b/src/lxc/json/defs.c
-index 8a052a88..4bf569a4 100644
+index 8a052a8..4bf569a 100644
 --- a/src/lxc/json/defs.c
 +++ b/src/lxc/json/defs.c
 @@ -24,6 +24,10 @@ defs_hook *make_defs_hook(yajl_val tree, struct parser_context *ctx, parser_erro
@@ -221,7 +221,7 @@ index 8a052a88..4bf569a4 100644
              for (i = 0; i < YAJL_GET_ARRAY(tmp)->len; i++) {
                  yajl_val val = YAJL_GET_ARRAY(tmp)->values[i];
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
-index 5da1e6de..ed2fe834 100755
+index 5da1e6d..ed2fe83 100755
 --- a/src/lxc/json/json_common.c
 +++ b/src/lxc/json/json_common.c
 @@ -445,6 +445,9 @@ json_map_int_int *make_json_map_int_int(yajl_val src, struct parser_context *ctx
@@ -420,7 +420,7 @@ index 5da1e6de..ed2fe834 100755
      free(map->keys);
      map->keys = keys;
 diff --git a/src/lxc/json/logger_json_file.c b/src/lxc/json/logger_json_file.c
-index 842d35b5..6abeef45 100644
+index 842d35b..6abeef4 100644
 --- a/src/lxc/json/logger_json_file.c
 +++ b/src/lxc/json/logger_json_file.c
 @@ -230,8 +230,12 @@ char *logger_json_file_generate_json(logger_json_file *ptr, struct parser_contex
@@ -438,7 +438,7 @@ index 842d35b5..6abeef45 100644
  
  free_out:
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 3b2c5af2..5a724838 100644
+index 3b2c5af..5a72483 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -928,6 +928,9 @@ static char **use_init_args(char **init_argv, size_t init_args)
@@ -480,7 +480,7 @@ index 3b2c5af2..5a724838 100644
  	if (snprintf(fpath, PATH_MAX, "%s/%s/%s", c->config_path, c->name, START_GENERATE_CONFIG) < 0) {
  		fprintf(stderr, "Sprintf config path failed\n");
 diff --git a/src/lxc/path.c b/src/lxc/path.c
-index c545887a..df285f54 100644
+index c545887..df285f5 100644
 --- a/src/lxc/path.c
 +++ b/src/lxc/path.c
 @@ -58,7 +58,7 @@ char *preserve_trailing_dot_or_separator(const char *cleanedpath,
@@ -511,7 +511,7 @@ index c545887a..df285f54 100644
  		return false;
  	}
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index d6c706e7..00d478c4 100644
+index d6c706e..00d478c 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2383,7 +2383,7 @@ static int create_start_timeout_thread(struct lxc_conf *conf, unsigned int start
@@ -542,7 +542,7 @@ index d6c706e7..00d478c4 100644
  
  	memset(handler, 0, sizeof(*handler));
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index b9b65c6f..1fee6516 100644
+index b9b65c6..1fee651 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -1330,7 +1330,7 @@ static int lxc_terminal_set_fifo(struct lxc_terminal *console, const char *in, c
@@ -555,7 +555,7 @@ index b9b65c6f..1fee6516 100644
  			close(fifofd_in);
  		if (fifofd_out >= 0)
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index e6e8905b..656df4a3 100644
+index e6e8905..656df4a 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1945,9 +1945,9 @@ static proc_t *lxc_stat2proc(const char *S)
@@ -571,5 +571,5 @@ index e6e8905b..656df4a3 100644
  	/* parse these two strings separately, skipping the leading "(". */
  	num = sscanf(S, "%d (%15c", &P->pid, P->cmd);   /* comm[16] in kernel */
 -- 
-2.23.0
+1.8.3.1
 

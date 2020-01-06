@@ -1,7 +1,7 @@
-From 43ea109da4ebe985fa1990b0289f41f3ec30c747 Mon Sep 17 00:00:00 2001
+From c3be42e31402b3361f15d6a6d25a39f36cb58234 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 15:33:12 +0800
-Subject: [PATCH 020/131] fix log error when symlink subcgroup
+Subject: [PATCH 020/138] fix log error when symlink subcgroup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 705985f2..7f2a200a 100644
+index 705985f..7f2a200 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1736,21 +1736,21 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
@@ -40,5 +40,5 @@ index 705985f2..7f2a200a 100644
  	}
  
 -- 
-2.23.0
+1.8.3.1
 

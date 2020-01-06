@@ -1,7 +1,7 @@
-From f853d85dfb6625f1e97a9b908377886af993e327 Mon Sep 17 00:00:00 2001
+From 3b253a4a69bc3e239244f7ed0aaab7d8d2bf4187 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 11 Apr 2019 20:34:51 +0800
-Subject: [PATCH 083/131] lxc: free lxc-handler
+Subject: [PATCH 083/138] lxc: free lxc-handler
 
 free handler if failed
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 87e07d33..f1cd7fa3 100644
+index 87e07d3..f1cd7fa 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -695,6 +695,10 @@ void lxc_zero_handler(struct lxc_handler *handler)
@@ -37,5 +37,5 @@ index 87e07d33..f1cd7fa3 100644
  }
  
 -- 
-2.23.0
+1.8.3.1
 

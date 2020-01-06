@@ -1,7 +1,7 @@
-From e7542b143ade41e65ab267f3593a9813ccff938d Mon Sep 17 00:00:00 2001
+From 33c5b695d265b115b6ff96bbc33152feb4e69473 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 12 Feb 2019 14:00:47 +0800
-Subject: [PATCH 058/131] do not check ppid when set death signal
+Subject: [PATCH 058/138] do not check ppid when set death signal
 
 ppid will not be 0 if we shared host pid
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 9a50fced..0aa87aa4 100644
+index 9a50fce..0aa87aa 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1722,12 +1722,13 @@ int lxc_set_death_signal(int signal, pid_t parent)
@@ -32,5 +32,5 @@ index 9a50fced..0aa87aa4 100644
  	if (ret < 0)
  		return -1;
 -- 
-2.23.0
+1.8.3.1
 
