@@ -1,23 +1,23 @@
-From 9eb3f03ff4604a61dae9f587294599ef7f68da64 Mon Sep 17 00:00:00 2001
+From 0a4c408e992b1431316a1e743f4109f1b8a0a837 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 15 Jan 2019 16:00:30 +0800
-Subject: [PATCH 030/131] support block device as rootfs
+Subject: [PATCH 030/138] support block device as rootfs
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/Makefile.am             |  1 +
- src/lxc/conf.c                  | 10 ++--
- src/lxc/storage/block.c         | 86 +++++++++++++++++++++++++++++++++
- src/lxc/storage/block.h         | 41 ++++++++++++++++
- src/lxc/storage/dir.c           | 10 +---
- src/lxc/storage/storage.c       | 18 +++++++
+ src/lxc/conf.c                  | 10 ++---
+ src/lxc/storage/block.c         | 86 +++++++++++++++++++++++++++++++++++++++++
+ src/lxc/storage/block.h         | 41 ++++++++++++++++++++
+ src/lxc/storage/dir.c           | 10 +----
+ src/lxc/storage/storage.c       | 18 +++++++++
  src/lxc/storage/storage_utils.c |  2 +-
  7 files changed, 153 insertions(+), 15 deletions(-)
  create mode 100644 src/lxc/storage/block.c
  create mode 100644 src/lxc/storage/block.h
 
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index 5678b8da..260a7eb0 100644
+index 5678b8d..260a7eb 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -130,6 +130,7 @@ liblxc_la_SOURCES = af_unix.c af_unix.h \
@@ -29,7 +29,7 @@ index 5678b8da..260a7eb0 100644
  		    storage/lvm.c storage/lvm.h \
  		    storage/nbd.c storage/nbd.h \
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 439353b2..88763ee2 100644
+index 439353b..88763ee 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -3865,13 +3865,10 @@ static int setup_populate_devs(const struct lxc_rootfs *rootfs, struct lxc_list
@@ -61,7 +61,7 @@ index 439353b2..88763ee2 100644
  		}
 diff --git a/src/lxc/storage/block.c b/src/lxc/storage/block.c
 new file mode 100644
-index 00000000..eb75e706
+index 0000000..eb75e70
 --- /dev/null
 +++ b/src/lxc/storage/block.c
 @@ -0,0 +1,86 @@
@@ -153,7 +153,7 @@ index 00000000..eb75e706
 +}
 diff --git a/src/lxc/storage/block.h b/src/lxc/storage/block.h
 new file mode 100644
-index 00000000..2fa7565f
+index 0000000..2fa7565
 --- /dev/null
 +++ b/src/lxc/storage/block.h
 @@ -0,0 +1,41 @@
@@ -199,7 +199,7 @@ index 00000000..2fa7565f
 +
 +#endif /* __LXC_BLK_H */
 diff --git a/src/lxc/storage/dir.c b/src/lxc/storage/dir.c
-index deeecec2..2b548d0f 100644
+index deeecec..2b548d0 100644
 --- a/src/lxc/storage/dir.c
 +++ b/src/lxc/storage/dir.c
 @@ -150,7 +150,7 @@ bool dir_detect(const char *path)
@@ -227,7 +227,7 @@ index deeecec2..2b548d0f 100644
  	if (ret < 0) {
  		SYSERROR("Failed to mount \"%s\" on \"%s\"", src, bdev->dest);
 diff --git a/src/lxc/storage/storage.c b/src/lxc/storage/storage.c
-index c4f4c2ea..18f754a4 100644
+index c4f4c2e..18f754a 100644
 --- a/src/lxc/storage/storage.c
 +++ b/src/lxc/storage/storage.c
 @@ -61,6 +61,7 @@
@@ -270,7 +270,7 @@ index c4f4c2ea..18f754a4 100644
  
  static const size_t numbdevs = sizeof(bdevs) / sizeof(struct lxc_storage_type);
 diff --git a/src/lxc/storage/storage_utils.c b/src/lxc/storage/storage_utils.c
-index 46e08a35..b4dcb57c 100644
+index 46e08a3..b4dcb57 100644
 --- a/src/lxc/storage/storage_utils.c
 +++ b/src/lxc/storage/storage_utils.c
 @@ -416,7 +416,7 @@ int find_fstype_cb(char *buffer, void *data)
@@ -283,5 +283,5 @@ index 46e08a35..b4dcb57c 100644
  		free(mntdata);
  		return 0;
 -- 
-2.23.0
+1.8.3.1
 

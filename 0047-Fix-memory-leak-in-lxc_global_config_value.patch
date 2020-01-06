@@ -1,7 +1,7 @@
-From fbf9417e0ee9a19cd678e1c493615fa049b547c9 Mon Sep 17 00:00:00 2001
+From 3e915fc0e452dc7488694f81e1727e979d7afee0 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 17 Jan 2019 07:43:23 -0500
-Subject: [PATCH 047/131] Fix memory leak in lxc_global_config_value
+Subject: [PATCH 047/138] Fix memory leak in lxc_global_config_value
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 2 insertions(+), 5 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgroup.c b/src/lxc/cgroups/cgroup.c
-index 720a6c93..8d559bea 100644
+index 720a6c9..8d559be 100644
 --- a/src/lxc/cgroups/cgroup.c
 +++ b/src/lxc/cgroups/cgroup.c
 @@ -95,6 +95,8 @@ void cgroup_exit(struct cgroup_ops *ops)
@@ -23,7 +23,7 @@ index 720a6c93..8d559bea 100644
  }
  
 diff --git a/src/lxc/initutils.c b/src/lxc/initutils.c
-index 09b521e5..60147a5e 100644
+index 09b521e..60147a5 100644
 --- a/src/lxc/initutils.c
 +++ b/src/lxc/initutils.c
 @@ -74,12 +74,7 @@ const char *lxc_global_config_value(const char *option_name)
@@ -40,5 +40,5 @@ index 09b521e5..60147a5e 100644
  	/* user_config_path is freed as soon as it is used */
  	char *user_config_path = NULL;
 -- 
-2.23.0
+1.8.3.1
 

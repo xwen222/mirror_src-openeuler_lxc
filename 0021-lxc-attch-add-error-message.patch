@@ -1,24 +1,24 @@
-From df2061c420b0ca9af3f3248a249458e64d399c12 Mon Sep 17 00:00:00 2001
+From 1c8e603aed10f387d6f74b51551c76c0154e1ad5 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 14 Jan 2019 04:29:40 -0500
-Subject: [PATCH 021/131] lxc-attch: add error message
+Subject: [PATCH 021/138] lxc-attch: add error message
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c           | 49 ++++++++++++++++++++++++++++++++++----
+ src/lxc/attach.c           | 49 +++++++++++++++++++++++++++++++++++++++++-----
  src/lxc/attach.h           |  4 ++--
- src/lxc/attach_options.h   |  6 ++---
- src/lxc/conf.c             | 27 +++++++++++++++++----
+ src/lxc/attach_options.h   |  6 +++---
+ src/lxc/conf.c             | 27 +++++++++++++++++++++----
  src/lxc/conf.h             |  3 +++
  src/lxc/lxccontainer.c     |  4 ++--
- src/lxc/tools/lxc_attach.c |  8 +++----
+ src/lxc/tools/lxc_attach.c |  8 ++++----
  src/lxc/tools/lxc_ls.c     |  4 ++--
- src/lxc/utils.c            | 21 ++++++++++++++++
+ src/lxc/utils.c            | 21 ++++++++++++++++++++
  src/lxc/utils.h            |  1 +
  10 files changed, 105 insertions(+), 22 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 1886bdef..570b9d0e 100644
+index 1886bde..570b9d0 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -757,10 +757,15 @@ static int attach_child_main(struct attach_clone_payload *payload)
@@ -142,7 +142,7 @@ index 1886bdef..570b9d0e 100644
  	uid_t uid;
  	struct passwd pwent;
 diff --git a/src/lxc/attach.h b/src/lxc/attach.h
-index 4bf9578e..e62b98bc 100644
+index 4bf9578..e62b98b 100644
 --- a/src/lxc/attach.h
 +++ b/src/lxc/attach.h
 @@ -42,7 +42,7 @@ struct lxc_proc_context_info {
@@ -156,7 +156,7 @@ index 4bf9578e..e62b98bc 100644
  
  #endif /* __LXC_ATTACH_H */
 diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
-index 081618cd..7b0a8cb3 100644
+index 081618c..7b0a8cb 100644
 --- a/src/lxc/attach_options.h
 +++ b/src/lxc/attach_options.h
 @@ -71,7 +71,7 @@ enum {
@@ -187,7 +187,7 @@ index 081618cd..7b0a8cb3 100644
  #ifdef  __cplusplus
  }
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 537f956c..8d8230fb 100644
+index 537f956..8d8230f 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2803,10 +2803,6 @@ struct lxc_conf *lxc_conf_init(void)
@@ -246,7 +246,7 @@ index 537f956c..8d8230fb 100644
  	free(conf);
  }
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 79278128..db474e11 100644
+index 7927812..db474e1 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -413,6 +413,9 @@ struct lxc_conf {
@@ -260,7 +260,7 @@ index 79278128..db474e11 100644
  };
  
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 8029f339..31f4819e 100644
+index 8029f33..31f4819 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -4063,7 +4063,7 @@ static int lxcapi_attach(struct lxc_container *c, lxc_attach_exec_t exec_functio
@@ -282,7 +282,7 @@ index 8029f339..31f4819e 100644
  		ERROR("ups");
  		return r;
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index 6d0ffe57..a590fd12 100644
+index 6d0ffe5..a590fd1 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -295,8 +295,8 @@ static int do_attach_foreground(struct lxc_container *c, lxc_attach_command_t *c
@@ -308,7 +308,7 @@ index 6d0ffe57..a590fd12 100644
  		msgpipe[1] = -1;
  		ret = -1;
 diff --git a/src/lxc/tools/lxc_ls.c b/src/lxc/tools/lxc_ls.c
-index cb3eb1e5..e261c7bf 100644
+index cb3eb1e..e261c7b 100644
 --- a/src/lxc/tools/lxc_ls.c
 +++ b/src/lxc/tools/lxc_ls.c
 @@ -122,7 +122,7 @@ struct wrapargs {
@@ -330,7 +330,7 @@ index cb3eb1e5..e261c7bf 100644
  	int ret = -1;
  	size_t len = 0;
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 74e74a15..8ec9f461 100644
+index 74e74a1..8ec9f46 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1971,3 +1971,24 @@ out:
@@ -359,7 +359,7 @@ index 74e74a15..8ec9f461 100644
 +}
 +
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 364bf672..3d56fd93 100644
+index 364bf67..3d56fd9 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -314,5 +314,6 @@ extern int lxc_setup_env_home(uid_t uid);
@@ -370,5 +370,5 @@ index 364bf672..3d56fd93 100644
  
  #endif /* __LXC_UTILS_H */
 -- 
-2.23.0
+1.8.3.1
 

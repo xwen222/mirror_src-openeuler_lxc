@@ -1,0 +1,169 @@
+From 62b1de26a3b8bafbe3e3e2da56176dc7c82e4e25 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Wed, 18 Dec 2019 06:00:58 -0500
+Subject: [PATCH 132/138] lxc: fix bug in cgroup-parent
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 78 ++++++++++++++++++++++++++++--------------------
+ 1 file changed, 46 insertions(+), 32 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 50bdc77..2f86a66 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -557,45 +557,24 @@ on_error:
+ 	return false;
+ }
+ 
+-/* Initialize the cpuset hierarchy in first directory of @gname and set
+- * cgroup.clone_children so that children inherit settings. Since the
+- * h->base_path is populated by init or ourselves, we know it is already
+- * initialized.
+- */
+-static bool cg_legacy_handle_cpuset_hierarchy(struct hierarchy *h, char *cgname)
++static bool build_sub_cpuset_cgroup_dir(char *cgpath)
+ {
+ 	int ret;
+ 	char v;
+-	char *cgpath, *clonechildrenpath, *slash;
+-
+-	if (!string_in_list(h->controllers, "cpuset"))
+-		return true;
+-
+-	if (*cgname == '/')
+-		cgname++;
+-	slash = strchr(cgname, '/');
+-	if (slash)
+-		*slash = '\0';
+-
+-	cgpath = must_make_path(h->mountpoint, h->container_base_path, cgname, NULL);
+-	if (slash)
+-		*slash = '/';
++	char *clonechildrenpath = NULL;
+ 
+ 	ret = mkdir_p(cgpath, 0755);
+ 	if (ret < 0) {
+ 		if (errno != EEXIST) {
+ 			SYSERROR("Failed to create directory \"%s\"", cgpath);
+-			free(cgpath);
+ 			return false;
+ 		}
+ 	}
+ 
+-	clonechildrenpath =
+-	        must_make_path(cgpath, "cgroup.clone_children", NULL);
++	clonechildrenpath = must_make_path(cgpath, "cgroup.clone_children", NULL);
+ 	/* unified hierarchy doesn't have clone_children */
+ 	if (!file_exists(clonechildrenpath)) {
+ 		free(clonechildrenpath);
+-		free(cgpath);
+ 		return true;
+ 	}
+ 
+@@ -603,7 +582,6 @@ static bool cg_legacy_handle_cpuset_hierarchy(struct hierarchy *h, char *cgname)
+ 	if (ret < 0) {
+ 		SYSERROR("Failed to read file \"%s\"", clonechildrenpath);
+ 		free(clonechildrenpath);
+-		free(cgpath);
+ 		return false;
+ 	}
+ 
+@@ -611,7 +589,6 @@ static bool cg_legacy_handle_cpuset_hierarchy(struct hierarchy *h, char *cgname)
+ 	if (!cg_legacy_filter_and_set_cpus(cgpath, v == '1')) {
+ 		SYSERROR("Failed to remove isolated cpus");
+ 		free(clonechildrenpath);
+-		free(cgpath);
+ 		return false;
+ 	}
+ 
+@@ -619,18 +596,15 @@ static bool cg_legacy_handle_cpuset_hierarchy(struct hierarchy *h, char *cgname)
+ 	if (v == '1') {
+ 		DEBUG("\"cgroup.clone_children\" was already set to \"1\"");
+ 		free(clonechildrenpath);
+-		free(cgpath);
+ 		return true;
+ 	}
+ 
+ 	/* copy parent's settings */
+ 	if (!copy_parent_file(cgpath, "cpuset.mems")) {
+ 		SYSERROR("Failed to copy \"cpuset.mems\" settings");
+-		free(cgpath);
+ 		free(clonechildrenpath);
+ 		return false;
+ 	}
+-	free(cgpath);
+ 
+ 	ret = lxc_write_to_file(clonechildrenpath, "1", 1, false, 0666);
+ 	if (ret < 0) {
+@@ -641,6 +615,48 @@ static bool cg_legacy_handle_cpuset_hierarchy(struct hierarchy *h, char *cgname)
+ 	}
+ 	free(clonechildrenpath);
+ 	return true;
++
++}
++
++/* Initialize the cpuset hierarchy in first directory of @gname and set
++ * cgroup.clone_children so that children inherit settings. Since the
++ * h->base_path is populated by init or ourselves, we know it is already
++ * initialized.
++ */
++static bool cg_legacy_handle_cpuset_hierarchy(struct hierarchy *h, char *cgname)
++{
++	char *cgpath, *slash;
++	bool sub_mk_success = false;
++
++	if (!string_in_list(h->controllers, "cpuset"))
++		return true;
++
++	cgname += strspn(cgname, "/");
++
++	slash = strchr(cgname, '/');
++
++	if (slash != NULL) {
++		while (slash) {
++			*slash = '\0';
++			cgpath = must_make_path(h->mountpoint, h->container_base_path, cgname, NULL);
++			sub_mk_success = build_sub_cpuset_cgroup_dir(cgpath);
++			free(cgpath);
++			*slash = '/';
++			if (!sub_mk_success) {
++				return false;
++			}
++			slash = strchr(slash + 1, '/');
++		}
++	} else {
++		cgpath = must_make_path(h->mountpoint, h->container_base_path, cgname, NULL);
++		sub_mk_success = build_sub_cpuset_cgroup_dir(cgpath);
++		free(cgpath);
++		if (!sub_mk_success) {
++			return false;
++		}
++	}
++
++	return true;
+ }
+ 
+ /* Given two null-terminated lists of strings, return true if any string is in
+@@ -1207,9 +1223,7 @@ static int mkdir_eexist_on_last(const char *dir, mode_t mode)
+ {
+ 	const char *tmp = dir;
+ 	const char *orig = dir;
+-	size_t orig_len;
+ 
+-	orig_len = strlen(dir);
+ 	do {
+ 		int ret;
+ 		size_t cur_len;
+@@ -1226,7 +1240,7 @@ static int mkdir_eexist_on_last(const char *dir, mode_t mode)
+ 
+ 		ret = mkdir(makeme, mode);
+ 		if (ret < 0) {
+-			if ((errno != EEXIST) || (orig_len == cur_len)) {
++			if (errno != EEXIST) {
+ 				SYSERROR("Failed to create directory \"%s\"", makeme);
+ 				free(makeme);
+ 				return -1;
+-- 
+1.8.3.1
+

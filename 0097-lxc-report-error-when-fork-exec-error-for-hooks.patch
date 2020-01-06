@@ -1,7 +1,7 @@
-From 05cf3e2c1b015175be82d4040e2d2f421494ac57 Mon Sep 17 00:00:00 2001
+From 386ea470d2371fb7916135e801e0d7f5e3c5b8fa Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 15 May 2019 00:53:49 -0400
-Subject: [PATCH 097/131] lxc: report error when fork/exec error for hooks
+Subject: [PATCH 097/138] lxc: report error when fork/exec error for hooks
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 9 insertions(+), 12 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 6cf86a4e..341fdab5 100644
+index 6cf86a4..341fdab 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4559,21 +4559,12 @@ static struct lxc_popen_FILE *lxc_popen_ocihook(char *commandpath, char **args,
@@ -68,5 +68,5 @@ index 6cf86a4e..341fdab5 100644
  			(conf->which >= NUM_LXC_HOOKS) ? "invalid type" : lxchook_names[conf->which],
  			WEXITSTATUS(ret), output);
 -- 
-2.23.0
+1.8.3.1
 

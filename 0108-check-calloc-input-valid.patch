@@ -1,7 +1,7 @@
-From b00c15567bc0fedc87f5e31106fadc5fbea1ca54 Mon Sep 17 00:00:00 2001
+From b23823f7acf224be1c4e99dbc8959b7adb1bcc11 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 18 Jun 2019 23:16:09 +0800
-Subject: [PATCH 108/131] check calloc input valid
+Subject: [PATCH 108/138] check calloc input valid
 
 check calloc input valid
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 778a0abd..6b117de7 100644
+index 778a0ab..6b117de 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -444,8 +444,11 @@ static ssize_t lxc_logger_write(struct lxc_terminal *terminal, const char *type,
@@ -29,5 +29,5 @@ index 778a0abd..6b117de7 100644
  	}
  	msg->log = calloc(bytes_read, 1);
 -- 
-2.23.0
+1.8.3.1
 

@@ -1,7 +1,7 @@
-From 5698aab60ae5ef398af34b129f4998922a43826c Mon Sep 17 00:00:00 2001
+From ff77c9eb552544103add1f52f0534831642aaa2b Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 17 Jan 2019 10:19:37 +0800
-Subject: [PATCH 043/131] check null pointer of handler to fix coredump of
+Subject: [PATCH 043/138] check null pointer of handler to fix coredump of
  attach
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lxc/cgroups/cgroup.c b/src/lxc/cgroups/cgroup.c
-index 7442c310..720a6c93 100644
+index 7442c31..720a6c9 100644
 --- a/src/lxc/cgroups/cgroup.c
 +++ b/src/lxc/cgroups/cgroup.c
 @@ -44,7 +44,7 @@ struct cgroup_ops *cgroup_init(struct lxc_handler *handler)
@@ -24,5 +24,5 @@ index 7442c310..720a6c93 100644
  		ERROR("Failed to initialize cgroup driver");
  		return NULL;
 -- 
-2.23.0
+1.8.3.1
 

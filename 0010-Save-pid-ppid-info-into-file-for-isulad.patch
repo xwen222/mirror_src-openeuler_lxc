@@ -1,23 +1,23 @@
-From 091e9a9121c04a96a3d8a227a133ca6616f0b86f Mon Sep 17 00:00:00 2001
+From 891845a031814911a72b8eed95c4d44426b7e69c Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Fri, 11 Jan 2019 22:53:56 -0500
-Subject: [PATCH 010/131] Save pid/ppid info into file for isulad
+Subject: [PATCH 010/138] Save pid/ppid info into file for isulad
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/conf.c            |   1 +
  src/lxc/conf.h            |   2 +
- src/lxc/lxccontainer.c    |  24 ++++++++
+ src/lxc/lxccontainer.c    |  24 ++++++++++
  src/lxc/lxccontainer.h    |  10 ++++
- src/lxc/start.c           |  41 ++++++++++++++
+ src/lxc/start.c           |  41 +++++++++++++++++
  src/lxc/tools/arguments.h |   2 +
- src/lxc/tools/lxc_start.c |  20 +++++++
- src/lxc/utils.c           | 114 ++++++++++++++++++++++++++++++++++++++
- src/lxc/utils.h           |  66 ++++++++++++++++++++++
+ src/lxc/tools/lxc_start.c |  20 ++++++++
+ src/lxc/utils.c           | 114 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/utils.h           |  66 +++++++++++++++++++++++++++
  9 files changed, 280 insertions(+)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 7b7f95b7..0b4b63b8 100644
+index 7b7f95b..0b4b63b 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4194,6 +4194,7 @@ void lxc_conf_free(struct lxc_conf *conf)
@@ -29,7 +29,7 @@ index 7b7f95b7..0b4b63b8 100644
  	free(conf);
  }
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index cced868c..e0954f92 100644
+index cced868..e0954f9 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -403,6 +403,8 @@ struct lxc_conf {
@@ -42,7 +42,7 @@ index cced868c..e0954f92 100644
  };
  
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 318c71e6..5679b9b4 100644
+index 318c71e..5679b9b 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -4988,6 +4988,29 @@ static bool do_lxcapi_set_terminal_default_fifos(struct lxc_container *c, const
@@ -84,7 +84,7 @@ index 318c71e6..5679b9b4 100644
  	return c;
  
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index 486531e5..3c845fea 100644
+index 486531e..3c845fe 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -857,6 +857,16 @@ struct lxc_container {
@@ -105,7 +105,7 @@ index 486531e5..3c845fea 100644
  
  /*!
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index d64bdac1..9d71dd79 100644
+index d64bdac..9d71dd7 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1553,6 +1553,39 @@ static inline int do_share_ns(void *arg)
@@ -164,7 +164,7 @@ index d64bdac1..9d71dd79 100644
  		if (handler->ns_on_clone_flags & ns_info[i].clone_flag)
  			INFO("Cloned %s", ns_info[i].flag_name);
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index b7af2b51..b6df23f8 100644
+index b7af2b5..b6df23f 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -63,6 +63,7 @@ struct lxc_arguments {
@@ -184,7 +184,7 @@ index b7af2b51..b6df23f8 100644
  
  extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index 8f03f111..2f94d671 100644
+index 8f03f11..2f94d67 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -69,8 +69,11 @@ static const struct option my_longopts[] = {
@@ -244,7 +244,7 @@ index 8f03f111..2f94d671 100644
  	exit(err);
  }
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 67c3b3ef..4728284f 100644
+index 67c3b3e..4728284 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1828,3 +1828,117 @@ int lxc_setup_keyring(void)
@@ -366,7 +366,7 @@ index 67c3b3ef..4728284f 100644
 +}
 +
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 2d38178c..8e4ed894 100644
+index 2d38178..8e4ed89 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -56,6 +56,71 @@ extern char *get_rundir(void);
@@ -449,5 +449,5 @@ index 2d38178c..8e4ed894 100644
  
  #endif /* __LXC_UTILS_H */
 -- 
-2.23.0
+1.8.3.1
 

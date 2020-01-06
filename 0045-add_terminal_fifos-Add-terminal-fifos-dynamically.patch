@@ -1,20 +1,20 @@
-From 37c62f3f3ae17c22d4a0a4edd2ed5b804c6491bf Mon Sep 17 00:00:00 2001
+From 1b1e83d187893f2e61c8952887d24b5afb949c77 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 17 Jan 2019 02:18:14 -0500
-Subject: [PATCH 045/131] add_terminal_fifos: Add terminal fifos dynamically
+Subject: [PATCH 045/138] add_terminal_fifos: Add terminal fifos dynamically
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/commands.c     | 62 ++++++++++++++++++++++++++++++++++++++++++
- src/lxc/commands.h     |  4 +++
- src/lxc/lxccontainer.c | 24 ++++++++++++++++
- src/lxc/lxccontainer.h | 10 +++++++
- src/lxc/terminal.c     | 47 ++++++++++++++++++++++++++++++++
+ src/lxc/commands.c     | 62 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/commands.h     |  4 ++++
+ src/lxc/lxccontainer.c | 24 +++++++++++++++++++
+ src/lxc/lxccontainer.h | 10 ++++++++
+ src/lxc/terminal.c     | 47 ++++++++++++++++++++++++++++++++++++++
  src/lxc/terminal.h     |  1 +
  6 files changed, 148 insertions(+)
 
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index 47a824a9..46b28053 100644
+index 47a824a..46b2805 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -96,6 +96,7 @@ static const char *lxc_cmd_str(lxc_cmd_t cmd)
@@ -101,7 +101,7 @@ index 47a824a9..46b28053 100644
  
  	if (req->cmd >= LXC_CMD_MAX) {
 diff --git a/src/lxc/commands.h b/src/lxc/commands.h
-index 2c024b65..0c64544e 100644
+index 2c024b6..0c64544 100644
 --- a/src/lxc/commands.h
 +++ b/src/lxc/commands.h
 @@ -46,6 +46,7 @@ typedef enum {
@@ -121,7 +121,7 @@ index 2c024b65..0c64544e 100644
 +
  #endif /* __commands_h */
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index d6418510..bfbf223b 100644
+index d641851..bfbf223 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -5164,6 +5164,29 @@ static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pi
@@ -163,14 +163,13 @@ index d6418510..bfbf223b 100644
  	return c;
  
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index a00e0ece..c1d83ba7 100644
+index a00e0ec..c1d83ba 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
-@@ -877,6 +877,16 @@ struct lxc_container {
- 	 */
+@@ -878,6 +878,16 @@ struct lxc_container {
  	bool (*set_terminal_init_fifos)(struct lxc_container *c, const char *in, const char *out);
  
-+	/*! isulad add
+ 	/*! isulad add
 +	 * \brief An API call to add the path of terminal fifos
 +	 *
 +	 * \param c Container.
@@ -180,11 +179,12 @@ index a00e0ece..c1d83ba7 100644
 +	 */
 +	bool (*add_terminal_fifos)(struct lxc_container *c, const char *in, const char *out);
 +
- 	/*! isulad add
++	/*! isulad add
  	 * \brief An API call to set the path of info file
  	 *
+ 	 * \param c Container.
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index ee3aef21..a33830dd 100644
+index ee3aef2..a33830d 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -1473,3 +1473,50 @@ int lxc_terminal_map_ids(struct lxc_conf *c, struct lxc_terminal *terminal)
@@ -239,7 +239,7 @@ index ee3aef21..a33830dd 100644
 +}
 +
 diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
-index d25da657..d006b80a 100644
+index d25da65..d006b80 100644
 --- a/src/lxc/terminal.h
 +++ b/src/lxc/terminal.h
 @@ -310,5 +310,6 @@ extern int lxc_terminal_map_ids(struct lxc_conf *c,
@@ -250,5 +250,5 @@ index d25da657..d006b80a 100644
  
  #endif /* __LXC_TERMINAL_H */
 -- 
-2.23.0
+1.8.3.1
 

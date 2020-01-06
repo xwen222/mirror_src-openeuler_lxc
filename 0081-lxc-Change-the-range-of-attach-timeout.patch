@@ -1,7 +1,7 @@
-From 567715dd8df8468d292da02720b210e2972e6f8e Mon Sep 17 00:00:00 2001
+From 1c0c1b59116fde86d5bbaff143c1678a0c7414b0 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 8 Apr 2019 16:42:43 +0800
-Subject: [PATCH 081/131] lxc: Change the range of attach timeout
+Subject: [PATCH 081/138] lxc: Change the range of attach timeout
 
 Signed-off-by: wujing <wujing50@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  4 files changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 79049c3d..6480eb99 100644
+index 79049c3..6480eb9 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -78,7 +78,7 @@ typedef enum {
@@ -35,7 +35,7 @@ index 79049c3d..6480eb99 100644
  	int ret = 0;
  	pthread_t ptid;
 diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
-index 5e279baf..9744a2e4 100644
+index 5e279ba..9744a2e 100644
 --- a/src/lxc/attach_options.h
 +++ b/src/lxc/attach_options.h
 @@ -137,7 +137,7 @@ typedef struct lxc_attach_options_t {
@@ -48,7 +48,7 @@ index 5e279baf..9744a2e4 100644
  
  /*! Default attach options to use */
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index 2fc90ad9..de02aeb0 100644
+index 2fc90ad..de02aeb 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -70,7 +70,7 @@ struct lxc_arguments {
@@ -61,7 +61,7 @@ index 2fc90ad9..de02aeb0 100644
  	/* for lxc-console */
  	unsigned int ttynum;
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index 440c0bcb..854b3a2c 100644
+index 440c0bc..854b3a2 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -212,7 +212,7 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
@@ -74,5 +74,5 @@ index 440c0bcb..854b3a2c 100644
  	}
  
 -- 
-2.23.0
+1.8.3.1
 

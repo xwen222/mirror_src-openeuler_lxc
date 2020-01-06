@@ -1,7 +1,7 @@
-From 5b16103c5148098f737c2b7827805d9e35209ed9 Mon Sep 17 00:00:00 2001
+From 18727f1d50acf2a01e3f593e016ffdb06cef7f16 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 22 Jan 2019 20:14:53 +0800
-Subject: [PATCH 054/131] fix invalid log message
+Subject: [PATCH 054/138] fix invalid log message
 
 fix invalid log message
 
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 6ea8f9c1..1e403ebb 100644
+index 6ea8f9c..1e403eb 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2708,7 +2708,6 @@ static int mount_file_entries(const struct lxc_conf *conf,
@@ -25,7 +25,7 @@ index 6ea8f9c1..1e403ebb 100644
  			ret = mount_entry_on_systemfs(&mntent);
  		else if (mntent.mnt_dir[0] != '/')
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 24e975bc..4db61c56 100644
+index 24e975b..4db61c5 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1777,7 +1777,7 @@ int recursive_destroy(char *dirname)
@@ -38,5 +38,5 @@ index 24e975bc..4db61c56 100644
  		}
  		SYSERROR("Failed to open dir \"%s\"", dirname);
 -- 
-2.23.0
+1.8.3.1
 

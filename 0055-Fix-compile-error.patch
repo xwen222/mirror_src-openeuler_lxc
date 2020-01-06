@@ -1,7 +1,7 @@
-From ab9a88aaccd839edd48cc15e6e6ef28ff332299d Mon Sep 17 00:00:00 2001
+From 4ee09d4e9110bc6073db74cbf90de696c8104d1e Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 24 Jan 2019 05:14:24 -0500
-Subject: [PATCH 055/131] Fix compile error
+Subject: [PATCH 055/138] Fix compile error
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -16,7 +16,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  8 files changed, 18 insertions(+), 44 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 6bfa693e..e5132182 100644
+index 6bfa693..e513218 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1263,18 +1263,6 @@ static bool create_path_for_hierarchy(struct hierarchy *h, char *cgname, int err
@@ -47,7 +47,7 @@ index 6bfa693e..e5132182 100644
  		char *base_cgroup = NULL, *mountpoint = NULL;
  		char **controller_list = NULL;
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 1e403ebb..4800943c 100644
+index 1e403eb..4800943 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -1518,7 +1518,7 @@ error:
@@ -101,7 +101,7 @@ index 1e403ebb..4800943c 100644
  		if (!argv || !argv[0]) {
  			ERROR("oci hook require lxcpath");
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 7e9d5c85..f66d01ba 100644
+index 7e9d5c8..f66d01b 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -3909,7 +3909,6 @@ static int get_config_init_args(const char *key, char *retv, int inlen,
@@ -113,7 +113,7 @@ index 7e9d5c85..f66d01ba 100644
  	if (!retv)
  		inlen = 0;
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index daf2af4d..816b4a2d 100644
+index daf2af4..816b4a2 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2470,8 +2470,6 @@ retry:
@@ -126,7 +126,7 @@ index daf2af4d..816b4a2d 100644
  out:
  	return ret;
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 95140e0b..252a644f 100644
+index 95140e0..252a644 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -418,6 +418,21 @@ static void lxc_forward_data_to_fifo(struct lxc_list *list, char *buf, int r)
@@ -183,7 +183,7 @@ index 95140e0b..252a644f 100644
  int lxc_terminal_delete_fifo(int fd, struct lxc_list *list)
  {
 diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
-index d006b80a..0c9653c5 100644
+index d006b80..0c9653c 100644
 --- a/src/lxc/terminal.h
 +++ b/src/lxc/terminal.h
 @@ -305,9 +305,6 @@ extern void lxc_terminal_info_init(struct lxc_terminal_info *terminal);
@@ -197,7 +197,7 @@ index d006b80a..0c9653c5 100644
  int lxc_terminal_delete_fifo(int fd, struct lxc_list *list);
  int lxc_terminal_add_fifos(struct lxc_conf *conf, const char *fifonames);
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index a590fd12..88569344 100644
+index a590fd1..8856934 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -398,11 +398,9 @@ out:
@@ -213,7 +213,7 @@ index a590fd12..88569344 100644
  	lxc_attach_command_t command = (lxc_attach_command_t){.program = NULL};
  
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 4db61c56..9a50fced 100644
+index 4db61c5..9a50fce 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -2026,7 +2026,6 @@ void lxc_write_error_message(int errfd, const char *format, ...)
@@ -225,5 +225,5 @@ index 4db61c56..9a50fced 100644
  	bool alive = true;
  	proc_t *pid_info = NULL;
 -- 
-2.23.0
+1.8.3.1
 

@@ -1,7 +1,7 @@
-From 8cd813403960ae2038ec49bcc22c3a49af9c3664 Mon Sep 17 00:00:00 2001
+From 44f1f43ed02453951dd974bc3cc17ee364476894 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 21:24:25 +0800
-Subject: [PATCH 027/131] fix bug of memory leak
+Subject: [PATCH 027/138] fix bug of memory leak
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  3 files changed, 19 insertions(+), 4 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 6a14de1f..e076bf28 100644
+index 6a14de1..e076bf2 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4822,6 +4822,16 @@ int lxc_clear_procs(struct lxc_conf *c, const char *key)
@@ -40,7 +40,7 @@ index 6a14de1f..e076bf28 100644
  	free(conf->cgroup_meta.controllers);
  	/* isulad add begin */
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 2263e47e..44feb986 100644
+index 2263e47..44feb98 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -491,6 +491,7 @@ extern int setup_sysctl_parameters(struct lxc_list *sysctls);
@@ -52,7 +52,7 @@ index 2263e47e..44feb986 100644
  /* isulad add begin */
  int lxc_clear_init_args(struct lxc_conf *lxc_conf);
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 81c0ec35..e6272fcd 100644
+index 81c0ec3..e6272fc 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -5418,10 +5418,13 @@ int list_active_containers(const char *lxcpath, char ***nret,
@@ -74,5 +74,5 @@ index 81c0ec35..e6272fcd 100644
  
  		if (!add_to_array(&ct_name, p, ct_name_cnt)) {
 -- 
-2.23.0
+1.8.3.1
 

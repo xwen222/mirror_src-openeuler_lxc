@@ -1,7 +1,7 @@
-From a2682d0a53a373585ad99d24d245e5c009127ea3 Mon Sep 17 00:00:00 2001
+From 1c4b55f4bb5d7b9720153073e78facb69fe220d1 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 21 Feb 2019 20:27:47 +0800
-Subject: [PATCH 068/131] support record stdout, stderr log of container
+Subject: [PATCH 068/138] support record stdout, stderr log of container
  console
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
@@ -11,12 +11,12 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  src/lxc/attach_options.h   |   2 +-
  src/lxc/commands.c         |  15 +-
  src/lxc/commands.h         |   2 +-
- src/lxc/conf.c             |  33 ++--
- src/lxc/lxccontainer.c     |  79 +++++++--
- src/lxc/lxccontainer.h     |  35 +++-
- src/lxc/start.c            |  67 ++++++-
+ src/lxc/conf.c             |  33 +++--
+ src/lxc/lxccontainer.c     |  79 +++++++---
+ src/lxc/lxccontainer.h     |  35 ++++-
+ src/lxc/start.c            |  67 ++++++++-
  src/lxc/start.h            |   5 +
- src/lxc/terminal.c         | 351 +++++++++++++++++++++++++++----------
+ src/lxc/terminal.c         | 351 ++++++++++++++++++++++++++++++++-------------
  src/lxc/terminal.h         |   7 +-
  src/lxc/tools/arguments.h  |  14 +-
  src/lxc/tools/lxc_attach.c |   7 +-
@@ -24,7 +24,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  14 files changed, 502 insertions(+), 152 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 97688971..c979c85a 100644
+index 9768897..c979c85 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -1052,15 +1052,18 @@ static int lxc_attach_terminal(struct lxc_conf *conf,
@@ -53,7 +53,7 @@ index 97688971..c979c85a 100644
  	ret = lxc_terminal_create(terminal);
  	if (ret < 0) {
 diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
-index 7b0a8cb3..71c1739d 100644
+index 7b0a8cb..71c1739 100644
 --- a/src/lxc/attach_options.h
 +++ b/src/lxc/attach_options.h
 @@ -136,7 +136,7 @@ typedef struct lxc_attach_options_t {
@@ -66,7 +66,7 @@ index 7b0a8cb3..71c1739d 100644
  
  /*! Default attach options to use */
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index 46b28053..f0c95df7 100644
+index 46b2805..f0c95df 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -1064,21 +1064,22 @@ reap_client_fd:
@@ -100,7 +100,7 @@ index 46b28053..f0c95df7 100644
  	struct lxc_cmd_rr cmd = {
  		.req = {
 diff --git a/src/lxc/commands.h b/src/lxc/commands.h
-index 0c64544e..6b64849c 100644
+index 0c64544..6b64849 100644
 --- a/src/lxc/commands.h
 +++ b/src/lxc/commands.h
 @@ -127,6 +127,6 @@ extern int lxc_cmd_console_log(const char *name, const char *lxcpath,
@@ -112,7 +112,7 @@ index 0c64544e..6b64849c 100644
  
  #endif /* __commands_h */
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index e139dffe..a6b97975 100644
+index e139dff..a6b9797 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2067,20 +2067,22 @@ static int lxc_setup_ttydir_console(const struct lxc_rootfs *rootfs,
@@ -165,7 +165,7 @@ index e139dffe..a6b97975 100644
  
  	new->errmsg = NULL;
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 3fd1a66c..8a3724c6 100644
+index 3fd1a66..8a3724c 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -702,6 +702,40 @@ static bool do_lxcapi_want_daemonize(struct lxc_container *c, bool state)
@@ -318,7 +318,7 @@ index 3fd1a66c..8a3724c6 100644
  	c->start = lxcapi_start;
  	c->startl = lxcapi_startl;
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index c1d83ba7..c3368e4f 100644
+index c1d83ba..c3368e4 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -137,6 +137,15 @@ struct lxc_container {
@@ -337,11 +337,10 @@ index c1d83ba7..c3368e4f 100644
  	/*! Full path to configuration file */
  	char *config_path;
  
-@@ -243,6 +252,28 @@ struct lxc_container {
- 	 */
+@@ -244,6 +253,28 @@ struct lxc_container {
  	bool (*stop)(struct lxc_container *c);
  
-+	/*!
+ 	/*!
 +	 * \brief Change whether the container wants to create pty or pipes
 +	 * from the console log.
 +	 *
@@ -363,9 +362,10 @@ index c1d83ba7..c3368e4f 100644
 +	 */
 +	bool (*want_open_stdin)(struct lxc_container *c, bool state);
 +
- 	/*!
++	/*!
  	 * \brief Change whether the container wants to run disconnected
  	 * from the terminal.
+ 	 *
 @@ -875,7 +906,7 @@ struct lxc_container {
  	 *
  	 * \return \c true on success, else \c false.
@@ -385,7 +385,7 @@ index c1d83ba7..c3368e4f 100644
  	/*! isulad add
  	 * \brief An API call to set the path of info file
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 816b4a2d..cad0d769 100644
+index 816b4a2..cad0d76 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -635,6 +635,13 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
@@ -505,7 +505,7 @@ index 816b4a2d..cad0d769 100644
  	if (handler->conf->container_info_file) {
  		if (lxc_save_container_info(handler->conf->container_info_file, handler->pid)) {
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index ab72e6e0..02989919 100644
+index ab72e6e..0298991 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -99,6 +99,11 @@ struct lxc_handler {
@@ -521,7 +521,7 @@ index ab72e6e0..02989919 100644
  	pid_t pid;
  
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 602d43d7..dfce92ed 100644
+index 602d43d..dfce92e 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -432,7 +432,7 @@ static bool get_now_time_buffer(char *timebuffer, size_t maxsize)
@@ -1080,7 +1080,7 @@ index 602d43d7..dfce92ed 100644
  		ret = -1;
  		goto free_out;
 diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
-index 0c9653c5..9bb341f0 100644
+index 0c9653c..9bb341f 100644
 --- a/src/lxc/terminal.h
 +++ b/src/lxc/terminal.h
 @@ -115,16 +115,21 @@ struct lxc_terminal {
@@ -1107,7 +1107,7 @@ index 0c9653c5..9bb341f0 100644
  };
  
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index afab9f54..d03f8a42 100644
+index afab9f5..d03f8a4 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -51,6 +51,8 @@ struct lxc_arguments {
@@ -1146,7 +1146,7 @@ index afab9f54..d03f8a42 100644
  
  extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index acdf8a01..674050de 100644
+index acdf8a0..674050d 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -77,6 +77,7 @@ static const struct option my_longopts[] = {
@@ -1180,7 +1180,7 @@ index acdf8a01..674050de 100644
  	} else if (stdfd_is_pty()) {
  		attach_options.attach_flags |= LXC_ATTACH_TERMINAL;
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index ec487018..183fafcb 100644
+index ec48701..183fafc 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -73,9 +73,12 @@ static const struct option my_longopts[] = {
@@ -1240,5 +1240,5 @@ index ec487018..183fafcb 100644
  	if (args == default_args)
  		err = c->start(c, 0, NULL) ? EXIT_SUCCESS : EXIT_FAILURE;
 -- 
-2.23.0
+1.8.3.1
 

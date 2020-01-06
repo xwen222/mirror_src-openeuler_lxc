@@ -1,7 +1,7 @@
-From 86c34d70d2a3e213945bda652ccb970bc89b79c6 Mon Sep 17 00:00:00 2001
+From a7911877ab97ce77a810f57ff4a3e4a9383f6f9d Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 11 Mar 2019 23:26:27 -0400
-Subject: [PATCH 065/131] Storage: return true if storage_init init fail
+Subject: [PATCH 065/138] Storage: return true if storage_init init fail
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/storage/storage.c b/src/lxc/storage/storage.c
-index 18f754a4..88ed7884 100644
+index 18f754a..88ed788 100644
 --- a/src/lxc/storage/storage.c
 +++ b/src/lxc/storage/storage.c
 @@ -610,8 +610,11 @@ bool storage_destroy(struct lxc_conf *conf)
@@ -26,5 +26,5 @@ index 18f754a4..88ed7884 100644
  	destroy_rv = r->ops->destroy(r);
  	if (destroy_rv == 0)
 -- 
-2.23.0
+1.8.3.1
 

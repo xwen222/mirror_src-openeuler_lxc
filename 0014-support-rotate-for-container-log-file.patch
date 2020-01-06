@@ -1,7 +1,7 @@
-From e5a0cdcd196da8697a2a83f8122245d29c90247c Mon Sep 17 00:00:00 2001
+From 525ebf75258bcc7ea9edeeb726c9b3363bb80d80 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Sat, 12 Jan 2019 15:29:56 +0800
-Subject: [PATCH 014/131] support rotate for container log file
+Subject: [PATCH 014/138] support rotate for container log file
 
 support rotate for container log file
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 43 insertions(+)
 
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index cbef2e21..e7822115 100644
+index cbef2e2..e782211 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -1802,11 +1802,14 @@ static int set_config_console_rotate(const char *key, const char *value,
@@ -31,7 +31,7 @@ index cbef2e21..e7822115 100644
  	return 0;
  }
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 410f643c..3bb3a52a 100644
+index 410f643..3bb3a52 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -229,6 +229,39 @@ static int lxc_terminal_truncate_log_file(struct lxc_terminal *terminal)
@@ -89,5 +89,5 @@ index 410f643c..3bb3a52a 100644
  	tmp = alloca(len);
  
 -- 
-2.23.0
+1.8.3.1
 

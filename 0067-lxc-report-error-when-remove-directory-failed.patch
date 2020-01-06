@@ -1,7 +1,7 @@
-From 5e13dd95a5e96b3d9bc9e28b6d8912625b92ce20 Mon Sep 17 00:00:00 2001
+From 44a5db6680dd81a11cd1afe87fae9ad63dc30f34 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Sat, 16 Mar 2019 10:06:13 +0800
-Subject: [PATCH 067/131] lxc: report error when remove directory failed
+Subject: [PATCH 067/138] lxc: report error when remove directory failed
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 11 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index bfbf223b..3fd1a66c 100644
+index bfbf223..3fd1a66 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -3148,8 +3148,11 @@ static bool container_destroy(struct lxc_container *c,
@@ -27,7 +27,7 @@ index bfbf223b..3fd1a66c 100644
  	}
  	INFO("Destroyed directory \"%s\" for \"%s\"", path, c->name);
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 91ba4935..480e6d0a 100644
+index 91ba493..480e6d0 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -88,6 +88,7 @@ static int _recursive_rmdir(const char *dirname, dev_t pdev,
@@ -68,5 +68,5 @@ index 91ba4935..480e6d0a 100644
  }
  
 -- 
-2.23.0
+1.8.3.1
 

@@ -1,7 +1,7 @@
-From ab769b5cde6f65355eb395b7477acda3c5fbd381 Mon Sep 17 00:00:00 2001
+From 8285ecc2065505e869f92b74934abee2249eaac5 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Mon, 17 Jun 2019 20:17:37 +0800
-Subject: [PATCH 107/131] add log for failure of rename file
+Subject: [PATCH 107/138] add log for failure of rename file
 
 1. add log message of rename operator
 2. if rename console file failed, reopen terminal fd
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index a8a0dc97..778a0abd 100644
+index a8a0dc9..778a0ab 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -293,8 +293,9 @@ static int lxc_terminal_rotate_log_file(struct lxc_terminal *terminal)
@@ -29,5 +29,5 @@ index a8a0dc97..778a0abd 100644
  	return lxc_terminal_create_log_file(terminal);
  }
 -- 
-2.23.0
+1.8.3.1
 

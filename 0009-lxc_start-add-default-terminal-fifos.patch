@@ -1,23 +1,23 @@
-From fc179b0e5abb9dfe444343e81ef50e69cbc678cd Mon Sep 17 00:00:00 2001
+From 88256f6a222a9e2fbaac73f66ffcd02a4f970864 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Fri, 11 Jan 2019 21:52:11 -0500
-Subject: [PATCH 009/131] lxc_start: add default terminal fifos
+Subject: [PATCH 009/138] lxc_start: add default terminal fifos
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/conf.c            |   4 +
- src/lxc/lxccontainer.c    |  30 ++++++
- src/lxc/lxccontainer.h    |  10 ++
- src/lxc/terminal.c        | 194 +++++++++++++++++++++++++++++++++++++-
+ src/lxc/lxccontainer.c    |  30 +++++++
+ src/lxc/lxccontainer.h    |  10 +++
+ src/lxc/terminal.c        | 194 +++++++++++++++++++++++++++++++++++++++++++++-
  src/lxc/terminal.h        |  16 ++++
- src/lxc/tools/arguments.h |   5 +
+ src/lxc/tools/arguments.h |   5 ++
  src/lxc/tools/lxc_start.c |  11 +++
- src/lxc/utils.c           |  23 +++++
+ src/lxc/utils.c           |  23 ++++++
  src/lxc/utils.h           |   4 +
  9 files changed, 294 insertions(+), 3 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 37a5ff79..7b7f95b7 100644
+index 37a5ff7..7b7f95b 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2714,6 +2714,10 @@ struct lxc_conf *lxc_conf_init(void)
@@ -32,7 +32,7 @@ index 37a5ff79..7b7f95b7 100644
  	new->nbd_idx = -1;
  	new->rootfs.mount = strdup(default_rootfs_mount);
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 1d7f5bea..318c71e6 100644
+index 1d7f5be..318c71e 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -4961,6 +4961,33 @@ out:
@@ -80,7 +80,7 @@ index 1d7f5bea..318c71e6 100644
  
  err:
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index 9e06215c..486531e5 100644
+index 9e06215..486531e 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -847,6 +847,16 @@ struct lxc_container {
@@ -101,7 +101,7 @@ index 9e06215c..486531e5 100644
  
  /*!
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 4060e7f9..c5077122 100644
+index 4060e7f..c507712 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -364,6 +364,20 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
@@ -382,7 +382,7 @@ index 4060e7f9..c5077122 100644
  
  int lxc_terminal_map_ids(struct lxc_conf *c, struct lxc_terminal *terminal)
 diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
-index bfd271f4..d25da657 100644
+index bfd271f..d25da65 100644
 --- a/src/lxc/terminal.h
 +++ b/src/lxc/terminal.h
 @@ -115,6 +115,17 @@ struct lxc_terminal {
@@ -414,7 +414,7 @@ index bfd271f4..d25da657 100644
 +
  #endif /* __LXC_TERMINAL_H */
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index 810050ad..b7af2b51 100644
+index 810050a..b7af2b5 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -62,6 +62,7 @@ struct lxc_arguments {
@@ -437,7 +437,7 @@ index 810050ad..b7af2b51 100644
  extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
  			       char *const argv[]);
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index 4553cb5c..8f03f111 100644
+index 4553cb5..8f03f11 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -69,6 +69,8 @@ static const struct option my_longopts[] = {
@@ -473,7 +473,7 @@ index 4553cb5c..8f03f111 100644
  		err = c->start(c, 0, NULL) ? EXIT_SUCCESS : EXIT_FAILURE;
  	else
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 6e9165ae..67c3b3ef 100644
+index 6e9165a..67c3b3e 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -611,6 +611,19 @@ bool dir_exists(const char *path)
@@ -514,7 +514,7 @@ index 6e9165ae..67c3b3ef 100644
  {
  	int ret;
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 94196d09..2d38178c 100644
+index 94196d0..2d38178 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -147,6 +147,8 @@ extern gid_t get_ns_gid(gid_t orig);
@@ -534,5 +534,5 @@ index 94196d09..2d38178c 100644
 +
  #endif /* __LXC_UTILS_H */
 -- 
-2.23.0
+1.8.3.1
 

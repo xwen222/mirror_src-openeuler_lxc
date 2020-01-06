@@ -1,32 +1,32 @@
-From 187a14aa91f9b3c6ca6447f2de3b9df1f20ccf09 Mon Sep 17 00:00:00 2001
+From 4eb6383318a8e3beb1c632553a77b4f86e78dd20 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 3 Jun 2019 05:14:46 -0400
-Subject: [PATCH 101/131] lxc: fix code error
+Subject: [PATCH 101/138] lxc: fix code error
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
  src/lxc/af_unix.c               |  28 +-
- src/lxc/cgroups/cgfsng.c        | 263 +++++-----
- src/lxc/conf.c                  | 575 ++++++++++----------
+ src/lxc/cgroups/cgfsng.c        | 263 ++++++------
+ src/lxc/conf.c                  | 575 ++++++++++++++------------
  src/lxc/conf.h                  |  28 +-
- src/lxc/confile.c               | 897 ++++++++++++++++----------------
+ src/lxc/confile.c               | 897 ++++++++++++++++++++--------------------
  src/lxc/confile_utils.c         |  42 +-
- src/lxc/json/logger_json_file.c | 422 +++++++--------
- src/lxc/json/read-file.c        | 139 ++---
- src/lxc/log.c                   |  48 +-
- src/lxc/lxccontainer.c          | 239 +++++----
+ src/lxc/json/logger_json_file.c | 422 +++++++++----------
+ src/lxc/json/read-file.c        | 139 +++----
+ src/lxc/log.c                   |  48 +--
+ src/lxc/lxccontainer.c          | 239 ++++++-----
  src/lxc/mainloop.c              |   8 +-
- src/lxc/path.c                  | 584 ++++++++++++---------
+ src/lxc/path.c                  | 584 +++++++++++++++-----------
  src/lxc/path.h                  |  18 +-
- src/lxc/start.c                 | 194 +++----
+ src/lxc/start.c                 | 194 ++++-----
  src/lxc/storage/block.c         |   3 +-
- src/lxc/terminal.c              | 129 ++---
- src/lxc/utils.c                 | 159 ++++--
+ src/lxc/terminal.c              | 129 +++---
+ src/lxc/utils.c                 | 159 ++++---
  src/lxc/utils.h                 |  11 +-
  18 files changed, 2019 insertions(+), 1768 deletions(-)
 
 diff --git a/src/lxc/af_unix.c b/src/lxc/af_unix.c
-index 24500a8f..4c45946d 100644
+index 24500a8..4c45946 100644
 --- a/src/lxc/af_unix.c
 +++ b/src/lxc/af_unix.c
 @@ -47,7 +47,7 @@
@@ -138,7 +138,7 @@ index 24500a8f..4c45946d 100644
  			errno = EACCES;
  			return -1;
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index eee7ed6a..67c7a0ee 100644
+index eee7ed6..67c7a0e 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -149,7 +149,7 @@ static char *cg_legacy_must_prefix_named(char *entry)
@@ -869,7 +869,7 @@ index eee7ed6a..67c7a0ee 100644
  			tmp = lxc_string_replace("%n", handler->name, ops->cgroup_pattern);
  		if (!tmp) {
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 3780966a..ec1667d4 100644
+index 3780966..ec1667d 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -351,8 +351,8 @@ static int run_buffer(char *buffer)
@@ -2382,7 +2382,7 @@ index 3780966a..ec1667d4 100644
  			 * before lxc.cgroup.memory.limit_in_bytes, swap these
  			 * two items */
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index fb3c1560..26bb70fa 100644
+index fb3c156..26bb70f 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -70,14 +70,14 @@ typedef void * scmp_filter_ctx;
@@ -2466,7 +2466,7 @@ index fb3c1560..26bb70fa 100644
  extern int setup_sysctl_parameters(struct lxc_list *sysctls);
  extern int lxc_clear_sysctls(struct lxc_conf *c, const char *key);
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 93936ccd..216a6883 100644
+index 93936cc..216a688 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -270,7 +270,7 @@ struct lxc_config_t *lxc_get_config(const char *key)
@@ -5088,7 +5088,7 @@ index 93936ccd..216a6883 100644
  	int len;
  	int fulllen = 0;
 diff --git a/src/lxc/confile_utils.c b/src/lxc/confile_utils.c
-index 9049ce82..8c5208f1 100644
+index 9049ce8..8c5208f 100644
 --- a/src/lxc/confile_utils.c
 +++ b/src/lxc/confile_utils.c
 @@ -46,7 +46,7 @@
@@ -5234,7 +5234,7 @@ index 9049ce82..8c5208f1 100644
  			return -EINVAL;
  
 diff --git a/src/lxc/json/logger_json_file.c b/src/lxc/json/logger_json_file.c
-index 6433b042..409ea119 100644
+index 6433b04..409ea11 100644
 --- a/src/lxc/json/logger_json_file.c
 +++ b/src/lxc/json/logger_json_file.c
 @@ -8,236 +8,236 @@
@@ -5686,7 +5686,7 @@ index 6433b042..409ea119 100644
 +	return json_buf;
  }
 diff --git a/src/lxc/json/read-file.c b/src/lxc/json/read-file.c
-index ad0eda1e..70e73e51 100644
+index ad0eda1..70e73e5 100644
 --- a/src/lxc/json/read-file.c
 +++ b/src/lxc/json/read-file.c
 @@ -16,79 +16,80 @@
@@ -5840,7 +5840,7 @@ index ad0eda1e..70e73e51 100644
 +	return buf;
  }
 diff --git a/src/lxc/log.c b/src/lxc/log.c
-index 91fb7efa..e598a5fb 100644
+index 91fb7ef..e598a5f 100644
 --- a/src/lxc/log.c
 +++ b/src/lxc/log.c
 @@ -157,7 +157,7 @@ static int isulad_open_fifo(const char *file_path)
@@ -5975,7 +5975,7 @@ index 91fb7efa..e598a5fb 100644
  	if (!log)
  		return -1;
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index e0c4de3e..e32f524d 100644
+index e0c4de3..e32f524 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -111,7 +111,7 @@ static const char *lxcapi_get_config_path(struct lxc_container *c);
@@ -6813,7 +6813,7 @@ index e0c4de3e..e32f524d 100644
  	int i, ret, active_cnt, ct_cnt, ct_list_cnt;
  	char **active_name;
 diff --git a/src/lxc/mainloop.c b/src/lxc/mainloop.c
-index 9603d1ee..a127a13e 100644
+index 9603d1e..a127a13 100644
 --- a/src/lxc/mainloop.c
 +++ b/src/lxc/mainloop.c
 @@ -65,7 +65,7 @@ int lxc_mainloop(struct lxc_epoll_descr *descr, int timeout_ms)
@@ -6841,7 +6841,7 @@ index 9603d1ee..a127a13e 100644
  	if (fd < 0)
  		return 0;
 diff --git a/src/lxc/path.c b/src/lxc/path.c
-index e917dcb8..45ab4c3b 100644
+index e917dcb..45ab4c3 100644
 --- a/src/lxc/path.c
 +++ b/src/lxc/path.c
 @@ -10,6 +10,7 @@
@@ -7578,7 +7578,7 @@ index e917dcb8..45ab4c3b 100644
 \ No newline at end of file
 +}
 diff --git a/src/lxc/path.h b/src/lxc/path.h
-index e3a04cc5..51009413 100644
+index e3a04cc..5100941 100644
 --- a/src/lxc/path.h
 +++ b/src/lxc/path.h
 @@ -13,7 +13,7 @@ bool has_traling_path_separator(const char *path);
@@ -7622,7 +7622,7 @@ index e3a04cc5..51009413 100644
  // Rel returns a relative path that is lexically equivalent to targpath when
  // joined to basepath with an intervening separator. That is,
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 45417930..ccdd844c 100644
+index 4541793..ccdd844 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -93,7 +93,7 @@ extern void mod_all_rdeps(struct lxc_container *c, bool inc);
@@ -8259,7 +8259,7 @@ index 45417930..ccdd844c 100644
  		ret = -1;
  	}
 diff --git a/src/lxc/storage/block.c b/src/lxc/storage/block.c
-index eb75e706..89989233 100644
+index eb75e70..8998923 100644
 --- a/src/lxc/storage/block.c
 +++ b/src/lxc/storage/block.c
 @@ -62,7 +62,8 @@ bool blk_detect(const char *path)
@@ -8273,7 +8273,7 @@ index eb75e706..89989233 100644
  		return -22;
  
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 88653b4f..802bf392 100644
+index 88653b4..802bf39 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -113,7 +113,7 @@ void lxc_terminal_sigwinch(int sig)
@@ -8638,7 +8638,7 @@ index 88653b4f..802bf392 100644
  		lxc_terminal_delete_fifo(fifofd_in, &terminal->fifos);
  		ret = -1;
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index dc0e6c51..9ce24739 100644
+index dc0e6c5..9ce2473 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -56,6 +56,7 @@
@@ -8945,7 +8945,7 @@ index dc0e6c51..9ce24739 100644
 +}
 +
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 4410ff22..2406ee15 100644
+index 4410ff2..2406ee1 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -229,8 +229,8 @@ extern bool switch_to_ns(pid_t pid, const char *ns);
@@ -8979,5 +8979,5 @@ index 4410ff22..2406ee15 100644
 +extern FILE *lxc_fopen(const char *filename, const char *mode);
  #endif /* __LXC_UTILS_H */
 -- 
-2.23.0
+1.8.3.1
 

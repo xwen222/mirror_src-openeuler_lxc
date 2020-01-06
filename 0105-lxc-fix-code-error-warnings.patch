@@ -1,7 +1,7 @@
-From 9f0429283bfb550036831afcc19026963d42a4e8 Mon Sep 17 00:00:00 2001
+From 24364817d7ba5efc33de345547e0413df9dc756d Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 3 Jun 2019 23:02:50 -0400
-Subject: [PATCH 105/131] lxc: fix code error warnings
+Subject: [PATCH 105/138] lxc: fix code error warnings
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  3 files changed, 6 insertions(+), 4 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 127ef77b..83117238 100644
+index 127ef77..8311723 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -5325,9 +5325,12 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
@@ -29,7 +29,7 @@ index 127ef77b..83117238 100644
  
  	return 0;
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 72417ed6..a09e066a 100644
+index 72417ed..a09e066 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -1180,6 +1180,7 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
@@ -57,7 +57,7 @@ index 72417ed6..a09e066a 100644
  on_error:
  	if (c->pidfile) {
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index ccdd844c..2380581f 100644
+index ccdd844..2380581 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2421,7 +2421,7 @@ int __lxc_start(const char *name, struct lxc_handler *handler,
@@ -70,5 +70,5 @@ index ccdd844c..2380581f 100644
  	handler->ops = ops;
  	handler->data = data;
 -- 
-2.23.0
+1.8.3.1
 

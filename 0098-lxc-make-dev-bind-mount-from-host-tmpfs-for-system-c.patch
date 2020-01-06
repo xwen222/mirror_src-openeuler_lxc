@@ -1,7 +1,7 @@
-From 59487c2d1aeee28af0c74004196b5fa0f3da613c Mon Sep 17 00:00:00 2001
+From 28a3fe0efea9a99a01e91b593be941505162cf1f Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 15 May 2019 12:42:08 +0800
-Subject: [PATCH 098/131] lxc: make /dev bind mount from host tmpfs for system
+Subject: [PATCH 098/138] lxc: make /dev bind mount from host tmpfs for system
  container
 
 reason:make /dev bind mount from host tmpfs for system container
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 16 insertions(+), 8 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 341fdab5..3780966a 100644
+index 341fdab..3780966 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -1122,7 +1122,7 @@ on_error:
@@ -63,5 +63,5 @@ index 341fdab5..3780966a 100644
  			ERROR("Failed to mount \"/dev\"");
  			goto on_error;
 -- 
-2.23.0
+1.8.3.1
 

@@ -1,7 +1,7 @@
-From 1958525ba64c9f2f255e5e0bc098eeaf7cbfc383 Mon Sep 17 00:00:00 2001
+From 038a44d304a7ab1cea6bd87a82af2b5f56527ba5 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Fri, 11 Jan 2019 17:00:48 +0800
-Subject: [PATCH 007/131] use isulad log format
+Subject: [PATCH 007/138] use isulad log format
 
 use isulad log format
 
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 14 insertions(+), 5 deletions(-)
 
 diff --git a/src/lxc/log.c b/src/lxc/log.c
-index 4e744599..91fb7efa 100644
+index 4e74459..91fb7ef 100644
 --- a/src/lxc/log.c
 +++ b/src/lxc/log.c
 @@ -139,6 +139,7 @@ static char *lxc_log_get_va_msg(struct lxc_log_event *event)
@@ -70,5 +70,5 @@ index 4e744599..91fb7efa 100644
  
  	return ret;
 -- 
-2.23.0
+1.8.3.1
 

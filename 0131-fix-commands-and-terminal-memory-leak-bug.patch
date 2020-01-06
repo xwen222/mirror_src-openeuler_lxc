@@ -1,7 +1,7 @@
-From 6556417fa407074368a0b959fd478b8816d7c796 Mon Sep 17 00:00:00 2001
+From 6e5ce4f3e23cb7cb5ccfba058b6aca8829e2fa87 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 18 Dec 2019 15:44:19 +0800
-Subject: [PATCH 131/131] fix commands and terminal memory leak bug
+Subject: [PATCH 131/138] fix commands and terminal memory leak bug
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: wujing <wujing50@huawei.com>
  2 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index 7d6cf6f3..b70564fd 100644
+index 7d6cf6f..b70564f 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -1083,8 +1083,11 @@ int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath, const char
@@ -27,7 +27,7 @@ index 7d6cf6f3..b70564fd 100644
  	struct lxc_cmd_rr cmd = {
  		.req = {
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index b547013c..bccc23d9 100644
+index b547013..bccc23d 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -243,6 +243,7 @@ static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
@@ -39,5 +39,5 @@ index b547013c..bccc23d9 100644
  		}
  		free(rename_fname);
 -- 
-2.23.0
+1.8.3.1
 

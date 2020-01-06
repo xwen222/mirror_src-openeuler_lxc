@@ -1,7 +1,7 @@
-From 8f85eda569912dce488d2e951f853958ba800ada Mon Sep 17 00:00:00 2001
+From 754525a09827844e9b309c659f745509c3ae4ebc Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 27 Nov 2019 22:33:46 -0500
-Subject: [PATCH 124/131] lxc: close maincmd fd before destroy cgroup
+Subject: [PATCH 124/138] lxc: close maincmd fd before destroy cgroup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 22 insertions(+), 17 deletions(-)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 87b49b0f..c96285e1 100644
+index 87b49b0..c96285e 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -2013,8 +2013,10 @@ __cgfsng_ops static bool cgfsng_attach(struct cgroup_ops *ops, const char *name,
@@ -27,7 +27,7 @@ index 87b49b0f..c96285e1 100644
  		fullpath = build_full_cgpath_from_monitorpath(h, path, "cgroup.procs");
  		free(path);
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 7246283e..63be4e3e 100644
+index 7246283..63be4e3 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1185,19 +1185,6 @@ void lxc_fini(const char *name, struct lxc_handler *handler)
@@ -98,5 +98,5 @@ index 7246283e..63be4e3e 100644
  			usleep(100 * 1000); /* 100 millisecond */
  			retry_count++;
 -- 
-2.23.0
+1.8.3.1
 

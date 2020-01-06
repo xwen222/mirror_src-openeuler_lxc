@@ -1,11 +1,11 @@
-From f266297dbbc4a0278ca993946656fb664a674336 Mon Sep 17 00:00:00 2001
+From 5748a52d562b6a72f958a632a8ab8bd9b0157e11 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 17:02:02 +0800
-Subject: [PATCH 022/131] support rootfs mount propagation
+Subject: [PATCH 022/138] support rootfs mount propagation
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/conf.c                  | 230 +++++++++++++++++++++-----------
+ src/lxc/conf.c                  | 230 ++++++++++++++++++++++++++--------------
  src/lxc/conf.h                  |   2 +-
  src/lxc/confile.c               |   8 +-
  src/lxc/criu.c                  |   4 +-
@@ -17,7 +17,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  9 files changed, 165 insertions(+), 104 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 8d8230fb..55d1e453 100644
+index 8d8230f..55d1e45 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -1296,11 +1296,102 @@ static int lxc_fill_autodev(const struct lxc_rootfs *rootfs)
@@ -338,7 +338,7 @@ index 8d8230fb..55d1e453 100644
  	ret = run_lxc_hooks(name, "pre-mount", conf, NULL);
  	if (ret < 0) {
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index db474e11..7393dbfe 100644
+index db474e1..7393dbf 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -463,7 +463,7 @@ extern int userns_exec_1(struct lxc_conf *conf, int (*fn)(void *), void *data,
@@ -351,7 +351,7 @@ index db474e11..7393dbfe 100644
  extern void tmp_proc_unmount(struct lxc_conf *lxc_conf);
  extern void remount_all_slave(void);
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index e1999656..db63b550 100644
+index e199965..db63b55 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -2065,16 +2065,10 @@ static int set_config_rootfs_options(const char *key, const char *value,
@@ -373,7 +373,7 @@ index e1999656..db63b550 100644
  	if (ret < 0) {
  		free(mdata);
 diff --git a/src/lxc/criu.c b/src/lxc/criu.c
-index 31c19407..bb97859b 100644
+index 31c1940..bb97859 100644
 --- a/src/lxc/criu.c
 +++ b/src/lxc/criu.c
 @@ -389,9 +389,9 @@ static void exec_criu(struct cgroup_ops *cgroup_ops, struct lxc_conf *conf,
@@ -389,7 +389,7 @@ index 31c19407..bb97859b 100644
  
  		free(mntdata);
 diff --git a/src/lxc/storage/btrfs.c b/src/lxc/storage/btrfs.c
-index bbfce61b..a02c2150 100644
+index bbfce61..a02c215 100644
 --- a/src/lxc/storage/btrfs.c
 +++ b/src/lxc/storage/btrfs.c
 @@ -212,7 +212,7 @@ bool btrfs_detect(const char *path)
@@ -411,7 +411,7 @@ index bbfce61b..a02c2150 100644
  		return -22;
  	}
 diff --git a/src/lxc/storage/dir.c b/src/lxc/storage/dir.c
-index 79b64696..c7b5ee27 100644
+index 79b6469..c7b5ee2 100644
 --- a/src/lxc/storage/dir.c
 +++ b/src/lxc/storage/dir.c
 @@ -170,20 +170,13 @@ int dir_mount(struct lxc_storage *bdev)
@@ -437,7 +437,7 @@ index 79b64696..c7b5ee27 100644
  
  	ret = mount(src, bdev->dest, "bind", MS_BIND | MS_REC | mntflags | pflags, mntdata);
 diff --git a/src/lxc/storage/overlay.c b/src/lxc/storage/overlay.c
-index 01546b1b..90408a3b 100644
+index 01546b1..90408a3 100644
 --- a/src/lxc/storage/overlay.c
 +++ b/src/lxc/storage/overlay.c
 @@ -495,7 +495,7 @@ int ovl_mount(struct lxc_storage *bdev)
@@ -459,7 +459,7 @@ index 01546b1b..90408a3b 100644
  		ERROR("Failed to parse mount options");
  		free(mntdata);
 diff --git a/src/lxc/storage/storage_utils.c b/src/lxc/storage/storage_utils.c
-index fa4e7270..46e08a35 100644
+index fa4e727..46e08a3 100644
 --- a/src/lxc/storage/storage_utils.c
 +++ b/src/lxc/storage/storage_utils.c
 @@ -396,7 +396,7 @@ int find_fstype_cb(char *buffer, void *data)
@@ -481,7 +481,7 @@ index fa4e7270..46e08a35 100644
  		return 0;
  	}
 diff --git a/src/lxc/storage/zfs.c b/src/lxc/storage/zfs.c
-index ba104da5..752b0c50 100644
+index ba104da..752b0c5 100644
 --- a/src/lxc/storage/zfs.c
 +++ b/src/lxc/storage/zfs.c
 @@ -184,7 +184,7 @@ int zfs_mount(struct lxc_storage *bdev)
@@ -503,5 +503,5 @@ index ba104da5..752b0c50 100644
  		ERROR("Failed to parse mount options");
  		free(mntdata);
 -- 
-2.23.0
+1.8.3.1
 

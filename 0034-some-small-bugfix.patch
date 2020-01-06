@@ -1,7 +1,7 @@
-From ad4a2433846406dd288b31589dc9bc468749918e Mon Sep 17 00:00:00 2001
+From 0c156740697d390dc68c693b4b317a1e4bf77774 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 15 Jan 2019 20:39:11 +0800
-Subject: [PATCH 034/131] some small bugfix
+Subject: [PATCH 034/138] some small bugfix
 
 1. support new container without load config to save time
 2. try to create workdir if not exist
@@ -16,7 +16,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  5 files changed, 58 insertions(+), 8 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index e6e4b0d1..8cbbf962 100644
+index e6e4b0d..8cbbf96 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -806,6 +806,22 @@ static int attach_child_main(struct attach_clone_payload *payload)
@@ -43,23 +43,23 @@ index e6e4b0d1..8cbbf962 100644
  	 * if you want this to be a no-op).
  	 */
 diff --git a/src/lxc/lxc.h b/src/lxc/lxc.h
-index 687b4b28..5df5080a 100644
+index 687b4b2..5df5080 100644
 --- a/src/lxc/lxc.h
 +++ b/src/lxc/lxc.h
-@@ -103,6 +103,11 @@ extern lxc_state_t lxc_state(const char *name, const char *lxcpath);
-  */
+@@ -104,6 +104,11 @@ extern lxc_state_t lxc_state(const char *name, const char *lxcpath);
  extern struct lxc_container *lxc_container_new(const char *name, const char *configpath);
  
-+/*
+ /*
 + * Create a new container without loading config.
 + */
 +extern struct lxc_container *lxc_container_without_config_new(const char *name, const char *configpath);
 +
- /*
++/*
   * Returns 1 on success, 0 on failure.
   */
+ extern int lxc_container_get(struct lxc_container *c);
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 38059faf..e99c41cb 100644
+index 38059fa..e99c41c 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -5133,7 +5133,7 @@ static bool do_lxcapi_clean_container_resource(struct lxc_container *c, pid_t pi
@@ -105,14 +105,13 @@ index 38059faf..e99c41cb 100644
  {
  	int i;
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index 679ca42c..a00e0ece 100644
+index 679ca42..a00e0ec 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
-@@ -1039,6 +1039,18 @@ struct lxc_console_log {
-  */
+@@ -1040,6 +1040,18 @@ struct lxc_console_log {
  struct lxc_container *lxc_container_new(const char *name, const char *configpath);
  
-+/*!
+ /*!
 + * \brief Create a new container without loading config.
 + *
 + * \param name Name to use for container.
@@ -124,11 +123,12 @@ index 679ca42c..a00e0ece 100644
 + */
 +struct lxc_container *lxc_container_without_config_new(const char *name, const char *configpath);
 +
- /*!
++/*!
   * \brief Add a reference to the specified container.
   *
+  * \param c Container.
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 08d753ab..040909c3 100644
+index 08d753a..040909c 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -1364,10 +1364,14 @@ static int do_start(void *data)
@@ -151,5 +151,5 @@ index 08d753ab..040909c3 100644
  		}
  	}
 -- 
-2.23.0
+1.8.3.1
 

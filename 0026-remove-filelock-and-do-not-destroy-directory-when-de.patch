@@ -1,7 +1,7 @@
-From bb6ce8063c801154eae7f2d6f22c016811c1694b Mon Sep 17 00:00:00 2001
+From 654c22d0f010187a98d77cf68cc8c0d259f09587 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 21:13:00 +0800
-Subject: [PATCH 026/131] remove filelock and do not destroy directory when
+Subject: [PATCH 026/138] remove filelock and do not destroy directory when
  destroy container
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  4 files changed, 43 insertions(+), 13 deletions(-)
 
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 68134d87..81c0ec35 100644
+index 68134d8..81c0ec3 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -2996,8 +2996,14 @@ static bool container_destroy(struct lxc_container *c,
@@ -51,7 +51,7 @@ index 68134d87..81c0ec35 100644
  
  	if (has_snapshots(c)) {
 diff --git a/src/lxc/lxclock.c b/src/lxc/lxclock.c
-index e3d4654b..8890968f 100644
+index e3d4654..8890968 100644
 --- a/src/lxc/lxclock.c
 +++ b/src/lxc/lxclock.c
 @@ -198,6 +198,21 @@ on_error:
@@ -91,7 +91,7 @@ index e3d4654b..8890968f 100644
 +	return lxc_removelock(c->privlock);
 +}
 diff --git a/src/lxc/lxclock.h b/src/lxc/lxclock.h
-index 364a71b8..e86bc340 100644
+index 364a71b..e86bc34 100644
 --- a/src/lxc/lxclock.h
 +++ b/src/lxc/lxclock.h
 @@ -174,4 +174,9 @@ extern int container_disk_lock(struct lxc_container *c);
@@ -105,7 +105,7 @@ index 364a71b8..e86bc340 100644
 +
  #endif
 diff --git a/src/lxc/storage/dir.c b/src/lxc/storage/dir.c
-index c7b5ee27..deeecec2 100644
+index c7b5ee2..deeecec 100644
 --- a/src/lxc/storage/dir.c
 +++ b/src/lxc/storage/dir.c
 @@ -123,17 +123,7 @@ int dir_create(struct lxc_storage *bdev, const char *dest, const char *n,
@@ -128,5 +128,5 @@ index c7b5ee27..deeecec2 100644
  }
  
 -- 
-2.23.0
+1.8.3.1
 

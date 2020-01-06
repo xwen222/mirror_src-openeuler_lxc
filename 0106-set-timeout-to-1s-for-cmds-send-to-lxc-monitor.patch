@@ -1,7 +1,7 @@
-From 412831f8677bfe78a9e473a473c29e1441cf7fe9 Mon Sep 17 00:00:00 2001
+From a57a384e7d39498a2d70027f67aa9dc1d1db2ea4 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 6 Jun 2019 22:48:38 -0400
-Subject: [PATCH 106/131] set timeout to 1s for cmds send to [lxc monitor]
+Subject: [PATCH 106/138] set timeout to 1s for cmds send to [lxc monitor]
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index c74b8c1f..0802a167 100644
+index c74b8c1..0802a16 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -127,10 +127,10 @@ static int lxc_cmd_rsp_recv(int sock, struct lxc_cmd_rr *cmd)
@@ -27,5 +27,5 @@ index c74b8c1f..0802a167 100644
  
  		if (errno == ECONNRESET || errno == EAGAIN || errno == EWOULDBLOCK) {
 -- 
-2.23.0
+1.8.3.1
 

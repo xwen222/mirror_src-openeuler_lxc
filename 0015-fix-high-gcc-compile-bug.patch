@@ -1,7 +1,7 @@
-From 887c38c0198592051e2323d8c2921f5ec4c22741 Mon Sep 17 00:00:00 2001
+From b5365278bc22ab4798d5ebd7bdb7c9d110b60124 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Sat, 12 Jan 2019 16:28:41 +0800
-Subject: [PATCH 015/131] fix high gcc compile bug
+Subject: [PATCH 015/138] fix high gcc compile bug
 
 fix high gcc compile bug
 
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 3bb3a52a..7aa47309 100644
+index 3bb3a52..7aa4730 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -235,18 +235,18 @@ static int lxc_terminal_truncate_log_file(struct lxc_terminal *terminal)
@@ -37,5 +37,5 @@ index 3bb3a52a..7aa47309 100644
  			free(rename_fname);
  			return -EFBIG;
 -- 
-2.23.0
+1.8.3.1
 

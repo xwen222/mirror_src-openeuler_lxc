@@ -1,7 +1,7 @@
-From 6f4194128b0387e19f5e7ad65bfa157f52335871 Mon Sep 17 00:00:00 2001
+From 3d13f72c92b0a40b97cfd708a56d9abaad9c1610 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 31 Jul 2019 05:24:11 -0400
-Subject: [PATCH 117/131] pupulate device with dir mode 750 and set uid/gid
+Subject: [PATCH 117/138] pupulate device with dir mode 750 and set uid/gid
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  2 files changed, 2 insertions(+), 3 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index d9a7aae1..0b10a2dd 100644
+index d9a7aae..0b10a2d 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4005,13 +4005,11 @@ static int setup_populate_devs(const struct lxc_rootfs *rootfs, struct lxc_list
@@ -36,7 +36,7 @@ index d9a7aae1..0b10a2dd 100644
  	INFO("Populated devices into container /dev");
  	return 0;
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 01fc9443..3a02e099 100644
+index 01fc944..3a02e09 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -2335,6 +2335,8 @@ static int set_config_populate_device(const char *key, const char *value,
@@ -49,5 +49,5 @@ index 01fc9443..3a02e099 100644
  	lxc_list_add_elem(dev_list, dev_elem);
  
 -- 
-2.23.0
+1.8.3.1
 

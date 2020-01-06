@@ -1,7 +1,7 @@
-From 57584932914c0979260573e6c599f59688629019 Mon Sep 17 00:00:00 2001
+From 762e925625752a52c30dd55d28b210c659869f9c Mon Sep 17 00:00:00 2001
 From: LiuHao <liuhao27@huawei.com>
 Date: Thu, 5 Sep 2019 11:48:57 +0800
-Subject: [PATCH 120/131] remove unuse unmount-namespace
+Subject: [PATCH 120/138] remove unuse unmount-namespace
 
 Signed-off-by: LiuHao <liuhao27@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiuHao <liuhao27@huawei.com>
  1 file changed, 1 deletion(-)
 
 diff --git a/lxc.spec.in b/lxc.spec.in
-index 7fcd811f..2ca12fef 100644
+index 7fcd811..2ca12fe 100644
 --- a/lxc.spec.in
 +++ b/lxc.spec.in
 @@ -259,7 +259,6 @@ fi
@@ -21,5 +21,5 @@ index 7fcd811f..2ca12fef 100644
  %{_libexecdir}/%{name}/lxc-monitord
  %attr(4111,root,root) %{_libexecdir}/%{name}/lxc-user-nic
 -- 
-2.23.0
+1.8.3.1
 

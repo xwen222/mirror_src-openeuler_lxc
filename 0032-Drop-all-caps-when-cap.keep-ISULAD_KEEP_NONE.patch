@@ -1,7 +1,7 @@
-From 40bb25ecfda607f2a42659843a99c2c1447e31a3 Mon Sep 17 00:00:00 2001
+From d81dd5eca326f5173b89fbad3e419f7e623ccaea Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 15 Jan 2019 05:39:39 -0500
-Subject: [PATCH 032/131] Drop all caps when cap.keep=ISULAD_KEEP_NONE
+Subject: [PATCH 032/138] Drop all caps when cap.keep=ISULAD_KEEP_NONE
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 9 insertions(+)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 88763ee2..54b967b4 100644
+index 88763ee..54b967b 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2805,6 +2805,15 @@ static int dropcaps_except(struct lxc_list *caps)
@@ -29,5 +29,5 @@ index 88763ee2..54b967b4 100644
  		if (capid == -2)
  			continue;
 -- 
-2.23.0
+1.8.3.1
 

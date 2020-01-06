@@ -1,7 +1,7 @@
-From 662d5aab3686ddf29294a7f6d67e4e092cac51e9 Mon Sep 17 00:00:00 2001
+From 62a3cf699d424e956cc7f7a73d425c5828f64902 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Fri, 15 Mar 2019 10:11:10 +0800
-Subject: [PATCH 066/131] lxc: Pids limit does not report an error after
+Subject: [PATCH 066/138] lxc: Pids limit does not report an error after
  executing the limit in the background
 
 Signed-off-by: wujing <wujing50@huawei.com>
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index 88569344..acdf8a01 100644
+index 8856934..acdf8a0 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -378,6 +378,8 @@ static int do_attach_background(struct lxc_container *c, lxc_attach_command_t *c
@@ -24,5 +24,5 @@ index 88569344..acdf8a01 100644
  		msgpipe[1] = -1;
  		ret = -1;
 -- 
-2.23.0
+1.8.3.1
 

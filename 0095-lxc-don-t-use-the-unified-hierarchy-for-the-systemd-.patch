@@ -1,7 +1,7 @@
-From 8e6ee8123309cc04ebd55b9088cd01c396cd5739 Mon Sep 17 00:00:00 2001
+From 5fe1c6fec0943d6eda9a937a0832c66dd8860a1c Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Fri, 10 May 2019 11:05:42 +0800
-Subject: [PATCH 095/131] lxc: don't use the unified hierarchy for the systemd
+Subject: [PATCH 095/138] lxc: don't use the unified hierarchy for the systemd
  cgroup
 
 reason:don't use the unified hierarchy for the systemd cgroup
@@ -13,7 +13,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 14 insertions(+)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 2bf142f9..eee7ed6a 100644
+index 2bf142f..eee7ed6 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1571,6 +1571,7 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
@@ -52,5 +52,5 @@ index 2bf142f9..eee7ed6a 100644
  	return retval;
  }
 -- 
-2.23.0
+1.8.3.1
 

@@ -1,7 +1,7 @@
-From 51e56ed2d4d4e9a98a5f23cfa857403100db433a Mon Sep 17 00:00:00 2001
+From bbd3eefaa71e17113a05268ad14707b8cee52bd1 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 16 Jan 2019 02:22:13 -0500
-Subject: [PATCH 040/131] add timeout(200ms) for cmds send to [lxc monitor]
+Subject: [PATCH 040/138] add timeout(200ms) for cmds send to [lxc monitor]
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  3 files changed, 30 insertions(+), 4 deletions(-)
 
 diff --git a/src/lxc/af_unix.c b/src/lxc/af_unix.c
-index 02f32c45..24500a8f 100644
+index 02f32c4..24500a8 100644
 --- a/src/lxc/af_unix.c
 +++ b/src/lxc/af_unix.c
 @@ -194,8 +194,9 @@ int lxc_abstract_unix_send_fds(int fd, int *sendfds, int num_sendfds,
@@ -68,7 +68,7 @@ index 02f32c45..24500a8f 100644
  {
  	struct msghdr msg = {0};
 diff --git a/src/lxc/af_unix.h b/src/lxc/af_unix.h
-index f2c2fdcc..74fd77ff 100644
+index f2c2fdc..74fd77f 100644
 --- a/src/lxc/af_unix.h
 +++ b/src/lxc/af_unix.h
 @@ -37,5 +37,7 @@ extern int lxc_abstract_unix_recv_fds(int fd, int *recvfds, int num_recvfds,
@@ -80,7 +80,7 @@ index f2c2fdcc..74fd77ff 100644
  
  #endif /* __LXC_AF_UNIX_H */
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index 133384d7..47a824a9 100644
+index 133384d..47a824a 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -126,13 +126,16 @@ static int lxc_cmd_rsp_recv(int sock, struct lxc_cmd_rr *cmd)
@@ -103,5 +103,5 @@ index 133384d7..47a824a9 100644
  		return -1;
  	}
 -- 
-2.23.0
+1.8.3.1
 

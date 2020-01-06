@@ -1,7 +1,7 @@
-From 331f06d4322e17db05949ee29cd1fe92217b73f5 Mon Sep 17 00:00:00 2001
+From 396928f93365c2eb6f19a3d0d87394fcd43dcef0 Mon Sep 17 00:00:00 2001
 From: TanYifeng <tanyifeng1@huawei.com>
 Date: Tue, 3 Dec 2019 22:43:25 -0500
-Subject: [PATCH 127/131] log: only write (size - begin) if buffer is full
+Subject: [PATCH 127/138] log: only write (size - begin) if buffer is full
 
 Signed-off-by: TanYifeng <tanyifeng1@huawei.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: TanYifeng <tanyifeng1@huawei.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index e81f57ee..b547013c 100644
+index e81f57e..b547013 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -538,7 +538,7 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, const char
@@ -22,5 +22,5 @@ index e81f57ee..b547013c 100644
  				WARN("Failed to log msg");
  			}
 -- 
-2.23.0
+1.8.3.1
 

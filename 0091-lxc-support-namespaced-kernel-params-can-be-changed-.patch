@@ -1,18 +1,18 @@
-From 542fd40b355d670ad5beadb06ee5b4bfe01fa8d8 Mon Sep 17 00:00:00 2001
+From 6091a808d2eca19f7e7f1ac11dae8f2ca9574a9e Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Fri, 26 Apr 2019 07:13:53 +0800
-Subject: [PATCH 091/131] lxc: support namespaced kernel params can be changed
+Subject: [PATCH 091/138] lxc: support namespaced kernel params can be changed
  in system container
 
 support namespaced kernel params can be changed in system container
 
 Signed-off-by: yangchenliang <yangchenliang@huawei.com>
 ---
- src/lxc/conf.c | 77 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/conf.c | 77 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 77 insertions(+)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 14d5d807..0f227aa1 100644
+index 14d5d80..0f227aa 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -1516,6 +1516,66 @@ error:
@@ -114,5 +114,5 @@ index 14d5d807..0f227aa1 100644
  		if (!lxc_list_empty(&lxc_conf->caps)) {
  			ERROR("Container requests lxc.cap.drop and "
 -- 
-2.23.0
+1.8.3.1
 

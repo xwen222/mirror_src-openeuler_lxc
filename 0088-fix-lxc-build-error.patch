@@ -1,7 +1,7 @@
-From 845d28355b85578a0ebc0d8aff3bb405d63ff8a3 Mon Sep 17 00:00:00 2001
+From 0c0588bd00878eaf2add137bb29bf225eaa8d904 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 25 Apr 2019 10:12:16 +0800
-Subject: [PATCH 088/131] fix lxc build error
+Subject: [PATCH 088/138] fix lxc build error
 
 cause by invalid print format
 
@@ -12,7 +12,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index a1d77ebc..14d5d807 100644
+index a1d77eb..14d5d80 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -4814,7 +4814,7 @@ static int run_oci_hooks(const char *name, const char *lxcpath, struct lxc_conf
@@ -25,5 +25,5 @@ index a1d77ebc..14d5d807 100644
  			break;
  		case OCI_HOOK_POSTSTOP:
 -- 
-2.23.0
+1.8.3.1
 

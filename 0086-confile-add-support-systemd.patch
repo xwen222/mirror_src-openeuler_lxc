@@ -1,7 +1,7 @@
-From 994b69da275c77f060e9247f9fdf401a357af280 Mon Sep 17 00:00:00 2001
+From a717837708d91574471645822071d349e60d0678 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Sat, 20 Apr 2019 22:40:18 +0800
-Subject: [PATCH 086/131] confile: add support systemd
+Subject: [PATCH 086/138] confile: add support systemd
 
 lxc.isulad.systemd=true remount systemd cgroup path to rw
 
@@ -15,7 +15,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  4 files changed, 48 insertions(+)
 
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index cc087375..b1f56b07 100644
+index cc08737..b1f56b0 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -1567,6 +1567,7 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
@@ -53,7 +53,7 @@ index cc087375..b1f56b07 100644
  	return retval;
  }
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 20eb8408..8cdccf13 100644
+index 20eb840..8cdccf1 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -5320,6 +5320,7 @@ void lxc_conf_free(struct lxc_conf *conf)
@@ -65,7 +65,7 @@ index 20eb8408..8cdccf13 100644
  	/* isulad add end */
  	free(conf);
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 11cf5960..fb3c1560 100644
+index 11cf596..fb3c156 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -430,6 +430,7 @@ struct lxc_conf {
@@ -77,7 +77,7 @@ index 11cf5960..fb3c1560 100644
  };
  
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 60e6c462..93936ccd 100644
+index 60e6c46..93936cc 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -157,6 +157,7 @@ lxc_config_define(init_args);
@@ -146,5 +146,5 @@ index 60e6c462..93936ccd 100644
  				   struct lxc_conf *c, void *data)
  {
 -- 
-2.23.0
+1.8.3.1
 

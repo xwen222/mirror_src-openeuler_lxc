@@ -1,15 +1,15 @@
-From a96bf413990df081d5e63094f44d996106264eaf Mon Sep 17 00:00:00 2001
+From 264bfe855295416c66f9c149a0dcb93e56492011 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 17 Jan 2019 03:09:00 +0800
-Subject: [PATCH 042/131] lxc: seccomp adopt to lxc3.0
+Subject: [PATCH 042/138] lxc: seccomp adopt to lxc3.0
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/seccomp.c | 127 ++++++++++++++++++++++++----------------------
+ src/lxc/seccomp.c | 127 ++++++++++++++++++++++++++++--------------------------
  1 file changed, 65 insertions(+), 62 deletions(-)
 
 diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
-index 1e14be17..27bdc223 100644
+index 1e14be1..27bdc22 100644
 --- a/src/lxc/seccomp.c
 +++ b/src/lxc/seccomp.c
 @@ -936,86 +936,89 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
@@ -165,5 +165,5 @@ index 1e14be17..27bdc223 100644
  	return 0;
  
 -- 
-2.23.0
+1.8.3.1
 

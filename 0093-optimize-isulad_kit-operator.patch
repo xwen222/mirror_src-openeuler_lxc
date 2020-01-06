@@ -1,23 +1,23 @@
-From fc2fc11d6985f14aea41021f9c4e85b664bcbbaf Mon Sep 17 00:00:00 2001
+From 97241ee73a975fb4234d8e83c79d539f41ee348c Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 2 May 2019 11:23:50 +0800
-Subject: [PATCH 093/131] optimize isulad_kit operator
+Subject: [PATCH 093/138] optimize isulad_kit operator
 
 parse group add start container
 
 Signed-off-by: liuhao <liuhao27@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/Makefile.am                           |   2 +
- .../json/container_start_generate_config.c    | 245 ++++++++++++++++++
- .../json/container_start_generate_config.h    |  43 +++
- src/lxc/tools/lxc_start.c                     |  58 +++++
+ src/lxc/Makefile.am                            |   2 +
+ src/lxc/json/container_start_generate_config.c | 245 +++++++++++++++++++++++++
+ src/lxc/json/container_start_generate_config.h |  43 +++++
+ src/lxc/tools/lxc_start.c                      |  58 ++++++
  4 files changed, 348 insertions(+)
  create mode 100644 src/lxc/json/container_start_generate_config.c
  create mode 100644 src/lxc/json/container_start_generate_config.h
 
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index 698f8f95..4ec20812 100644
+index 698f8f9..4ec2081 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -45,6 +45,7 @@ noinst_HEADERS = attach.h \
@@ -38,7 +38,7 @@ index 698f8f95..4ec20812 100644
  
 diff --git a/src/lxc/json/container_start_generate_config.c b/src/lxc/json/container_start_generate_config.c
 new file mode 100644
-index 00000000..5ec83114
+index 0000000..5ec8311
 --- /dev/null
 +++ b/src/lxc/json/container_start_generate_config.c
 @@ -0,0 +1,245 @@
@@ -289,7 +289,7 @@ index 00000000..5ec83114
 +}
 diff --git a/src/lxc/json/container_start_generate_config.h b/src/lxc/json/container_start_generate_config.h
 new file mode 100644
-index 00000000..e1dcf56f
+index 0000000..e1dcf56
 --- /dev/null
 +++ b/src/lxc/json/container_start_generate_config.h
 @@ -0,0 +1,43 @@
@@ -337,7 +337,7 @@ index 00000000..e1dcf56f
 +
 +#endif
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index af63f581..4069204f 100644
+index af63f58..4069204 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -50,6 +50,7 @@
@@ -420,5 +420,5 @@ index af63f581..4069204f 100644
  	if (my_args.exit_monitor_fifo != NULL) {
  		c->exit_fifo = strdup(my_args.exit_monitor_fifo);
 -- 
-2.23.0
+1.8.3.1
 

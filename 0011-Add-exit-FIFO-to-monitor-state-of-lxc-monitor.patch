@@ -1,7 +1,7 @@
-From 8d93081e3d8384dbb2b2b5dd14d02b0394af8c15 Mon Sep 17 00:00:00 2001
+From 0ebd912b689734dce70226495a5ac35893dda615 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Sat, 12 Jan 2019 02:07:15 -0500
-Subject: [PATCH 011/131] Add exit FIFO to monitor state of [lxc monitor]
+Subject: [PATCH 011/138] Add exit FIFO to monitor state of [lxc monitor]
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
@@ -18,7 +18,7 @@ Signed-off-by: LiFeng <lifeng68@huawei.com>
  10 files changed, 59 insertions(+), 7 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 0b4b63b8..bc45e448 100644
+index 0b4b63b..bc45e44 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -2759,6 +2759,7 @@ struct lxc_conf *lxc_conf_init(void)
@@ -39,7 +39,7 @@ index 0b4b63b8..bc45e448 100644
  	free(conf);
  }
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index e0954f92..2d939cd2 100644
+index e0954f9..2d939cd 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -405,6 +405,8 @@ struct lxc_conf {
@@ -52,7 +52,7 @@ index e0954f92..2d939cd2 100644
  };
  
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index e3212d3d..cbef2e21 100644
+index e3212d3..cbef2e2 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -240,10 +240,10 @@ static struct lxc_config_t config_jump_table[] = {
@@ -71,7 +71,7 @@ index e3212d3d..cbef2e21 100644
  
  static const size_t config_jump_table_size = sizeof(config_jump_table) / sizeof(struct lxc_config_t);
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 5679b9b4..8029f339 100644
+index 5679b9b..8029f33 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -295,6 +295,10 @@ static void lxc_container_free(struct lxc_container *c)
@@ -123,7 +123,7 @@ index 5679b9b4..8029f339 100644
  				  sizeof(keepfds) / sizeof(keepfds[0]));
  	if (ret < 0) {
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index 3c845fea..503038af 100644
+index 3c845fe..503038a 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -81,6 +81,12 @@ struct lxc_container {
@@ -140,7 +140,7 @@ index 3c845fea..503038af 100644
  	 * \private
  	 * Container semaphore lock.
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 9d71dd79..9365d116 100644
+index 9d71dd7..9365d11 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -730,6 +730,7 @@ struct lxc_handler *lxc_init_handler(const char *name, struct lxc_conf *conf,
@@ -175,7 +175,7 @@ index 9d71dd79..9365d116 100644
  out_fini:
  	lxc_delete_network(handler);
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index df987dcb..f59bf549 100644
+index df987dc..f59bf54 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -133,6 +133,8 @@ struct lxc_handler {
@@ -188,7 +188,7 @@ index df987dcb..f59bf549 100644
  
  struct execute_args {
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index c5077122..508e2e67 100644
+index c507712..508e2e6 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -1004,8 +1004,8 @@ static int lxc_terminal_set_fifo(struct lxc_terminal *console, const char *in, c
@@ -203,7 +203,7 @@ index c5077122..508e2e67 100644
  
  	return lxc_terminal_set_fifo(terminal, terminal->init_fifo[0], terminal->init_fifo[1]);
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index b6df23f8..61f4a0a7 100644
+index b6df23f..61f4a0a 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -64,6 +64,7 @@ struct lxc_arguments {
@@ -223,7 +223,7 @@ index b6df23f8..61f4a0a7 100644
  
  extern int lxc_arguments_parse(struct lxc_arguments *args, int argc,
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index 2f94d671..60c7d70b 100644
+index 2f94d67..60c7d70 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -73,6 +73,7 @@ static const struct option my_longopts[] = {
@@ -257,5 +257,5 @@ index 2f94d671..60c7d70b 100644
  		if (!c->set_config_item(c, "lxc.console.path", my_args.console))
  			goto out;
 -- 
-2.23.0
+1.8.3.1
 

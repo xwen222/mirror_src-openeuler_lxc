@@ -1,31 +1,31 @@
-From eb7e43a1814f9c1a3a02a4a17fd231ea1b31e3ab Mon Sep 17 00:00:00 2001
+From 20567796e28b406e13e0ec745fbbe4860a39a666 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 3 Jul 2019 23:41:15 -0400
-Subject: [PATCH 111/131] lxc: use safe_strdup instead of strdup
+Subject: [PATCH 111/138] lxc: use safe_strdup instead of strdup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/attach.c                 | 14 ++++-------
- src/lxc/conf.c                   | 32 +++++++------------------
- src/lxc/confile.c                | 32 +++++++------------------
+ src/lxc/attach.c                 | 14 +++++---------
+ src/lxc/conf.c                   | 32 +++++++++----------------------
+ src/lxc/confile.c                | 32 +++++++++----------------------
  src/lxc/json/defs.c              |  1 -
- src/lxc/json/json_common.c       | 41 ++++++++++----------------------
+ src/lxc/json/json_common.c       | 41 ++++++++++++----------------------------
  src/lxc/json/json_common.h       |  4 +---
  src/lxc/json/logger_json_file.c  |  1 -
  src/lxc/json/oci_runtime_hooks.c |  4 ++--
  src/lxc/json/oci_runtime_spec.c  |  1 -
- src/lxc/lxccontainer.c           | 16 ++++++-------
- src/lxc/path.c                   | 20 ++++------------
- src/lxc/start.c                  | 18 +++++++-------
- src/lxc/terminal.c               | 18 ++++++--------
+ src/lxc/lxccontainer.c           | 16 +++++++---------
+ src/lxc/path.c                   | 20 +++++---------------
+ src/lxc/start.c                  | 18 +++++++++---------
+ src/lxc/terminal.c               | 18 +++++++-----------
  src/lxc/tools/lxc_attach.c       |  4 ++--
  src/lxc/tools/lxc_start.c        |  2 +-
- src/lxc/utils.c                  | 16 +++++++++++++
+ src/lxc/utils.c                  | 16 ++++++++++++++++
  src/lxc/utils.h                  |  2 ++
  17 files changed, 87 insertions(+), 139 deletions(-)
 
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 6480eb99..d7b16e34 100644
+index 6480eb9..d7b16e3 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -1070,15 +1070,15 @@ static int lxc_attach_terminal(struct lxc_conf *conf,
@@ -70,7 +70,7 @@ index 6480eb99..d7b16e34 100644
  	close_mainloop:
  		if (options->attach_flags & LXC_ATTACH_TERMINAL)
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 83117238..1dfdaf31 100644
+index 8311723..1dfdaf3 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -1356,9 +1356,7 @@ static int rootfs_parent_mount_private(char *rootfs)
@@ -166,7 +166,7 @@ index 83117238..1dfdaf31 100644
  }
  
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 216a6883..8262d1e3 100644
+index 216a688..8262d1e 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -1011,9 +1011,7 @@ static int set_config_group(const char *key, const char *value,
@@ -259,7 +259,7 @@ index 216a6883..8262d1e3 100644
  }
  
 diff --git a/src/lxc/json/defs.c b/src/lxc/json/defs.c
-index e7d9a092..8a052a88 100644
+index e7d9a09..8a052a8 100644
 --- a/src/lxc/json/defs.c
 +++ b/src/lxc/json/defs.c
 @@ -4,7 +4,6 @@
@@ -271,7 +271,7 @@ index e7d9a092..8a052a88 100644
  
  defs_hook *make_defs_hook(yajl_val tree, struct parser_context *ctx, parser_error *err) {
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
-index 54b7b610..bea9b14d 100755
+index 54b7b61..bea9b14 100755
 --- a/src/lxc/json/json_common.c
 +++ b/src/lxc/json/json_common.c
 @@ -381,23 +381,6 @@ int common_safe_int(const char *numstr, int *converted) {
@@ -389,7 +389,7 @@ index 54b7b610..bea9b14d 100755
              free(vals);
              return -1;
 diff --git a/src/lxc/json/json_common.h b/src/lxc/json/json_common.h
-index 218a8371..60aa5fd9 100755
+index 218a837..60aa5fd 100755
 --- a/src/lxc/json/json_common.h
 +++ b/src/lxc/json/json_common.h
 @@ -9,7 +9,7 @@
@@ -411,7 +411,7 @@ index 218a8371..60aa5fd9 100755
      int *keys;
      int *values;
 diff --git a/src/lxc/json/logger_json_file.c b/src/lxc/json/logger_json_file.c
-index 409ea119..842d35b5 100644
+index 409ea11..842d35b 100644
 --- a/src/lxc/json/logger_json_file.c
 +++ b/src/lxc/json/logger_json_file.c
 @@ -4,7 +4,6 @@
@@ -423,7 +423,7 @@ index 409ea119..842d35b5 100644
  
  logger_json_file *make_logger_json_file(yajl_val tree, struct parser_context *ctx, parser_error *err) {
 diff --git a/src/lxc/json/oci_runtime_hooks.c b/src/lxc/json/oci_runtime_hooks.c
-index 43ff8d7f..41ddb672 100644
+index 43ff8d7..41ddb67 100644
 --- a/src/lxc/json/oci_runtime_hooks.c
 +++ b/src/lxc/json/oci_runtime_hooks.c
 @@ -34,7 +34,7 @@ oci_runtime_spec_hooks *oci_runtime_spec_hooks_parse_file(const char *filename,
@@ -445,7 +445,7 @@ index 43ff8d7f..41ddb672 100644
          return NULL;
      }
 diff --git a/src/lxc/json/oci_runtime_spec.c b/src/lxc/json/oci_runtime_spec.c
-index 4ccb6358..fd342deb 100644
+index 4ccb635..fd342de 100644
 --- a/src/lxc/json/oci_runtime_spec.c
 +++ b/src/lxc/json/oci_runtime_spec.c
 @@ -4,7 +4,6 @@
@@ -457,7 +457,7 @@ index 4ccb6358..fd342deb 100644
  
  oci_runtime_spec_hooks *make_oci_runtime_spec_hooks(yajl_val tree, struct parser_context *ctx, parser_error *err) {
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index a09e066a..ede4c885 100644
+index a09e066..ede4c88 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -1055,9 +1055,7 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
@@ -520,7 +520,7 @@ index a09e066a..ede4c885 100644
  	if (!c->config_path) {
  		fprintf(stderr, "Failed to allocate memory for %s\n", name);
 diff --git a/src/lxc/path.c b/src/lxc/path.c
-index 36d5e0be..c545887a 100644
+index 36d5e0b..c545887 100644
 --- a/src/lxc/path.c
 +++ b/src/lxc/path.c
 @@ -23,11 +23,7 @@ bool specify_current_dir(const char *path)
@@ -577,7 +577,7 @@ index 36d5e0be..c545887a 100644
 +	return safe_strdup(targ + t0);
  }
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index 2380581f..d6c706e7 100644
+index 2380581..d6c706e 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -2795,35 +2795,35 @@ static int clean_resource_set_env(struct lxc_handler *handler)
@@ -626,7 +626,7 @@ index 2380581f..d6c706e7 100644
  		conf->ocihooks->poststop[i]->env_len = j;
  		/* End of environment variable setup for hooks. */
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index 6b117de7..970db694 100644
+index 6b117de..970db69 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -246,7 +246,7 @@ static int lxc_terminal_rename_old_log_file(struct lxc_terminal *terminal)
@@ -678,7 +678,7 @@ index 6b117de7..970db694 100644
  	in = strtok_r(tmp, "&&&&", &saveptr);
  	if (!in) {
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index 854b3a2c..7d51ad72 100644
+index 854b3a2..7d51ad7 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -309,7 +309,7 @@ static int do_attach_foreground(struct lxc_container *c, lxc_attach_command_t *c
@@ -700,7 +700,7 @@ index 854b3a2c..7d51ad72 100644
  		}
  
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index af63f581..e48e5b3e 100644
+index af63f58..e48e5b3 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -360,7 +360,7 @@ int main(int argc, char *argv[])
@@ -713,7 +713,7 @@ index af63f581..e48e5b3e 100644
  
  	/* isulad: add start timeout */
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 9db762fb..e6e8905b 100644
+index 9db762f..e6e8905 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -2157,3 +2157,19 @@ FILE *lxc_fopen(const char *filename, const char *mode)
@@ -737,7 +737,7 @@ index 9db762fb..e6e8905b 100644
 +}
 +
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index 2406ee15..0b33f690 100644
+index 2406ee1..0b33f69 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -328,4 +328,6 @@ extern int lxc_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t o
@@ -748,5 +748,5 @@ index 2406ee15..0b33f690 100644
 +
  #endif /* __LXC_UTILS_H */
 -- 
-2.23.0
+1.8.3.1
 

@@ -1,15 +1,15 @@
-From 79e621410a8969949f8d4e4fe9994603225d6fca Mon Sep 17 00:00:00 2001
+From af616876267279ffc89cd86744ba327e8c5c3d83 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 15 Jan 2019 09:45:44 +0800
-Subject: [PATCH 028/131] support rootfs / for container
+Subject: [PATCH 028/138] support rootfs / for container
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/conf.c | 61 +++++++++++++++++++++++++++++++++++++++++++-------
+ src/lxc/conf.c | 61 ++++++++++++++++++++++++++++++++++++++++++++++++++--------
  1 file changed, 53 insertions(+), 8 deletions(-)
 
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index e076bf28..f429491e 100644
+index e076bf2..f429491 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -888,9 +888,6 @@ static int lxc_setup_ttys(struct lxc_conf *conf)
@@ -119,5 +119,5 @@ index e076bf28..f429491e 100644
  {
  	int ret;
 -- 
-2.23.0
+1.8.3.1
 
