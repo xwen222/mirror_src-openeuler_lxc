@@ -1,4 +1,4 @@
-%global _release 20200106
+%global _release 20200109
 %global debug_package %{nil}
 
 Name:           lxc
@@ -8,9 +8,7 @@ Summary:        Linux Containers userspace tools
 License:        LGPLv2+
 URL:            http://linuxcontainers.org
 Source0:        http://linuxcontainers.org/downloads/lxc-3.0.3.tar.gz
-Patch6000:      lxc-2.0.7-fix-init.patch
-Patch6001:      lxc-2.0.6-fix-lxc-net.patch
-Patch6002:      lxc-CVE-2019-5736-runC-rexec-callers-as-memfd.patch
+Patch6000:      lxc-CVE-2019-5736-runC-rexec-callers-as-memfd.patch
 Patch9003:      0001-confile-add-lxc.isulad.init.args-config-interface.patch
 Patch9004:      0002-namespace-add-support-share-namespace-by-path.patch
 Patch9005:      0003-confile-add-lxc.isulad.populate.device-interface.patch
