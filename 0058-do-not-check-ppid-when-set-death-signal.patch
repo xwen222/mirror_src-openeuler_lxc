@@ -1,7 +1,7 @@
-From 33c5b695d265b115b6ff96bbc33152feb4e69473 Mon Sep 17 00:00:00 2001
+From 9fa6889015604b101ce921c70d8dadb2c70358d0 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 12 Feb 2019 14:00:47 +0800
-Subject: [PATCH 058/138] do not check ppid when set death signal
+Subject: [PATCH 058/139] do not check ppid when set death signal
 
 ppid will not be 0 if we shared host pid
 

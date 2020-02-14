@@ -1,7 +1,7 @@
-From 5d6aea523f0a89a1ef57c409de234c9b22b14eb4 Mon Sep 17 00:00:00 2001
+From 02f351d441398861416e8101d491b4cdd6b4988b Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Fri, 11 Jan 2019 17:44:53 +0800
-Subject: [PATCH 008/138] isulad: modify exit code and stop signal
+Subject: [PATCH 008/139] isulad: modify exit code and stop signal
 
 1. modify default stop signal and disable reboot by signal.
 2. send '128 + signal' if container is killed by signal.

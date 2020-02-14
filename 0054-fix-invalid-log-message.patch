@@ -1,7 +1,7 @@
-From 18727f1d50acf2a01e3f593e016ffdb06cef7f16 Mon Sep 17 00:00:00 2001
+From f6a4f1363e2e380cad2fe973cd0b0b3a6e4a37ea Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 22 Jan 2019 20:14:53 +0800
-Subject: [PATCH 054/138] fix invalid log message
+Subject: [PATCH 054/139] fix invalid log message
 
 fix invalid log message
 

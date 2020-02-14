@@ -1,0 +1,318 @@
+From b98cb4cc297ab4b7a6da6b9e7096abf1a06656d4 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Wed, 15 Jan 2020 03:55:27 -0500
+Subject: [PATCH 139/139] lxc: fix get cgroup path by config instead of cmd
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c         |  2 +-
+ src/lxc/cgroups/cgfsng.c | 26 +++++++++++++-------------
+ src/lxc/cgroups/cgroup.c |  6 +++---
+ src/lxc/cgroups/cgroup.h |  4 ++--
+ src/lxc/criu.c           |  4 ++--
+ src/lxc/freezer.c        | 12 ++++++------
+ src/lxc/lxc.h            |  4 ++--
+ src/lxc/lxccontainer.c   |  8 ++++----
+ src/lxc/start.c          |  6 +++---
+ src/tests/cgpath.c       |  2 +-
+ 10 files changed, 37 insertions(+), 37 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 03a7646..2061b96 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -1477,7 +1477,7 @@ int lxc_attach(const char *name, const char *lxcpath, const char *suffix,
+ 		if (options->attach_flags & LXC_ATTACH_MOVE_TO_CGROUP) {
+ 			struct cgroup_ops *cgroup_ops;
+ 
+-			cgroup_ops = cgroup_init(NULL);
++			cgroup_ops = cgroup_init(conf);
+ 			if (!cgroup_ops)
+ 				goto on_error;
+ 
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index ed08f10..ae15449 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -1799,10 +1799,12 @@ __cgfsng_ops static int cgfsng_get(struct cgroup_ops *ops, const char *filename,
+ 	if (p)
+ 		*p = '\0';
+ 
+-	path = lxc_cmd_get_cgroup_path(name, lxcpath, controller);
+-	/* not running */
+-	if (!path)
++	const char *ori_path = ops->get_cgroup(ops, controller, true);
++	if (ori_path == NULL) {
++		ERROR("Failed to get cgroup path:%s", controller);
+ 		return -1;
++	}
++	path = safe_strdup(ori_path);
+ 
+ 	h = get_hierarchy(ops, controller);
+ 	if (h) {
+@@ -1838,10 +1840,12 @@ __cgfsng_ops static int cgfsng_set(struct cgroup_ops *ops,
+ 	if (p)
+ 		*p = '\0';
+ 
+-	path = lxc_cmd_get_cgroup_path(name, lxcpath, controller);
+-	/* not running */
+-	if (!path)
++	const char *ori_path = ops->get_cgroup(ops, controller, true);
++	if (ori_path == NULL) {
++		ERROR("Failed to get cgroup path:%s", controller);
+ 		return -1;
++	}
++	path = safe_strdup(ori_path);
+ 
+ 	h = get_hierarchy(ops, controller);
+ 	if (h) {
+@@ -2484,17 +2488,13 @@ static bool cg_init(struct cgroup_ops *ops)
+ 	return cg_hybrid_init(ops);
+ }
+ 
+-__cgfsng_ops static bool cgfsng_data_init(struct cgroup_ops *ops, struct lxc_handler *handler)
++__cgfsng_ops static bool cgfsng_data_init(struct cgroup_ops *ops, struct lxc_conf *conf)
+ {
+ 	const char *cgroup_pattern = NULL;
+ 	char *container_cgroup = NULL;
+ 	char *tmp = NULL;
+-	struct lxc_conf *conf = NULL;
+ 	size_t len;
+ 
+-	if (handler)
+-		conf = handler->conf;
+-
+ 	/* copy system-wide cgroup information */
+ 	cgroup_pattern = lxc_global_config_value("lxc.cgroup.pattern");
+ 	if (!cgroup_pattern) {
+@@ -2508,10 +2508,10 @@ __cgfsng_ops static bool cgfsng_data_init(struct cgroup_ops *ops, struct lxc_han
+ 	if (conf) {
+ 		if (conf->cgroup_meta.dir)
+ 			tmp = lxc_string_join("/", (const char *[]) {
+-			conf->cgroup_meta.dir, handler->name, NULL
++			conf->cgroup_meta.dir, conf->name, NULL
+ 		}, false);
+ 		else
+-			tmp = lxc_string_replace("%n", handler->name, ops->cgroup_pattern);
++			tmp = lxc_string_replace("%n", conf->name, ops->cgroup_pattern);
+ 		if (!tmp) {
+ 			ERROR("Failed expanding cgroup name pattern");
+ 			return false;
+diff --git a/src/lxc/cgroups/cgroup.c b/src/lxc/cgroups/cgroup.c
+index 8d559be..bca00d5 100644
+--- a/src/lxc/cgroups/cgroup.c
++++ b/src/lxc/cgroups/cgroup.c
+@@ -40,17 +40,17 @@ lxc_log_define(cgroup, lxc);
+ 
+ extern struct cgroup_ops *cgfsng_ops_init(int errfd);
+ 
+-struct cgroup_ops *cgroup_init(struct lxc_handler *handler)
++struct cgroup_ops *cgroup_init(struct lxc_conf *conf)
+ {
+ 	struct cgroup_ops *cgroup_ops;
+ 
+-	cgroup_ops = cgfsng_ops_init(handler ? handler->conf->errpipe[1] : -1);
++	cgroup_ops = cgfsng_ops_init(conf ? conf->errpipe[1] : -1);
+ 	if (!cgroup_ops) {
+ 		ERROR("Failed to initialize cgroup driver");
+ 		return NULL;
+ 	}
+ 
+-	if (!cgroup_ops->data_init(cgroup_ops, handler))
++	if (!cgroup_ops->data_init(cgroup_ops, conf))
+ 		return NULL;
+ 
+ 	TRACE("Initialized cgroup driver %s", cgroup_ops->driver);
+diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
+index edbb1e3..935b4d3 100644
+--- a/src/lxc/cgroups/cgroup.h
++++ b/src/lxc/cgroups/cgroup.h
+@@ -125,7 +125,7 @@ struct cgroup_ops {
+ 	 */
+ 	cgroup_layout_t cgroup_layout;
+ 
+-	bool (*data_init)(struct cgroup_ops *ops, struct lxc_handler *handler);
++	bool (*data_init)(struct cgroup_ops *ops, struct lxc_conf *conf);
+ 	bool (*destroy)(struct cgroup_ops *ops, struct lxc_handler *handler);
+ 	bool (*payload_create)(struct cgroup_ops *ops, struct lxc_handler *handler);
+ 	bool (*payload_enter)(struct cgroup_ops *ops, pid_t pid);
+@@ -148,7 +148,7 @@ struct cgroup_ops {
+ 	int (*nrtasks)(struct cgroup_ops *ops);
+ };
+ 
+-extern struct cgroup_ops *cgroup_init(struct lxc_handler *handler);
++extern struct cgroup_ops *cgroup_init(struct lxc_conf *conf);
+ extern void cgroup_exit(struct cgroup_ops *ops);
+ 
+ extern void prune_init_scope(char *cg);
+diff --git a/src/lxc/criu.c b/src/lxc/criu.c
+index 5c77979..700a3e4 100644
+--- a/src/lxc/criu.c
++++ b/src/lxc/criu.c
+@@ -970,7 +970,7 @@ static void do_restore(struct lxc_container *c, int status_pipe, struct migrate_
+ 	if (lxc_init(c->name, handler) < 0)
+ 		goto out;
+ 
+-	cgroup_ops = cgroup_init(NULL);
++	cgroup_ops = cgroup_init(c->lxc_conf);
+ 	if (!cgroup_ops)
+ 		goto out_fini_handler;
+ 	handler->cgroup_ops = cgroup_ops;
+@@ -1270,7 +1270,7 @@ static bool do_dump(struct lxc_container *c, char *mode, struct migrate_opts *op
+ 
+ 		close(criuout[0]);
+ 
+-		cgroup_ops = cgroup_init(NULL);
++		cgroup_ops = cgroup_init(c->lxc_conf);
+ 		if (!cgroup_ops) {
+ 			ERROR("failed to cgroup_init()");
+ 			_exit(EXIT_FAILURE);
+diff --git a/src/lxc/freezer.c b/src/lxc/freezer.c
+index fc3622a..d5fad75 100644
+--- a/src/lxc/freezer.c
++++ b/src/lxc/freezer.c
+@@ -45,7 +45,7 @@
+ 
+ lxc_log_define(freezer, lxc);
+ 
+-static int do_freeze_thaw(bool freeze, const char *name, const char *lxcpath)
++static int do_freeze_thaw(bool freeze, struct lxc_conf *conf, const char *name, const char *lxcpath)
+ {
+ 	int ret;
+ 	char v[100];
+@@ -54,7 +54,7 @@ static int do_freeze_thaw(bool freeze, const char *name, const char *lxcpath)
+ 	size_t state_len = 6;
+ 	lxc_state_t new_state = freeze ? FROZEN : THAWED;
+ 
+-	cgroup_ops = cgroup_init(NULL);
++	cgroup_ops = cgroup_init(conf);
+ 	if (!cgroup_ops)
+ 		return -1;
+ 
+@@ -88,14 +88,14 @@ static int do_freeze_thaw(bool freeze, const char *name, const char *lxcpath)
+ 	}
+ }
+ 
+-int lxc_freeze(const char *name, const char *lxcpath)
++int lxc_freeze(struct lxc_conf *conf, const char *name, const char *lxcpath)
+ {
+ 	lxc_cmd_serve_state_clients(name, lxcpath, FREEZING);
+ 	lxc_monitor_send_state(name, FREEZING, lxcpath);
+-	return do_freeze_thaw(true, name, lxcpath);
++	return do_freeze_thaw(true, conf, name, lxcpath);
+ }
+ 
+-int lxc_unfreeze(const char *name, const char *lxcpath)
++int lxc_unfreeze(struct lxc_conf *conf, const char *name, const char *lxcpath)
+ {
+-	return do_freeze_thaw(false, name, lxcpath);
++	return do_freeze_thaw(false, conf, name, lxcpath);
+ }
+diff --git a/src/lxc/lxc.h b/src/lxc/lxc.h
+index 5df5080..bd0d373 100644
+--- a/src/lxc/lxc.h
++++ b/src/lxc/lxc.h
+@@ -82,14 +82,14 @@ extern int lxc_monitor_close(int fd);
+  * @name : the container name
+  * Returns 0 on success, < 0 otherwise
+  */
+-extern int lxc_freeze(const char *name, const char *lxcpath);
++extern int lxc_freeze(struct lxc_conf *conf, const char *name, const char *lxcpath);
+ 
+ /*
+  * Unfreeze all previously frozen tasks.
+  * @name : the name of the container
+  * Return 0 on success, < 0 otherwise
+  */
+-extern int lxc_unfreeze(const char *name, const char *lxcpath);
++extern int lxc_unfreeze(struct lxc_conf *conf, const char *name, const char *lxcpath);
+ 
+ /*
+  * Retrieve the container state
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 7ef57f0..e5a82f3 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -516,7 +516,7 @@ static bool do_lxcapi_freeze(struct lxc_container *c)
+ 	if (!c)
+ 		return false;
+ 
+-	ret = lxc_freeze(c->name, c->config_path);
++	ret = lxc_freeze(c->lxc_conf, c->name, c->config_path);
+ 	if (ret < 0)
+ 		return false;
+ 
+@@ -532,7 +532,7 @@ static bool do_lxcapi_unfreeze(struct lxc_container *c)
+ 	if (!c)
+ 		return false;
+ 
+-	ret = lxc_unfreeze(c->name, c->config_path);
++	ret = lxc_unfreeze(c->lxc_conf, c->name, c->config_path);
+ 	if (ret < 0)
+ 		return false;
+ 
+@@ -3455,7 +3455,7 @@ static bool do_lxcapi_set_cgroup_item(struct lxc_container *c, const char *subsy
+ 	if (is_stopped(c))
+ 		return false;
+ 
+-	cgroup_ops = cgroup_init(NULL);
++	cgroup_ops = cgroup_init(c->lxc_conf);
+ 	if (!cgroup_ops)
+ 		return false;
+ 
+@@ -3479,7 +3479,7 @@ static int do_lxcapi_get_cgroup_item(struct lxc_container *c, const char *subsys
+ 	if (is_stopped(c))
+ 		return -1;
+ 
+-	cgroup_ops = cgroup_init(NULL);
++	cgroup_ops = cgroup_init(c->lxc_conf);
+ 	if (!cgroup_ops)
+ 		return -1;
+ 
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index c9bae65..0af2e92 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -919,7 +919,7 @@ int lxc_init(const char *name, struct lxc_handler *handler)
+ 	}
+ 	TRACE("Chowned console");
+ 
+-	handler->cgroup_ops = cgroup_init(handler);
++	handler->cgroup_ops = cgroup_init(conf);
+ 	if (!handler->cgroup_ops) {
+ 		ERROR("Failed to initialize cgroup driver");
+ 		goto out_delete_terminal;
+@@ -2680,7 +2680,7 @@ static struct lxc_handler *lxc_init_clean_handler(char *name, char *lxcpath, str
+ 	handler->name = name;
+ 	handler->exit_code = -1; /* isulad: record exit code of container */
+ 
+-	handler->cgroup_ops = cgroup_init(handler);
++	handler->cgroup_ops = cgroup_init(conf);
+ 	if (!handler->cgroup_ops) {
+ 		ERROR("Failed to initialize cgroup driver");
+ 		goto on_error;
+@@ -2729,7 +2729,7 @@ static struct lxc_handler *lxc_init_pids_handler(char *name, char *lxcpath, stru
+ 	handler->name = name;
+ 	handler->exit_code = -1; /* isulad: record exit code of container */
+ 
+-	handler->cgroup_ops = cgroup_init(handler);
++	handler->cgroup_ops = cgroup_init(conf);
+ 	if (!handler->cgroup_ops) {
+ 		ERROR("Failed to initialize cgroup driver");
+ 		goto on_error;
+diff --git a/src/tests/cgpath.c b/src/tests/cgpath.c
+index fa8d476..8f4c19f 100644
+--- a/src/tests/cgpath.c
++++ b/src/tests/cgpath.c
+@@ -80,7 +80,7 @@ static int test_running_container(const char *lxcpath,
+ 		goto err3;
+ 	}
+ 
+-	cgroup_ops = cgroup_init(NULL);
++	cgroup_ops = cgroup_init(c->lxc_conf);
+ 	if (!cgroup_ops)
+ 		goto err3;
+ 
+-- 
+1.8.3.1
+

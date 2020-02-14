@@ -1,7 +1,7 @@
-From d8efea3a4bd5c23eb18de98c5a7f908fd6409e60 Mon Sep 17 00:00:00 2001
+From 28d6bb955b254a0dd29bf47dc359359ba3da579f Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 30 Jan 2019 17:44:19 +0800
-Subject: [PATCH 060/138] using json-file to write console log of container
+Subject: [PATCH 060/139] using json-file to write console log of container
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>

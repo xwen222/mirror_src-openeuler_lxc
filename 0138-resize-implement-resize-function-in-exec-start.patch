@@ -1,7 +1,7 @@
-From 3690e3e4ced8378108888ff2c15aeecfc650b974 Mon Sep 17 00:00:00 2001
+From 29c845fe630204d35b300241a47ccd4525d315f9 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Fri, 29 Nov 2019 22:12:10 -0500
-Subject: [PATCH 138/138] resize: implement resize function in exec/start
+Subject: [PATCH 138/139] resize: implement resize function in exec/start
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

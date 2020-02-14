@@ -1,4 +1,4 @@
-%global _release 20200109
+%global _release 20200214
 %global debug_package %{nil}
 
 Name:           lxc
@@ -147,12 +147,17 @@ Patch9137:      0135-lxc-fix-code-warnings-for-cgfsng.c.patch
 Patch9138:      0136-lxc-fix-retry-bug-in-cgroup.patch
 Patch9139:      0137-lxc-fix-bug-in-read-proc.patch
 Patch9140:      0138-resize-implement-resize-function-in-exec-start.patch
+Patch9141:      0139-lxc-fix-get-cgroup-path-by-config-instead-of-cmd.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
 BuildRequires:  libcap libcap-devel libselinux-devel yajl yajl-devel
 BuildRequires:  pkgconfig(bash-completion)
 
+Requires:       lxc-libs = 3.0.3-%{release}
+
+%package           libs
+Summary:           Runtime library files for %{name}
 Requires:          rsync
 Requires(post):    systemd
 Requires(preun):   systemd
@@ -160,8 +165,12 @@ Requires(postun):  systemd
 Requires(post):    /sbin/ldconfig
 Requires(postun):  /sbin/ldconfig
 
-Provides: lxc-libs
-Obsoletes: lxc-libs
+%description    libs
+Linux Resource Containers provide process and resource isolation without the
+overhead of full virtualization.
+
+The %{name}-libs package contains libraries for running %{name} applications.
+
 
 %{!?_pkgdocdir: %global _pkgdocdir %{_docdir}/lxc-3.0.3}
 
@@ -257,6 +266,8 @@ make check
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
 %{_datadir}/bash-completion/completions/lxc
+%files libs
+%defattr(-,root,root)
 %{_libdir}/liblxc.so
 %{_libdir}/liblxc.so.*
 %{_libdir}/%{name}
@@ -266,10 +277,10 @@ make check
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/default.conf
 
-%license COPYING
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/AUTHORS
 %{_pkgdocdir}/README
+%license COPYING
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}@.service
 %{_unitdir}/%{name}-net.service
@@ -299,5 +310,7 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Feb 14 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-20200214
+- make lxc-libs package
 * Thu Dec 19 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-20191218
 - Package init

@@ -1,7 +1,7 @@
-From 3e5a9c9672e31e4f97c111d2c30424b2c203824f Mon Sep 17 00:00:00 2001
+From af999d8da16a36ff541d27d84d40bcf97f62e581 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 15 Jan 2019 19:54:13 +0800
-Subject: [PATCH 033/138] support mount squashfs in mount entry
+Subject: [PATCH 033/139] support mount squashfs in mount entry
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

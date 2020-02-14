@@ -1,7 +1,7 @@
-From 0ba955160234c68f8db801111618551e6303627b Mon Sep 17 00:00:00 2001
+From 9acd5efe54f66552a3389938c0ec86356ac8f039 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 11 Apr 2019 15:27:31 +0800
-Subject: [PATCH 082/138] lxc: fix memory leak cause by setenv
+Subject: [PATCH 082/139] lxc: fix memory leak cause by setenv
 
 isulad will call do_lxcapi_clean_resource(), so setenv at here, will
 change env of isulad.

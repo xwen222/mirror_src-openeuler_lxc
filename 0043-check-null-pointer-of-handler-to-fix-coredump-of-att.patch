@@ -1,7 +1,7 @@
-From ff77c9eb552544103add1f52f0534831642aaa2b Mon Sep 17 00:00:00 2001
+From d6893f5b376992b0b715a0b46c660c78144c1203 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 17 Jan 2019 10:19:37 +0800
-Subject: [PATCH 043/138] check null pointer of handler to fix coredump of
+Subject: [PATCH 043/139] check null pointer of handler to fix coredump of
  attach
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>

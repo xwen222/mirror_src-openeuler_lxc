@@ -1,7 +1,7 @@
-From 5748a52d562b6a72f958a632a8ab8bd9b0157e11 Mon Sep 17 00:00:00 2001
+From 20ff2957e4a3d49604c4fa29dac7b752746307a6 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 17:02:02 +0800
-Subject: [PATCH 022/138] support rootfs mount propagation
+Subject: [PATCH 022/139] support rootfs mount propagation
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

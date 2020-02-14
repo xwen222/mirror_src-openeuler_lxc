@@ -1,7 +1,7 @@
-From 9e36bb4d725edd77b84e2d9f2d0e07db69d6af33 Mon Sep 17 00:00:00 2001
+From c488db18d557594331fd8d2774d9e05eaeb57726 Mon Sep 17 00:00:00 2001
 From: maoweiyong <maoweiyong@huawei.com>
 Date: Thu, 25 Apr 2019 21:21:12 +0800
-Subject: [PATCH 090/138] lxc: remove unused variable
+Subject: [PATCH 090/139] lxc: remove unused variable
 
 Signed-off-by: maoweiyong <maoweiyong@huawei.com>
 ---

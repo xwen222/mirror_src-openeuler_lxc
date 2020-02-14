@@ -1,7 +1,7 @@
-From 3e915fc0e452dc7488694f81e1727e979d7afee0 Mon Sep 17 00:00:00 2001
+From 7bb780cc04729b9a9231a9403b8ac5465c0ca44b Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 17 Jan 2019 07:43:23 -0500
-Subject: [PATCH 047/138] Fix memory leak in lxc_global_config_value
+Subject: [PATCH 047/139] Fix memory leak in lxc_global_config_value
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

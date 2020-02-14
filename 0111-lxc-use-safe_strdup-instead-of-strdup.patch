@@ -1,7 +1,7 @@
-From 20567796e28b406e13e0ec745fbbe4860a39a666 Mon Sep 17 00:00:00 2001
+From a5f5a84fc4cab4b266c8b496ebb740010265b14b Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 3 Jul 2019 23:41:15 -0400
-Subject: [PATCH 111/138] lxc: use safe_strdup instead of strdup
+Subject: [PATCH 111/139] lxc: use safe_strdup instead of strdup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

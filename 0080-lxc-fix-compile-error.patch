@@ -1,7 +1,7 @@
-From fd14c1b679220e7b4554afcca3de7d7cd9588997 Mon Sep 17 00:00:00 2001
+From 12b020ddc343d35e4db1c23de7c511deb3b9f4a3 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 8 Apr 2019 08:29:46 -0400
-Subject: [PATCH 080/138] lxc: fix compile error
+Subject: [PATCH 080/139] lxc: fix compile error
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>

@@ -1,7 +1,7 @@
-From 5791056145d9d1885a5b17826f39a3c925168dd8 Mon Sep 17 00:00:00 2001
+From fc244b0d105bf7519bba11cbc1c1e65ff2b9eaaa Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Fri, 11 Jan 2019 16:55:01 +0800
-Subject: [PATCH 006/138] conf.c: fix bug when set no ro mount, mount
+Subject: [PATCH 006/139] conf.c: fix bug when set no ro mount, mount
  propagation will be skipped
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>

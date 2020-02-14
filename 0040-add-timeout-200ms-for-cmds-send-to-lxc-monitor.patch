@@ -1,7 +1,7 @@
-From bbd3eefaa71e17113a05268ad14707b8cee52bd1 Mon Sep 17 00:00:00 2001
+From 3697ed8dd6eb04d4664c8c56ee4e0e507db9c58d Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 16 Jan 2019 02:22:13 -0500
-Subject: [PATCH 040/138] add timeout(200ms) for cmds send to [lxc monitor]
+Subject: [PATCH 040/139] add timeout(200ms) for cmds send to [lxc monitor]
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

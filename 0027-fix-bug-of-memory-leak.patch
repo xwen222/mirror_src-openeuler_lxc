@@ -1,7 +1,7 @@
-From 44f1f43ed02453951dd974bc3cc17ee364476894 Mon Sep 17 00:00:00 2001
+From e430c3656032d2f112b7ec7eb99e07f05c300e8b Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 21:24:25 +0800
-Subject: [PATCH 027/138] fix bug of memory leak
+Subject: [PATCH 027/139] fix bug of memory leak
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From 5db3f150f53867f3b5e55bd3dd6b5b3f7d3916ab Mon Sep 17 00:00:00 2001
+From 703eeab29a903faa239be620fa3711e7d586e078 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 2 Sep 2019 06:24:07 -0400
-Subject: [PATCH 118/138] fix sscanf return value check
+Subject: [PATCH 118/139] fix sscanf return value check
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

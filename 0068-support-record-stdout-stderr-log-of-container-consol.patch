@@ -1,7 +1,7 @@
-From 1c4b55f4bb5d7b9720153073e78facb69fe220d1 Mon Sep 17 00:00:00 2001
+From 25e6f0bfa28a7da88a54da99123e2bbd60da2cb2 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 21 Feb 2019 20:27:47 +0800
-Subject: [PATCH 068/138] support record stdout, stderr log of container
+Subject: [PATCH 068/139] support record stdout, stderr log of container
  console
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>

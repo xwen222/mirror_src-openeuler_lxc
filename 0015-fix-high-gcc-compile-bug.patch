@@ -1,7 +1,7 @@
-From b5365278bc22ab4798d5ebd7bdb7c9d110b60124 Mon Sep 17 00:00:00 2001
+From 8c95d80b70033abcedfecdb6220926a824266b69 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Sat, 12 Jan 2019 16:28:41 +0800
-Subject: [PATCH 015/138] fix high gcc compile bug
+Subject: [PATCH 015/139] fix high gcc compile bug
 
 fix high gcc compile bug
 

@@ -1,7 +1,7 @@
-From cab7334deeb38b530bdb37e52b5f3a6dc58562d7 Mon Sep 17 00:00:00 2001
+From 7c3846e5c3e834821454766a45bced3e69bdfaab Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 30 Oct 2019 18:41:02 +0800
-Subject: [PATCH 126/138] add user option for lxc-attach
+Subject: [PATCH 126/139] add user option for lxc-attach
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---

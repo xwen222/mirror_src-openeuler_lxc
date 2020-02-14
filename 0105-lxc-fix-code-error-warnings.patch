@@ -1,7 +1,7 @@
-From 24364817d7ba5efc33de345547e0413df9dc756d Mon Sep 17 00:00:00 2001
+From 0a3af523280a1a0a39c0c368b5c562b3b6e30a6e Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 3 Jun 2019 23:02:50 -0400
-Subject: [PATCH 105/138] lxc: fix code error warnings
+Subject: [PATCH 105/139] lxc: fix code error warnings
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
