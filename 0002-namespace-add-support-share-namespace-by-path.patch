@@ -1,7 +1,7 @@
-From 57c5e215695a3b4c4e3fa80776aee90e0542d980 Mon Sep 17 00:00:00 2001
+From 0c195b1b6493fbb036e3eb9218f6a173e16a2123 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 10 Jan 2019 08:42:19 -0500
-Subject: [PATCH 002/138] namespace: add support share namespace by path
+Subject: [PATCH 002/139] namespace: add support share namespace by path
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

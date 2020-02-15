@@ -1,7 +1,7 @@
-From 62a3cf699d424e956cc7f7a73d425c5828f64902 Mon Sep 17 00:00:00 2001
+From 374e9e275bd379cfb70df2b252383a50869c42f6 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Fri, 15 Mar 2019 10:11:10 +0800
-Subject: [PATCH 066/138] lxc: Pids limit does not report an error after
+Subject: [PATCH 066/139] lxc: Pids limit does not report an error after
  executing the limit in the background
 
 Signed-off-by: wujing <wujing50@huawei.com>

@@ -1,7 +1,7 @@
-From 105b7c1dc22ec9928a42e803f32f9a4b461a6a3a Mon Sep 17 00:00:00 2001
+From 15ecacd152d85b4f7818e7612178081a23e53826 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 21 Feb 2019 05:37:05 -0500
-Subject: [PATCH 061/138] Fix hook: use the path, args, envs execvp dirctory
+Subject: [PATCH 061/139] Fix hook: use the path, args, envs execvp dirctory
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

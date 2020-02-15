@@ -1,7 +1,7 @@
-From f4802de0f33c70fa299d5fb8f73c179eb457a7e4 Mon Sep 17 00:00:00 2001
+From 613aa707fc904d35dbcbe9c6ecf42e0851aa4492 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 3 Apr 2019 23:36:04 -0400
-Subject: [PATCH 078/138] Run pre-start hook before chroot
+Subject: [PATCH 078/139] Run pre-start hook before chroot
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From 88c0440da8e943d251cff194b8d1d8bb916a524a Mon Sep 17 00:00:00 2001
+From 28e96202dfe639add68c68fd31447031675fddbe Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Fri, 11 Jan 2019 16:11:34 +0800
-Subject: [PATCH 004/138] support isulad fifo log
+Subject: [PATCH 004/139] support isulad fifo log
 
 support isulad fifo log in lxc3.0
 

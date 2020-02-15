@@ -1,7 +1,7 @@
-From 8285ecc2065505e869f92b74934abee2249eaac5 Mon Sep 17 00:00:00 2001
+From c45ff276f829272bc6153723263fad64234c5b1d Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Mon, 17 Jun 2019 20:17:37 +0800
-Subject: [PATCH 107/138] add log for failure of rename file
+Subject: [PATCH 107/139] add log for failure of rename file
 
 1. add log message of rename operator
 2. if rename console file failed, reopen terminal fd

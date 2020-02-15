@@ -1,7 +1,7 @@
-From 65d32efd1e3165badbfc731a0750e6e895be4fb7 Mon Sep 17 00:00:00 2001
+From a3f93824beaa0cb2634a4d6db268c1b90d5a7524 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Wed, 24 Apr 2019 22:22:55 +0800
-Subject: [PATCH 087/138] lxc: adapt to spec of oci hook
+Subject: [PATCH 087/139] lxc: adapt to spec of oci hook
 
 poststart failed do not cause run failed
 

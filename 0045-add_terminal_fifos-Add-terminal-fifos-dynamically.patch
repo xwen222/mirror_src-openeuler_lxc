@@ -1,7 +1,7 @@
-From 1b1e83d187893f2e61c8952887d24b5afb949c77 Mon Sep 17 00:00:00 2001
+From 00789ddaf32704bbb848c63eb69c2b299c2d3471 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 17 Jan 2019 02:18:14 -0500
-Subject: [PATCH 045/138] add_terminal_fifos: Add terminal fifos dynamically
+Subject: [PATCH 045/139] add_terminal_fifos: Add terminal fifos dynamically
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

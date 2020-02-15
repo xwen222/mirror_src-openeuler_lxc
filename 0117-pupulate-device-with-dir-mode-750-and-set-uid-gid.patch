@@ -1,7 +1,7 @@
-From 3d13f72c92b0a40b97cfd708a56d9abaad9c1610 Mon Sep 17 00:00:00 2001
+From a1c8c0461a87143e6bb9fdc8fabcf17811e94296 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 31 Jul 2019 05:24:11 -0400
-Subject: [PATCH 117/138] pupulate device with dir mode 750 and set uid/gid
+Subject: [PATCH 117/139] pupulate device with dir mode 750 and set uid/gid
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From f89900e2e45d8e94cd4576b5e1e7a7b3cca3b0a9 Mon Sep 17 00:00:00 2001
+From 8e3399baf65cdfc8383b5c387f6b05a8c8944435 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Wed, 16 Jan 2019 20:53:25 +0800
-Subject: [PATCH 035/138] lxc: fixup builds with newer glibc
+Subject: [PATCH 035/139] lxc: fixup builds with newer glibc
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

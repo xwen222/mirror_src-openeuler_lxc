@@ -1,7 +1,7 @@
-From 41a5e567cf02b18bf623e439a2457fb3ce95d8fb Mon Sep 17 00:00:00 2001
+From 40e603be55ed03d76e9ef1d82b57c05f15125f2c Mon Sep 17 00:00:00 2001
 From: LiuHao <liuhao27@huawei.com>
 Date: Mon, 25 Nov 2019 21:15:40 +0800
-Subject: [PATCH 123/138] in accordance with hook spec in oci
+Subject: [PATCH 123/139] in accordance with hook spec in oci
 
 Signed-off-by: LiuHao <liuhao27@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From 6091a808d2eca19f7e7f1ac11dae8f2ca9574a9e Mon Sep 17 00:00:00 2001
+From 474dcbe83981a95fe3be1f1da0d4289730a29a1c Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Fri, 26 Apr 2019 07:13:53 +0800
-Subject: [PATCH 091/138] lxc: support namespaced kernel params can be changed
+Subject: [PATCH 091/139] lxc: support namespaced kernel params can be changed
  in system container
 
 support namespaced kernel params can be changed in system container

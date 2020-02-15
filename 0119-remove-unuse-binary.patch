@@ -1,7 +1,7 @@
-From 8a67511e42e7c6ebeb28df2feeb8ee0774995822 Mon Sep 17 00:00:00 2001
+From 4234dc19cd6e7922cf8220674b27e729d733ab37 Mon Sep 17 00:00:00 2001
 From: LiuHao <liuhao27@huawei.com>
 Date: Wed, 4 Sep 2019 18:01:39 +0800
-Subject: [PATCH 119/138] remove unuse binary
+Subject: [PATCH 119/139] remove unuse binary
 
 Signed-off-by: LiuHao <liuhao27@huawei.com>
 ---

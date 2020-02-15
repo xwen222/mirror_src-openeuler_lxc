@@ -1,7 +1,7 @@
-From 428aeee42cc96d20dc7934e2ac038561ca9cde3d Mon Sep 17 00:00:00 2001
+From 2946339a18ea794a8a4637353ea5c30045131bba Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 30 Jan 2019 03:39:42 -0500
-Subject: [PATCH 057/138] confile: add support umask
+Subject: [PATCH 057/139] confile: add support umask
 
 lxc.isulad.umask=normal make the container umask to 0022
 lxc.isulad.umask=secure make the container umask to 0027 (default)

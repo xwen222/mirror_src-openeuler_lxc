@@ -1,7 +1,7 @@
-From 264bfe855295416c66f9c149a0dcb93e56492011 Mon Sep 17 00:00:00 2001
+From 666174f112d1f6f765f6755e6f1ed4d3f8ca9055 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 17 Jan 2019 03:09:00 +0800
-Subject: [PATCH 042/138] lxc: seccomp adopt to lxc3.0
+Subject: [PATCH 042/139] lxc: seccomp adopt to lxc3.0
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

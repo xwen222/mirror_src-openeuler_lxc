@@ -1,7 +1,7 @@
-From fce70a877da27262b274e56e5b31fbd16753adff Mon Sep 17 00:00:00 2001
+From a847fcefdce50fa6b6fe307ff4f80d9f7927eb35 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Sat, 26 Jan 2019 02:22:48 -0500
-Subject: [PATCH 056/138] [caps]: use _LINUX_CAPABILITY_VERSION_3 to set cap
+Subject: [PATCH 056/139] [caps]: use _LINUX_CAPABILITY_VERSION_3 to set cap
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

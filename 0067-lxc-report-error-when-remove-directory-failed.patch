@@ -1,7 +1,7 @@
-From 44a5db6680dd81a11cd1afe87fae9ad63dc30f34 Mon Sep 17 00:00:00 2001
+From c3b0074f845e009695ae55f8ef01b9e7ba450350 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Sat, 16 Mar 2019 10:06:13 +0800
-Subject: [PATCH 067/138] lxc: report error when remove directory failed
+Subject: [PATCH 067/139] lxc: report error when remove directory failed
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>

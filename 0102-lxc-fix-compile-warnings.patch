@@ -1,7 +1,7 @@
-From abcb5c5bdd46cb83deff2d2af95c26221ef51a8e Mon Sep 17 00:00:00 2001
+From ae1e9bad8f14613c01ce940795472961cc2e9561 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 3 Jun 2019 06:19:07 -0400
-Subject: [PATCH 102/138] lxc: fix compile warnings
+Subject: [PATCH 102/139] lxc: fix compile warnings
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

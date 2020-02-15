@@ -1,7 +1,7 @@
-From 762e925625752a52c30dd55d28b210c659869f9c Mon Sep 17 00:00:00 2001
+From 72c3b292ff9a56c7ab5b98dcf2587b158be93628 Mon Sep 17 00:00:00 2001
 From: LiuHao <liuhao27@huawei.com>
 Date: Thu, 5 Sep 2019 11:48:57 +0800
-Subject: [PATCH 120/138] remove unuse unmount-namespace
+Subject: [PATCH 120/139] remove unuse unmount-namespace
 
 Signed-off-by: LiuHao <liuhao27@huawei.com>
 ---

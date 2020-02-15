@@ -1,7 +1,7 @@
-From 754525a09827844e9b309c659f745509c3ae4ebc Mon Sep 17 00:00:00 2001
+From 3fed6c510fa597be32327e3e5aa2beb43a025553 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 27 Nov 2019 22:33:46 -0500
-Subject: [PATCH 124/138] lxc: close maincmd fd before destroy cgroup
+Subject: [PATCH 124/139] lxc: close maincmd fd before destroy cgroup
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

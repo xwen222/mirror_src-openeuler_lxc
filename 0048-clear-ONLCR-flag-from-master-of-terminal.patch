@@ -1,7 +1,7 @@
-From e98cf0e42079d5fd184b6749c4fdb2467c2ce604 Mon Sep 17 00:00:00 2001
+From 2b9f7cb1c39c18bd79f208f178d740fb1103f5e8 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 17 Jan 2019 20:46:33 +0800
-Subject: [PATCH 048/138] clear ONLCR flag from master of terminal
+Subject: [PATCH 048/139] clear ONLCR flag from master of terminal
 
 clear ONLCR flag from master of terminal
 
