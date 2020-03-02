@@ -1,7 +1,7 @@
-From 00b977726fdcf2bbc5e44275db4c7b68ef8fa549 Mon Sep 17 00:00:00 2001
+From a1f81f063eb08dbf3ca99d298fef016b89d7d0d1 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 15 Jan 2019 23:24:21 -0500
-Subject: [PATCH 038/139] make the given terminal as controlling terminal
+Subject: [PATCH 038/140] make the given terminal as controlling terminal
 
 Avoid warning when start cmd /bin/sh :
 sh: cannot set terminal process group (-1): Inappropriate ioctl for device

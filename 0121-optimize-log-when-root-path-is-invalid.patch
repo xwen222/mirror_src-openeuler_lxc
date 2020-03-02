@@ -1,7 +1,7 @@
-From 522a7231efdb304cd84443b1211cddfd0b8c80b3 Mon Sep 17 00:00:00 2001
+From d4b8e904b6730f3eefa96878eca9e42219437c11 Mon Sep 17 00:00:00 2001
 From: TanYifeng <tanyifeng1@huawei.com>
 Date: Sat, 21 Sep 2019 06:19:25 -0400
-Subject: [PATCH 121/139] optimize log when root path is invalid
+Subject: [PATCH 121/140] optimize log when root path is invalid
 
 Signed-off-by: TanYifeng <tanyifeng1@huawei.com>
 ---

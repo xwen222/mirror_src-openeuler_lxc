@@ -1,7 +1,7 @@
-From 49aea1a5c02f041fc5622ed0a998c2f5b5b45d5b Mon Sep 17 00:00:00 2001
+From b2904bbeda12d9d1e6864717f76052c05b213ab2 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 4 Apr 2019 11:19:48 +0800
-Subject: [PATCH 076/139] lxc: delete unused variable
+Subject: [PATCH 076/140] lxc: delete unused variable
 
 Signed-off-by: wujing <wujing50@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>

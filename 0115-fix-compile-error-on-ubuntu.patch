@@ -1,7 +1,7 @@
-From 6bffa764f1a5f78a9c0fb4beb024bd1b26eea5ce Mon Sep 17 00:00:00 2001
+From 4a03b0c529c8e2cf915c2b374a47e62b48c2d4db Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 11 Jul 2019 17:42:00 +0800
-Subject: [PATCH 115/139] fix compile error on ubuntu
+Subject: [PATCH 115/140] fix compile error on ubuntu
 
 fix compile error on ubuntu
 

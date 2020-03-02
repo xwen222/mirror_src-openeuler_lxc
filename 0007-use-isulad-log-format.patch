@@ -1,7 +1,7 @@
-From 7195a22f6717a3f34d1c0fccedb4a015dba50eb8 Mon Sep 17 00:00:00 2001
+From 371dc5d5822cd629b86313c6b6cb39f02e7164e8 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Fri, 11 Jan 2019 17:00:48 +0800
-Subject: [PATCH 007/139] use isulad log format
+Subject: [PATCH 007/140] use isulad log format
 
 use isulad log format
 

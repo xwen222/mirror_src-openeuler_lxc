@@ -1,7 +1,7 @@
-From adfe5a04dabc871fb5cf3d4b505057ce8da02480 Mon Sep 17 00:00:00 2001
+From 97a9081b91b573df9c381331fde2dc6ec7f257e6 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 15 Jan 2019 04:20:57 -0500
-Subject: [PATCH 031/139] clean: add clean resources api
+Subject: [PATCH 031/140] clean: add clean resources api
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From b20f7a706f5ad40221f765b026902435b61f87a1 Mon Sep 17 00:00:00 2001
+From 57d1ff71ce9c6d456e2fcaa8ca1229419d184ea9 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 4 Jul 2019 11:08:26 +0800
-Subject: [PATCH 112/139] fix secure errors
+Subject: [PATCH 112/140] fix secure errors
 
 1. use snprintf replace sprintf
 2. use malloc replace alloca

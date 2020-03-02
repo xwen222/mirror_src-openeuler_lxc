@@ -1,7 +1,7 @@
-From 8eee379351a1c81f41c62c6416c29bb7b6af5968 Mon Sep 17 00:00:00 2001
+From de46120969e9d164bb2d4926c16414daafa86063 Mon Sep 17 00:00:00 2001
 From: TanYifeng <tanyifeng1@huawei.com>
 Date: Tue, 3 Dec 2019 22:43:25 -0500
-Subject: [PATCH 127/139] log: only write (size - begin) if buffer is full
+Subject: [PATCH 127/140] log: only write (size - begin) if buffer is full
 
 Signed-off-by: TanYifeng <tanyifeng1@huawei.com>
 ---

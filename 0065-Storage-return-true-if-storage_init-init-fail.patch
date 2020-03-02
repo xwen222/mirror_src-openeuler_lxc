@@ -1,7 +1,7 @@
-From b4774d615555f3864720d7dd33b87e6d4ffccd36 Mon Sep 17 00:00:00 2001
+From c3f85efe70c8dabe1c7393a5fd83f4465ec46812 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 11 Mar 2019 23:26:27 -0400
-Subject: [PATCH 065/139] Storage: return true if storage_init init fail
+Subject: [PATCH 065/140] Storage: return true if storage_init init fail
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

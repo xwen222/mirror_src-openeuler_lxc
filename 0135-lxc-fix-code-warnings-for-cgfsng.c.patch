@@ -1,7 +1,7 @@
-From 5585a4c925088485b0d71b95c942973c31398154 Mon Sep 17 00:00:00 2001
+From 5d7175b7d6ac7340c779c0102955f2099fc7b7e9 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 23 Dec 2019 03:20:14 -0500
-Subject: [PATCH 135/139] lxc: fix code warnings for cgfsng.c
+Subject: [PATCH 135/140] lxc: fix code warnings for cgfsng.c
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

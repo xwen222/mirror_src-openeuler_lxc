@@ -1,7 +1,7 @@
-From 2fd043e31d7631c89329ece107313785af140a77 Mon Sep 17 00:00:00 2001
+From 68336a66df175c8f59e49ded276f95073326bfcd Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 18 Jun 2019 23:16:09 +0800
-Subject: [PATCH 108/139] check calloc input valid
+Subject: [PATCH 108/140] check calloc input valid
 
 check calloc input valid
 

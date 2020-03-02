@@ -1,7 +1,7 @@
-From 0dc5178ad05c6c2106be4f15e8d91211e6246eb5 Mon Sep 17 00:00:00 2001
+From 69556473f1e248be4ec79ccf069c65238ee9b8c1 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Mon, 13 May 2019 16:45:50 +0800
-Subject: [PATCH 096/139] close inherited fd in hook process
+Subject: [PATCH 096/140] close inherited fd in hook process
 
 close inherited fd in hook process
 

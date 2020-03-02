@@ -1,7 +1,7 @@
-From d7ebde92b6ceb66aef1280e7a81191bf5ef69ac9 Mon Sep 17 00:00:00 2001
+From e87fd4a3b69a4c98d2c50ede559d56b43f65578a Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 4 Apr 2019 17:21:56 +0800
-Subject: [PATCH 079/139] inherid env from parent in oci hooks
+Subject: [PATCH 079/140] inherid env from parent in oci hooks
 
 env: LD_LIBRAY_PAHT and PATH
 

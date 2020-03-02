@@ -1,7 +1,7 @@
-From 4355ae3c26f9cc26d9c95672945ca2630466b3d0 Mon Sep 17 00:00:00 2001
+From 629036e2732ed24c776b422271cef51cf8458f18 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Tue, 22 Jan 2019 11:25:45 +0800
-Subject: [PATCH 051/139] if ocihook is empty
+Subject: [PATCH 051/140] if ocihook is empty
 
 return success
 

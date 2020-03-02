@@ -1,7 +1,7 @@
-From db80cc666f47124c166771fbd018855f62ea0de3 Mon Sep 17 00:00:00 2001
+From 15d3b1e6c5e5ac896b15d04d486ba0c04ca39336 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Fri, 18 Jan 2019 02:11:11 -0500
-Subject: [PATCH 050/139] seccomp: add rules for specified architecture only
+Subject: [PATCH 050/140] seccomp: add rules for specified architecture only
 
 LXC MR: https://github.com/lxc/lxc/pull/2786
 

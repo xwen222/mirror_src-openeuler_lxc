@@ -1,7 +1,7 @@
-From d56b1478fb6cad6a7430ffb3444b86787201a565 Mon Sep 17 00:00:00 2001
+From c1b8d03c8911964c8323e4878ecfeca8162a7e08 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 15 Jan 2019 16:00:30 +0800
-Subject: [PATCH 030/139] support block device as rootfs
+Subject: [PATCH 030/140] support block device as rootfs
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

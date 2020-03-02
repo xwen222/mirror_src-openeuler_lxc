@@ -1,7 +1,7 @@
-From 312d0ba4aa928b8ee666fbe1eb95c997b30d731e Mon Sep 17 00:00:00 2001
+From cb3044f47a1823994ee8133055ca6662cbe56838 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Thu, 26 Sep 2019 07:47:19 -0400
-Subject: [PATCH 122/139] lxc: fix code reivew errors
+Subject: [PATCH 122/140] lxc: fix code reivew errors
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
