@@ -1,7 +1,7 @@
-From 7c5602c6601ed2af22b20958b738c4723221e606 Mon Sep 17 00:00:00 2001
+From 0c5c03e94eb4beb4d55275bef52b14f1eef09d66 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Sat, 12 Jan 2019 03:23:53 -0500
-Subject: [PATCH 012/139] Init fifos in lxc_attach_terminal
+Subject: [PATCH 012/140] Init fifos in lxc_attach_terminal
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From 0f0b1f6315e95c958a56c5409b006efeabbf3d30 Mon Sep 17 00:00:00 2001
+From 0c11550c088cca12b6900623240799dc911da458 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 14 Jan 2019 02:18:26 -0500
-Subject: [PATCH 018/139] lxc-attach: add support terminal fifos
+Subject: [PATCH 018/140] lxc-attach: add support terminal fifos
 
 1. support terminal fifos to redirect terminal
 2. support lxc-attach run in background

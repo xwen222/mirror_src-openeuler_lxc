@@ -1,7 +1,7 @@
-From c008838abc34819705f1b2ad51b24b5d7bbd629c Mon Sep 17 00:00:00 2001
+From cf669a5cfd241dc8ec9ce2571e73fc13d4266bce Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 20:12:06 +0800
-Subject: [PATCH 024/139] isulad: support symlink in mount entry, and not
+Subject: [PATCH 024/140] isulad: support symlink in mount entry, and not
  permit mount to /proc
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>

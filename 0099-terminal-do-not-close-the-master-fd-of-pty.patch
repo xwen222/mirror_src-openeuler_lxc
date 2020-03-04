@@ -1,7 +1,7 @@
-From 0c622aaccfa9ea9bb79fcc6fb1e6643ccc25858b Mon Sep 17 00:00:00 2001
+From 3d4a2fd9e5db67d6771ebd3268b05d7e461d3c74 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Tue, 21 May 2019 04:53:16 -0400
-Subject: [PATCH 099/139] terminal: do not close the master fd of pty
+Subject: [PATCH 099/140] terminal: do not close the master fd of pty
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

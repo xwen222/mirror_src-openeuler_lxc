@@ -1,7 +1,7 @@
-From 90727142a0c6ac463f79e5eb55038e88ce919c23 Mon Sep 17 00:00:00 2001
+From 42efaa5362d755d9f9bf028c283ca24bc6a03cbb Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Sat, 12 Jan 2019 15:29:56 +0800
-Subject: [PATCH 014/139] support rotate for container log file
+Subject: [PATCH 014/140] support rotate for container log file
 
 support rotate for container log file
 

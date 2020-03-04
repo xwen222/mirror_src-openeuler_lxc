@@ -1,7 +1,7 @@
-From b7771f88ab84ae04960a3d8f40bfea7093ff4cb7 Mon Sep 17 00:00:00 2001
+From 38b34aa2e20484616c40dba507f1c7a36afb56c2 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Thu, 21 Mar 2019 17:21:44 +0800
-Subject: [PATCH 070/139] lxc: signal all process for shared container when
+Subject: [PATCH 070/140] lxc: signal all process for shared container when
  container init exited
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>

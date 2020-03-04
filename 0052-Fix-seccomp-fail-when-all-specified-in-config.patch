@@ -1,7 +1,7 @@
-From d945679e11c19594e13ec8c2fbbaeb65d2f59f60 Mon Sep 17 00:00:00 2001
+From 2fbc0027a81a8ec79008afeb5298f5ec99203ea4 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Mon, 21 Jan 2019 23:28:43 -0500
-Subject: [PATCH 052/139] Fix seccomp fail when [all] specified in config
+Subject: [PATCH 052/140] Fix seccomp fail when [all] specified in config
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

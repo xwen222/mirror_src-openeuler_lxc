@@ -1,7 +1,7 @@
-From 14804433edf6c4d5732d109181f6ca1b0c19b0df Mon Sep 17 00:00:00 2001
+From 068331c965f3011f03e31b67d9791b2f81fd69b0 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Mon, 14 Jan 2019 11:03:03 +0800
-Subject: [PATCH 017/139] isulad: check cgroup cpu.shares after setted
+Subject: [PATCH 017/140] isulad: check cgroup cpu.shares after setted
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From 35caf7a1f7ea9fb577254965e834b78d46f74e23 Mon Sep 17 00:00:00 2001
+From 720f6f1c128eaac5c37153cdc30f09e4b18785aa Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 18 Dec 2019 15:44:19 +0800
-Subject: [PATCH 131/139] fix commands and terminal memory leak bug
+Subject: [PATCH 131/140] fix commands and terminal memory leak bug
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---

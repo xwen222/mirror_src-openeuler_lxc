@@ -1,7 +1,7 @@
-From f3ca7bf8732a2afce69a9ecfaf942cbfb56503c2 Mon Sep 17 00:00:00 2001
+From c315e6e595e6e5796c148c52ae18b8ba9b053e08 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Tue, 17 Dec 2019 21:24:24 +0800
-Subject: [PATCH 130/139] fix snprintf create abstract socket name bug
+Subject: [PATCH 130/140] fix snprintf create abstract socket name bug
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From d1adce7546410b4fa916c99a1807b653e6a950dd Mon Sep 17 00:00:00 2001
+From c0efbe3c3aafaad6842d8a28cd06635bbb5a566c Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 25 Apr 2019 10:12:16 +0800
-Subject: [PATCH 088/139] fix lxc build error
+Subject: [PATCH 088/140] fix lxc build error
 
 cause by invalid print format
 

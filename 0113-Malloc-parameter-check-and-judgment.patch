@@ -1,7 +1,7 @@
-From 5d86635af7e2c38a83c2611b61836ce285b8d8a3 Mon Sep 17 00:00:00 2001
+From 3b2dff6c4d17c6adeba8304f30334e93db611233 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Thu, 4 Jul 2019 12:08:17 +0800
-Subject: [PATCH 113/139] Malloc parameter check and judgment
+Subject: [PATCH 113/140] Malloc parameter check and judgment
 
 Signed-off-by: wujing <wujing50@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>

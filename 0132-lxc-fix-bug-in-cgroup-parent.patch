@@ -1,7 +1,7 @@
-From b71bd40c8f5bc8615ead8b95e142645174049757 Mon Sep 17 00:00:00 2001
+From 293ee3f82a8236de0a3b66c818b957f0a71c30d7 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
 Date: Wed, 18 Dec 2019 06:00:58 -0500
-Subject: [PATCH 132/139] lxc: fix bug in cgroup-parent
+Subject: [PATCH 132/140] lxc: fix bug in cgroup-parent
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---

@@ -1,7 +1,7 @@
-From 44dc712ff6f6ed02c4fb50829967b21497d5e3e1 Mon Sep 17 00:00:00 2001
+From 193bc24b1974e5149cf751ae9c50383b9c1a3999 Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 15 Jan 2019 20:39:11 +0800
-Subject: [PATCH 034/139] some small bugfix
+Subject: [PATCH 034/140] some small bugfix
 
 1. support new container without load config to save time
 2. try to create workdir if not exist

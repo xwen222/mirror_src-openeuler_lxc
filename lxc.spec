@@ -1,4 +1,4 @@
-%global _release 20200214
+%global _release 20200302
 %global debug_package %{nil}
 
 Name:           lxc
@@ -148,6 +148,7 @@ Patch9138:      0136-lxc-fix-retry-bug-in-cgroup.patch
 Patch9139:      0137-lxc-fix-bug-in-read-proc.patch
 Patch9140:      0138-resize-implement-resize-function-in-exec-start.patch
 Patch9141:      0139-lxc-fix-get-cgroup-path-by-config-instead-of-cmd.patch
+Patch9142:      0140-lxc-remove-umask-when-populate-devices.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -216,6 +217,7 @@ This package contains documentation for lxc for creating containers.
 %install
 %{make_install}
 mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
+mkdir -p %{buildroot}%{_datadir}/%{name}/__pycache__
 
 for file in $(find %{buildroot}/usr/bin/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
@@ -250,8 +252,10 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
 rm -rf %{buildroot}%{_libdir}/liblxc.la
 rm -rf %{buildroot}%{_sbindir}/init.%{name}.static
 rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
+rm -rf %{buildroot}%{_datadir}/%{name}/__pycache__
 %check
 make check
+rm -rf %{buildroot}%{_datadir}/%{name}/__pycache__
 
 %post
 
@@ -276,6 +280,7 @@ make check
 %{_sharedstatedir}/%{name}
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/default.conf
+%config(noreplace) %{_sysconfdir}/lxc/*
 
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/AUTHORS

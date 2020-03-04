@@ -1,7 +1,7 @@
-From d8e4fcd5e937cd4800f44e20afb6161be5671f9a Mon Sep 17 00:00:00 2001
+From 72e156f81d0db66d42724172a9d4b6fefbd6fabc Mon Sep 17 00:00:00 2001
 From: tanyifeng <tanyifeng1@huawei.com>
 Date: Tue, 12 Feb 2019 14:36:35 +0800
-Subject: [PATCH 059/139] delete unused variable ppid
+Subject: [PATCH 059/140] delete unused variable ppid
 
 Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
 Signed-off-by: LiFeng <lifeng68@huawei.com>

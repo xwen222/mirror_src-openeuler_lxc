@@ -1,7 +1,7 @@
-From d69ef31d49418d02a644c802c47f9e933fb186c3 Mon Sep 17 00:00:00 2001
+From 15e78bbe59a574b5c41405cfdb84a496095a1662 Mon Sep 17 00:00:00 2001
 From: liuhao <liuhao27@huawei.com>
 Date: Mon, 25 Mar 2019 18:03:23 +0800
-Subject: [PATCH 072/139] lxc: adapt to docker-18.09
+Subject: [PATCH 072/140] lxc: adapt to docker-18.09
 
 1. adapt to docker-18.09
 2. fix strlcpy bug
