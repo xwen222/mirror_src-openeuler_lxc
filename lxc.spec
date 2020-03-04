@@ -1,4 +1,4 @@
-%global _release 20200302
+%global _release 20200304
 %global debug_package %{nil}
 
 Name:           lxc
@@ -218,6 +218,7 @@ This package contains documentation for lxc for creating containers.
 %{make_install}
 mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
 mkdir -p %{buildroot}%{_datadir}/%{name}/__pycache__
+touch %{buildroot}%{_datadir}/%{name}/__pycache__/%{name}
 
 for file in $(find %{buildroot}/usr/bin/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
@@ -252,10 +253,8 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
 rm -rf %{buildroot}%{_libdir}/liblxc.la
 rm -rf %{buildroot}%{_sbindir}/init.%{name}.static
 rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
-rm -rf %{buildroot}%{_datadir}/%{name}/__pycache__
 %check
 make check
-rm -rf %{buildroot}%{_datadir}/%{name}/__pycache__
 
 %post
 
@@ -303,6 +302,9 @@ rm -rf %{buildroot}%{_datadir}/%{name}/__pycache__
 %{_datadir}/%{name}/templates/lxc-*
 %dir %{_datadir}/%{name}/config
 %{_datadir}/%{name}/config/*
+%dir %{_datadir}/%{name}/__pycache__
+%{_datadir}/%{name}/__pycache__/*
+
 
 %files help
 %dir %{_pkgdocdir}
