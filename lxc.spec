@@ -1,4 +1,4 @@
-%global _release 20200304
+%global _release 2020031001
 %global debug_package %{nil}
 
 Name:           lxc
@@ -317,6 +317,8 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Mar 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-2020031001
+- Correct release field
 * Thu Feb 14 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-20200214
 - make lxc-libs package
 * Thu Dec 19 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-20191218
