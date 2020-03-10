@@ -1,4 +1,4 @@
-%global _release 2020031001
+%global _release 2020031002
 %global debug_package %{nil}
 
 Name:           lxc
@@ -249,6 +249,12 @@ cp -a doc/api/html/* %{buildroot}%{_pkgdocdir}/api/
 # cache dir
 mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
 
+if [ ! -d %{buildroot}%{_sysconfdir}/sysconfig ]
+then
+    mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
+    touch %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+fi
+
 # remove libtool .la file
 rm -rf %{buildroot}%{_libdir}/liblxc.la
 rm -rf %{buildroot}%{_sbindir}/init.%{name}.static
@@ -280,6 +286,7 @@ make check
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/default.conf
 %config(noreplace) %{_sysconfdir}/lxc/*
+%config(noreplace) %{_sysconfdir}/sysconfig/*
 
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/AUTHORS
@@ -317,6 +324,8 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Mar 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-2020031002
+- add /etc/sysconfig/
 * Tue Mar 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-2020031001
 - Correct release field
 * Thu Feb 14 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-20200214
