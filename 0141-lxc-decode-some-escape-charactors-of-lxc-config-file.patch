@@ -1,0 +1,97 @@
+From a6fd611c354ba62320661ad4eef4dd822423fcb6 Mon Sep 17 00:00:00 2001
+From: gaohuatao <gaohuatao@huawei.com>
+Date: Wed, 1 Apr 2020 06:53:27 -0400
+Subject: [PATCH 141/142] lxc: decode some escape charactors of lxc config file
+ string
+
+Signed-off-by: gaohuatao <gaohuatao@huawei.com>
+---
+ src/lxc/confile.c | 55 +++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 53 insertions(+), 2 deletions(-)
+
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 3eaae4a9..747ccec7 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -2443,6 +2443,52 @@ struct parse_line_conf {
+ 	bool from_include;
+ };
+ 
++// escape_string_decode compress some escape characters
++static char *escape_string_decode(const char *src)
++{
++	size_t src_end = 0;
++	size_t dst_end = 0;
++	size_t len = 0;
++	char *dst = NULL;
++	
++	if (src == NULL) {
++		return NULL;
++	}
++
++	len = strlen(src);
++	if (len == 0) {
++		return NULL;
++	}
++	
++	dst = calloc(1, len + 1);
++	if (dst == NULL) {
++		ERROR("Out of memory");
++		return NULL;
++	}
++	
++	while(src_end < len) {
++		if (src[src_end] == '\\') {
++			switch (src[++src_end])
++			{
++				case 'r': dst[dst_end] = '\r'; break;
++				case 'n': dst[dst_end] = '\n'; break;
++				case 'f': dst[dst_end] = '\f'; break;
++				case 'b': dst[dst_end] = '\b'; break;
++				case 't': dst[dst_end] = '\t'; break;
++				case '\\': dst[dst_end] = '\\'; break;
++				// default do not decode
++				default: dst[dst_end++] = '\\'; dst[dst_end] = src[src_end]; break;
++			}
++		} else {
++			dst[dst_end] = src[src_end];	
++		}
++		dst_end++;
++		src_end++;
++	}
++	
++	return dst;
++}
++
+ static int parse_line(char *buffer, void *data)
+ {
+ 	char *dot, *key, *line, *linep, *value;
+@@ -2451,6 +2497,7 @@ static int parse_line(char *buffer, void *data)
+ 	int ret = 0;
+ 	char *dup = buffer;
+ 	struct parse_line_conf *plc = data;
++	char *value_decode = NULL;
+ 
+ 	/* If there are newlines in the config file we should keep them. */
+ 	empty_line = lxc_is_line_empty(dup);
+@@ -2517,11 +2564,15 @@ static int parse_line(char *buffer, void *data)
+ 		goto on_error;
+ 	}
+ 
+-	ret = config->set(key, value, plc->conf, NULL);
++	value_decode = escape_string_decode(value);
++	if (value_decode == NULL) {
++		ERROR("Value %s decode failed", value);
++	}
++	ret = config->set(key, value_decode ? value_decode: value, plc->conf, NULL);
+ 
+ on_error:
+ 	free(linep);
+-
++	free(value_decode);
+ 	return ret;
+ }
+ 
+-- 
+2.19.1
+

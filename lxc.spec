@@ -1,4 +1,4 @@
-%global _release 2020031002
+%global _release 2020040201
 %global debug_package %{nil}
 
 Name:           lxc
@@ -149,6 +149,8 @@ Patch9139:      0137-lxc-fix-bug-in-read-proc.patch
 Patch9140:      0138-resize-implement-resize-function-in-exec-start.patch
 Patch9141:      0139-lxc-fix-get-cgroup-path-by-config-instead-of-cmd.patch
 Patch9142:      0140-lxc-remove-umask-when-populate-devices.patch
+Patch9143:      0141-lxc-decode-some-escape-charactors-of-lxc-config-file.patch
+Patch9144:      0142-lxc-fix-non-root-user-cannot-write-dev-stdout.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
