@@ -151,6 +151,7 @@ Patch9141:      0139-lxc-fix-get-cgroup-path-by-config-instead-of-cmd.patch
 Patch9142:      0140-lxc-remove-umask-when-populate-devices.patch
 Patch9143:      0141-lxc-decode-some-escape-charactors-of-lxc-config-file.patch
 Patch9144:      0142-lxc-fix-non-root-user-cannot-write-dev-stdout.patch
+Patch9145:      0143-Support-syslog-for-console-log.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
