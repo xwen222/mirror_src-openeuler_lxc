@@ -1,4 +1,4 @@
-%global _release 2020040201
+%global _release 2020040801
 %global debug_package %{nil}
 
 Name:           lxc
@@ -7,7 +7,7 @@ Release:        %{_release}
 Summary:        Linux Containers userspace tools
 License:        LGPLv2+
 URL:            http://linuxcontainers.org
-Source0:        http://linuxcontainers.org/downloads/lxc-3.0.3.tar.gz
+Source0:        lxc-3.0.3.tar.gz
 Patch6000:      lxc-CVE-2019-5736-runC-rexec-callers-as-memfd.patch
 Patch9003:      0001-confile-add-lxc.isulad.init.args-config-interface.patch
 Patch9004:      0002-namespace-add-support-share-namespace-by-path.patch
@@ -327,6 +327,8 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Apr 08 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-2020040801
+- fix source0
 * Tue Mar 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-2020031002
 - add /etc/sysconfig/
 * Tue Mar 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.0.3-2020031001
