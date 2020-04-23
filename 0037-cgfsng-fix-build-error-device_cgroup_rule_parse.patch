@@ -1,0 +1,35 @@
+From 5f8d8bb11c42fbf6bca39438530db88729e50f5e Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 16 Apr 2020 11:12:28 +0800
+Subject: [PATCH 37/49] cgfsng: fix build error device_cgroup_rule_parse
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 1047c08..76576c5 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -3043,8 +3043,7 @@ static int device_cgroup_parse_access(struct device_item *device, const char *va
+ 	return 0;
+ }
+ 
+-#ifndef HAVE_ISULAD
+-static int device_cgroup_rule_parse(struct device_item *device, const char *key,
++int device_cgroup_rule_parse(struct device_item *device, const char *key,
+ 				    const char *val)
+ {
+ 	int count, ret;
+@@ -3130,7 +3129,6 @@ static int device_cgroup_rule_parse(struct device_item *device, const char *key,
+ 
+ 	return device_cgroup_parse_access(device, ++val);
+ }
+-#endif
+ 
+ #ifdef HAVE_ISULAD
+ __cgfsng_ops static int cgfsng_set(struct cgroup_ops *ops,
+-- 
+1.8.3.1
+

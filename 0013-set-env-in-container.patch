@@ -1,0 +1,143 @@
+From 01d666e795a2cce1d4968202a38c73e673c42e88 Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Mon, 13 Apr 2020 07:04:20 -0400
+Subject: [PATCH 13/49] set env in container
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ src/lxc/attach.c          |  7 +++++++
+ src/lxc/start.c           |  7 +++++++
+ src/lxc/tools/lxc_start.c |  4 ++--
+ src/lxc/utils.c           | 39 +++++++++++++++++++++++++++++++++++++++
+ src/lxc/utils.h           |  2 ++
+ 5 files changed, 57 insertions(+), 2 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 78b4700..801dc27 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -779,6 +779,13 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 	else
+ 		new_gid = ns_root_gid;
+ 
++#ifdef HAVE_ISULAD
++	// isulad: set env home in container
++	if (lxc_setup_env_home(new_uid) < 0) {
++		goto on_error;
++	}
++#endif
++
+ 	if ((init_ctx->container && init_ctx->container->lxc_conf &&
+ 	     init_ctx->container->lxc_conf->no_new_privs) ||
+ 	    (options->attach_flags & LXC_ATTACH_NO_NEW_PRIVS)) {
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 70e8282..17766bc 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1381,6 +1381,13 @@ static int do_start(void *data)
+ 	if (new_gid == nsgid)
+ 		new_gid = LXC_INVALID_GID;
+ 
++#ifdef HAVE_ISULAD
++	// isulad: set env home in container
++	if (lxc_setup_env_home(new_uid) < 0) {
++		goto out_warn_father;
++	}
++#endif
++
+ 	/* Make sure that the processes STDIO is correctly owned by the user that we are switching to */
+ 	ret = fix_stdio_permissions(new_uid);
+ 	if (ret)
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 11ff15b..76802df6 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -139,7 +139,7 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 		break;
+ 	case OPT_STDERR_FIFO:
+ 		args->terminal_fifos[2] = arg;
+-                break;
++		break;
+ 	case OPT_EXIT_FIFO:
+ 		args->exit_monitor_fifo = arg;
+ 		break;
+@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
+ 
+ 	if (my_args.terminal_fifos[0] || my_args.terminal_fifos[1] || my_args.terminal_fifos[2]) {
+ 		c->set_terminal_init_fifos(c, my_args.terminal_fifos[0], my_args.terminal_fifos[1], my_args.terminal_fifos[2]);
+-        }
++	}
+ 
+ 	/* isulad: fifo used to monitor state of monitor process */
+ 	if (my_args.exit_monitor_fifo != NULL) {
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 90113e0..5b04fa4 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -28,6 +28,7 @@
+ #include <sys/wait.h>
+ #include <unistd.h>
+ #include <sys/sysmacros.h>
++#include <pwd.h>
+ 
+ #include "config.h"
+ #include "log.h"
+@@ -2079,4 +2080,42 @@ out:
+     free(pid_info);
+     return startat;
+ }
++
++// isulad: set env home in container
++int lxc_setup_env_home(uid_t uid)
++{
++#define __PASSWD_FILE__ "/etc/passwd"
++	char *homedir = "/"; // default home dir is /
++	FILE *stream = NULL;
++	struct passwd pw, *pwbufp = NULL;
++	char buf[BUFSIZ];
++
++	stream = fopen_cloexec(__PASSWD_FILE__, "r");
++	if (stream == NULL) {
++		SYSWARN("Failed to open %s", __PASSWD_FILE__);
++		goto set_env;
++	}
++
++	while (fgetpwent_r(stream, &pw, buf, sizeof(buf), &pwbufp) == 0 && pwbufp != NULL) {
++		if (pwbufp->pw_uid == uid) {
++			homedir = pwbufp->pw_dir;
++			goto set_env;
++		}
++	}
++	WARN("User invalid, can not find user '%u'", uid);
++
++set_env:
++	if (stream)
++		fclose(stream);
++
++	// if we didn't configure HOME, set it based on uid
++	if (setenv("HOME", homedir, 0) < 0) {
++		SYSERROR("Unable to set env 'HOME'");
++		return -1;
++	}
++
++	NOTICE("Setted env 'HOME' to %s", homedir);
++	return 0;
++}
++
+ #endif
+diff --git a/src/lxc/utils.h b/src/lxc/utils.h
+index fbb0d55..677f632 100644
+--- a/src/lxc/utils.h
++++ b/src/lxc/utils.h
+@@ -316,6 +316,8 @@ extern int fix_stdio_permissions(uid_t uid);
+ extern void lxc_write_error_message(int errfd, const char *format, ...);
+ extern int lxc_file2str(const char *filename, char ret[], int cap);
+ extern int unsigned long long lxc_get_process_startat(pid_t pid);
++// set env home in container
++extern int lxc_setup_env_home(uid_t uid);
+ #endif
+ 
+ #endif /* __LXC_UTILS_H */
+-- 
+1.8.3.1
+

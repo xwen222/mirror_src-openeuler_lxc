@@ -1,0 +1,40 @@
+From 52b97324185142285f78143509244d88c6962826 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Tue, 14 Apr 2020 17:38:44 +0800
+Subject: [PATCH 24/49] start: do not check ppid when set death signal
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/utils.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 5b04fa4..27078e2 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -1734,11 +1734,14 @@ static int process_dead(/* takes */ int status_fd)
+ int lxc_set_death_signal(int signal, pid_t parent, int parent_status_fd)
+ {
+ 	int ret;
++#ifndef HAVE_ISULAD
+ 	pid_t ppid;
++#endif
+ 
+ 	ret = prctl(PR_SET_PDEATHSIG, prctl_arg(signal), prctl_arg(0),
+ 		    prctl_arg(0), prctl_arg(0));
+ 
++#ifndef HAVE_ISULAD
+ 	/* verify that we haven't been orphaned in the meantime */
+ 	ppid = (pid_t)syscall(SYS_getppid);
+ 	if (ppid == 0) { /* parent outside our pidns */
+@@ -1750,6 +1753,7 @@ int lxc_set_death_signal(int signal, pid_t parent, int parent_status_fd)
+ 	} else if (ppid != parent) {
+ 		return raise(SIGKILL);
+ 	}
++#endif
+ 
+ 	if (ret < 0)
+ 		return -1;
+-- 
+1.8.3.1
+

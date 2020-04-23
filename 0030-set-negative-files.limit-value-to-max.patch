@@ -1,0 +1,71 @@
+From eef7e463b7d4bebc305d65c35288c9fab6a5486f Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Wed, 15 Apr 2020 05:45:49 -0400
+Subject: [PATCH 30/49] set negative files.limit value to max
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c  | 19 +++++++++++++++----
+ src/lxc/storage/storage.c |  8 +++++++-
+ 2 files changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 00270ab..b6aef12 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -3481,16 +3481,27 @@ __cgfsng_ops static bool cgfsng_setup_limits_legacy(struct cgroup_ops *ops,
+ 		cg = iterator->elem;
+ 
+ 		if (do_devices == !strncmp("devices", cg->subsystem, 7)) {
+-			if (isulad_cg_legacy_set_data(ops, cg->subsystem, cg->value)) {
++			const char *cgvalue = cg->value;
++			if (strcmp(cg->subsystem, "files.limit") == 0) {
++				if (lxc_safe_long_long(cgvalue, &setvalue) != 0) {
++					SYSERROR("Invalid integer value %s", cgvalue);
++					goto out;
++				}
++				if (setvalue <= 0) {
++					cgvalue = "max";
++				}
++			}
++			if (isulad_cg_legacy_set_data(ops, cg->subsystem, cgvalue)) {
+ 				if (do_devices && (errno == EACCES || errno == EPERM)) {
+-					SYSWARN("Failed to set \"%s\" to \"%s\"", cg->subsystem, cg->value);
++					SYSWARN("Failed to set \"%s\" to \"%s\"", cg->subsystem, cgvalue);
+ 					continue;
+ 				}
+-				SYSERROR("Failed to set \"%s\" to \"%s\"", cg->subsystem, cg->value);
++				SYSERROR("Failed to set \"%s\" to \"%s\"", cg->subsystem, cgvalue);
+ 				goto out;
+ 			}
+-			DEBUG("Set controller \"%s\" set to \"%s\"", cg->subsystem, cg->value);
++			DEBUG("Set controller \"%s\" set to \"%s\"", cg->subsystem, cgvalue);
+ 		}
++
+ 		// isulad: check cpu shares
+ 		if (strcmp(cg->subsystem, "cpu.shares") == 0) {
+ 			if (isulad_cg_legacy_get_data(ops, cg->subsystem, value, sizeof(value) - 1) < 0) {
+diff --git a/src/lxc/storage/storage.c b/src/lxc/storage/storage.c
+index 876311a..5291b24 100644
+--- a/src/lxc/storage/storage.c
++++ b/src/lxc/storage/storage.c
+@@ -591,9 +591,15 @@ bool storage_destroy(struct lxc_conf *conf)
+ 	int destroy_rv = 0;
+ 
+ 	r = storage_init(conf);
++#ifdef HAVE_ISULAD
++	if (r == NULL) {
++		WARN("%s 's storage init failed, the storage may be deleted already", conf->name);
++		return true;
++	}
++#else
+ 	if (!r)
+ 		return ret;
+-
++#endif
+ 	destroy_rv = r->ops->destroy(r);
+ 	if (destroy_rv == 0)
+ 		ret = true;
+-- 
+1.8.3.1
+

@@ -1,0 +1,34 @@
+From a2097f947d40ff2da0b6ab47dbbc90a349ed33b9 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 23 Apr 2020 11:05:37 +0800
+Subject: [PATCH] attach: add read data from attach sigfd
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index b25222e..068cc5f 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -1203,8 +1203,16 @@ static int attach_signal_handler(int fd, uint32_t events, void *data,
+ {
+ 	int ret;
+ 	siginfo_t info;
++	struct signalfd_siginfo siginfo;
+ 	pid_t *pid = data;
+ 
++	ret = lxc_read_nointr(fd, &siginfo, sizeof(siginfo));
++	if (ret < 0)
++		return log_error(LXC_MAINLOOP_ERROR, "Failed to read signal info from signal file descriptor %d", fd);
++
++	if (ret != sizeof(siginfo))
++		return log_error(LXC_MAINLOOP_ERROR, "Unexpected size for struct signalfd_siginfo");
++
+ 	/* Check whether init is running. */
+ 	info.si_pid = 0;
+ 	ret = waitid(P_PID, *pid, &info, WEXITED | WNOWAIT | WNOHANG);
+-- 
+1.8.3.1
+

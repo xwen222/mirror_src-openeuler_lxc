@@ -1,0 +1,306 @@
+From 61bfa0ce515288897b93640507e48f09f0d78010 Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Tue, 14 Apr 2020 23:17:04 -0400
+Subject: [PATCH 26/49] Supporting UID GID configuration
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ src/lxc/attach.c           | 16 ++++++++
+ src/lxc/conf.c             | 19 ++++++++-
+ src/lxc/conf.h             |  4 ++
+ src/lxc/start.c            |  8 ++++
+ src/lxc/tools/lxc_attach.c | 99 +++++++++++++++++++++++++++++++++++++++++++---
+ 5 files changed, 139 insertions(+), 7 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 33946bb..c77b929 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -749,8 +749,10 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 			goto on_error;
+ 	}
+ 
++#ifndef HAVE_ISULAD
+ 	if (!lxc_setgroups(0, NULL) && errno != EPERM)
+ 		goto on_error;
++#endif
+ 
+ 	if (options->namespaces & CLONE_NEWUSER) {
+ 		/* Check whether nsuid 0 has a mapping. */
+@@ -892,6 +894,12 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 	if (new_gid == ns_root_gid)
+ 		new_gid = LXC_INVALID_GID;
+ 
++#ifdef HAVE_ISULAD
++	if (!lxc_setgroups(init_ctx->container->lxc_conf->init_groups_len,
++			init_ctx->container->lxc_conf->init_groups))
++		goto on_error;
++#endif
++
+ 	/* Make sure that the processes STDIO is correctly owned by the user that we are switching to */
+ 	ret = fix_stdio_permissions(new_uid);
+ 	if (ret)
+@@ -1058,6 +1066,14 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 	}
+ 	conf = init_ctx->container->lxc_conf;
+ 
++#ifdef HAVE_ISULAD
++	// always switch uid and gid for attach
++	if (options->uid == -1)
++		options->uid = init_ctx->container->lxc_conf->init_uid;
++	if (options->gid == -1)
++		options->gid = init_ctx->container->lxc_conf->init_gid;
++#endif
++
+ 	if (!fetch_seccomp(init_ctx->container, options))
+ 		WARN("Failed to get seccomp policy");
+ 
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 71fd6f9..43ef067 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -5100,6 +5100,7 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 		close(conf->exit_fd);
+ 	}
+ 	lxc_clear_init_args(conf);
++	lxc_clear_init_groups(conf);
+ 	lxc_clear_populate_devices(conf);
+ 	lxc_clear_rootfs_masked_paths(conf);
+ 	lxc_clear_rootfs_ro_paths(conf);
+@@ -5919,11 +5920,25 @@ struct lxc_list *sort_cgroup_settings(struct lxc_list *cgroup_settings)
+ /*isulad clear init args*/
+ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
+ {
+-	size_t i;
++	int i;
+ 
+-	for (i = 0; i < lxc_conf->init_argc; i++)
++	for (i = 0; i < lxc_conf->init_argc; i++) {
+ 		free(lxc_conf->init_argv[i]);
++		lxc_conf->init_argv[i] = NULL;
++	}
+ 	free(lxc_conf->init_argv);
++	lxc_conf->init_argv = NULL;
++	lxc_conf->init_argc = 0;
++
++	return 0;
++}
++
++/*isulad clear init groups*/
++int lxc_clear_init_groups(struct lxc_conf *lxc_conf)
++{
++	free(lxc_conf->init_groups);
++	lxc_conf->init_groups = NULL;
++	lxc_conf->init_groups_len = 0;
+ 
+ 	return 0;
+ }
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index 61c3383..879e427 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -451,6 +451,9 @@ struct lxc_conf {
+ 	char **init_argv;
+ 	size_t init_argc;
+ 
++	gid_t *init_groups;
++	size_t init_groups_len;
++
+ 	/* populate devices*/
+ 	struct lxc_list populate_devs;
+ 	mode_t umask;  //umask value
+@@ -548,6 +551,7 @@ extern int parse_mntopts(const char *mntopts, unsigned long *mntflags,
+ #ifdef HAVE_ISULAD
+ // isulad add
+ int lxc_clear_init_args(struct lxc_conf *lxc_conf);
++int lxc_clear_init_groups(struct lxc_conf *lxc_conf);
+ int lxc_clear_populate_devices(struct lxc_conf *c);
+ int lxc_clear_rootfs_masked_paths(struct lxc_conf *c);
+ int lxc_clear_rootfs_ro_paths(struct lxc_conf *c);
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 4f45776..e2311ec 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1685,8 +1685,16 @@ static int do_start(void *data)
+ 		#if HAVE_LIBCAP
+ 		if (lxc_proc_cap_is_set(CAP_SETGID, CAP_EFFECTIVE))
+ 		#endif
++		#ifdef HAVE_ISULAD
++			/* isulad: set groups for init process, and before we set uid and gid */
++			if (!lxc_setgroups(handler->conf->init_groups_len, handler->conf->init_groups)) {
++				ERROR("Can not set groups");
++				goto out_warn_father;
++				}
++		#else
+ 			if (!lxc_setgroups(0, NULL))
+ 				goto out_warn_father;
++		#endif
+ 
+ 	if (!lxc_switch_uid_gid(new_uid, new_gid))
+ 		goto out_warn_father;
+diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
+index 47ac2f2..b068c9a 100644
+--- a/src/lxc/tools/lxc_attach.c
++++ b/src/lxc/tools/lxc_attach.c
+@@ -72,9 +72,11 @@ static const struct option my_longopts[] = {
+ 	{"set-var", required_argument, 0, 'v'},
+ 	{"pty-log", required_argument, 0, 'L'},
+ 	{"rcfile", required_argument, 0, 'f'},
++#ifndef HAVE_ISULAD
+ 	{"uid", required_argument, 0, 'u'},
+ 	{"gid", required_argument, 0, 'g'},
+-#ifdef HAVE_ISULAD
++#else
++	{"user", required_argument, 0, 'u'},
+ 	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO}, /* isulad add terminal fifos*/
+ 	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
+ 	{"err-fifo", required_argument, 0, OPT_STDERR_FIFO},
+@@ -130,9 +132,18 @@ Options :\n\
+                     multiple times.\n\
+   -f, --rcfile=FILE\n\
+                     Load configuration file FILE\n\
++"
++#ifndef HAVE_ISULAD
++"\
+   -u, --uid=UID     Execute COMMAND with UID inside the container\n\
+   -g, --gid=GID     Execute COMMAND with GID inside the container\n\
+-",
++"
++#else
++"\
++  --user        User ID (format: UID[:GID])\n\
++"
++#endif
++,
+ 	.options      = my_longopts,
+ 	.parser       = my_parser,
+ 	.checker      = NULL,
+@@ -142,6 +153,71 @@ Options :\n\
+ 	.gid          = LXC_INVALID_GID,
+ };
+ 
++#ifdef HAVE_ISULAD
++static int parse_user_id(const char *username, char **uid, char **gid, char **tmp_dup)
++{
++	char *tmp = NULL;
++	char *pdot = NULL;
++
++	if (uid == NULL || gid == NULL || tmp_dup == NULL) {
++		return -1;
++	}
++
++	if (username != NULL) {
++		tmp = strdup(username);
++		if (tmp == NULL) {
++			ERROR("Failed to duplicate user name");
++			return -1;
++		}
++
++		// for free tmp in caller
++		*tmp_dup = tmp;
++		pdot = strstr(tmp, ":");
++		if (pdot != NULL) {
++			*pdot = '\0';
++			if (pdot != tmp) {
++				// uid found
++				*uid = tmp;
++			}
++
++			if (*(pdot + 1) != '\0') {
++				// gid found
++				*gid = pdot + 1;
++			}
++		} else {
++			// No : found
++			if (*tmp != '\0') {
++				*uid = tmp;
++			}
++		}
++	}
++
++	return 0;
++}
++
++static int get_attach_uid_gid(const char *username, uid_t *user_id, gid_t *group_id)
++{
++	char *tmp = NULL;
++	char *uid = NULL;
++	char *gid = NULL;
++
++	// parse uid and gid by username
++	if (parse_user_id(username, &uid, &gid, &tmp) != 0) {
++		return -1;
++	}
++
++	if (uid != NULL) {
++		*user_id = (unsigned int)atoll(uid);
++	}
++	if (gid != NULL) {
++		*group_id = (unsigned int)atoll(gid);
++	}
++
++	free(tmp);
++	return 0;
++}
++#endif
++
+ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ {
+ 	int ret;
+@@ -199,6 +275,7 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case 'f':
+ 		args->rcfile = arg;
+ 		break;
++#ifndef HAVE_ISULAD
+ 	case 'u':
+ 		if (lxc_safe_uint(arg, &args->uid) < 0)
+ 			return -1;
+@@ -207,7 +284,13 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 		if (lxc_safe_uint(arg, &args->gid) < 0)
+ 			return -1;
+ 		break;
+-#ifdef HAVE_ISULAD
++#else
++	case 'u':
++		if (get_attach_uid_gid(arg, &args->uid, &args->gid) != 0) {
++			ERROR("Failed to get attach user U/GID");
++			return -1;
++		}
++		break;
+ 	case OPT_INPUT_FIFO:
+ 		args->terminal_fifos[0] = arg;
+ 		break;
+@@ -286,7 +369,7 @@ static int lxc_attach_create_log_file(const char *log_file)
+ 
+ #ifdef HAVE_ISULAD
+ // isulad: send '128 + signal' if container is killed by signal.
+-#define ExitSignalOffset 128
++#define EXIT_SIGNAL_OFFSET 128
+ 
+ /*isulad: attach with terminal*/
+ static int do_attach_foreground(struct lxc_container *c, lxc_attach_command_t *command,
+@@ -316,7 +399,7 @@ static int do_attach_foreground(struct lxc_container *c, lxc_attach_command_t *c
+ 
+ 	if (WIFSIGNALED(ret)) {
+ 		signal = WTERMSIG(ret);
+-		wexit = ExitSignalOffset + signal;
++		wexit = EXIT_SIGNAL_OFFSET + signal;
+ 	}
+ out:
+ 	if (c->lxc_conf->errmsg)
+@@ -515,6 +598,12 @@ int main(int argc, char *argv[])
+ 		}
+ 	}
+ 
++	if (my_args.uid != LXC_INVALID_UID)
++		attach_options.uid = my_args.uid;
++
++	if (my_args.gid != LXC_INVALID_GID)
++		attach_options.gid = my_args.gid;
++
+ 	attach_options.suffix = my_args.suffix;
+ 
+ 	/* isulad: add do attach background */
+-- 
+1.8.3.1
+

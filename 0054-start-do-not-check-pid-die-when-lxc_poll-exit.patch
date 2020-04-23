@@ -1,0 +1,31 @@
+From d5558ec70cbc4949d0a411ec32278201fdc189db Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Wed, 22 Apr 2020 11:14:22 +0800
+Subject: [PATCH] start: do not check pid die when lxc_poll exit
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/start.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 68a6116..51d1325 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -2595,11 +2595,13 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
+ 		goto out_delete_network;
+ 	}
+ 
++#ifndef HAVE_ISULAD
+ 	if (!handler->init_died && handler->pid > 0) {
+ 		ERROR("Child process is not killed");
+ 		ret = -1;
+ 		goto out_delete_network;
+ 	}
++#endif
+ 
+ 	status = lxc_wait_for_pid_status(handler->pid);
+ 	if (status < 0)
+-- 
+1.8.3.1
+

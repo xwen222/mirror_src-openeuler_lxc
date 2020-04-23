@@ -1,0 +1,452 @@
+From 61b64be9ac4e5d46e9363bb605c7b2e14d0cd2a2 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 13 Apr 2020 20:41:03 +0800
+Subject: [PATCH 14/49] exec: refact attach progress
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c           |   2 +-
+ src/lxc/attach_options.h   |  23 +++-
+ src/lxc/conf.h             |   2 +
+ src/lxc/terminal.c         |  27 ++++-
+ src/lxc/tools/arguments.h  |   1 +
+ src/lxc/tools/lxc_attach.c | 273 +++++++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 324 insertions(+), 4 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 801dc27..e66ca1c 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -1420,7 +1420,7 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 	}
+ 
+ 	if (pid == 0) {
+-		if (options->attach_flags & LXC_ATTACH_TERMINAL) {
++		if (options->attach_flags & LXC_ATTACH_TERMINAL && terminal.tty_state) {
+ 			ret = pthread_sigmask(SIG_SETMASK,
+ 					      &terminal.tty_state->oldmask, NULL);
+ 			if (ret < 0) {
+diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
+index 3a02ee5..7b0ea5e 100644
+--- a/src/lxc/attach_options.h
++++ b/src/lxc/attach_options.h
+@@ -116,10 +116,12 @@ typedef struct lxc_attach_options_t {
+ #ifdef HAVE_ISULAD
+ 	char *init_fifo[3]; /* isulad: default fifos for the start */
+ 	int64_t timeout;/* isulad: Seconds for waiting on a container to attach/exec before it is killed*/
++	const char *suffix;
+ #endif
+ 
+ } lxc_attach_options_t;
+ 
++#ifdef HAVE_ISULAD
+ /*! Default attach options to use */
+ #define LXC_ATTACH_OPTIONS_DEFAULT                                             \
+ 	{                                                                      \
+@@ -136,8 +138,27 @@ typedef struct lxc_attach_options_t {
+ 		/* .stdout_fd = */      1,                                     \
+ 		/* .stderr_fd = */      2,                                     \
+ 		/* .log_fd    = */      -EBADF,                                \
++		/* .init_fifo = */  	{NULL, NULL, NULL},                    \
+ 	}
+-
++#else
++/*! Default attach options to use */
++#define LXC_ATTACH_OPTIONS_DEFAULT                                             \
++	{                                                                      \
++		/* .attach_flags = */   LXC_ATTACH_DEFAULT,                    \
++		/* .namespaces = */     -1,                                    \
++		/* .personality = */    -1,                                    \
++		/* .initial_cwd = */    NULL,                                  \
++		/* .uid = */            (uid_t)-1,                             \
++		/* .gid = */            (gid_t)-1,                             \
++		/* .env_policy = */     LXC_ATTACH_KEEP_ENV,                   \
++		/* .extra_env_vars = */ NULL,                                  \
++		/* .extra_keep_env = */ NULL,                                  \
++		/* .stdin_fd = */       0,                                     \
++		/* .stdout_fd = */      1,                                     \
++		/* .stderr_fd = */      2,                                     \
++		/* .log_fd    = */      -EBADF,                                \
++	}
++#endif
+ /*!
+  * Representation of a command to run in a container.
+  */
+diff --git a/src/lxc/conf.h b/src/lxc/conf.h
+index c5b70e1..52460a3 100644
+--- a/src/lxc/conf.h
++++ b/src/lxc/conf.h
+@@ -432,6 +432,8 @@ struct lxc_conf {
+ 	char *container_info_file;
+ 
+ 	int exit_fd; /* exit fifo fd*/
++
++	char *errmsg; /* record error messages */
+ #endif
+ 
+ };
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index c8cd83f..775743d 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -1174,8 +1174,25 @@ static int lxc_terminal_peer_default(struct lxc_terminal *terminal)
+ 
+ 	if (terminal->path)
+ 		path = terminal->path;
+-	else
+-		path = "/dev/tty";
++
++#ifdef HAVE_ISULAD
++	/* isulad: if no console was given, try current controlling terminal, there
++	 * won't be one if we were started as a daemon (-d)
++	 */
++	if (!path && !access("/dev/tty", F_OK)) {
++		int fd;
++		fd = open("/dev/tty", O_RDWR);
++		if (fd >= 0) {
++			close(fd);
++			path = "/dev/tty";
++		}
++	}
++
++	if (!path) {
++		DEBUG("Not have a controlling terminal");
++		return 0;
++	}
++#endif
+ 
+ 	terminal->peer = lxc_unpriv(open(path, O_RDWR | O_CLOEXEC));
+ 	if (terminal->peer < 0) {
+@@ -1884,9 +1901,15 @@ int lxc_terminal_prepare_login(int fd)
+ 	if (ret < 0)
+ 		return -1;
+ 
++#ifdef HAVE_ISULAD
++	ret = set_stdfds(fd);
++	if (ret < 0)
++		return -1;
++#else
+ 	ret = lxc_terminal_set_stdfds(fd);
+ 	if (ret < 0)
+ 		return -1;
++#endif
+ 
+ 	if (fd > STDERR_FILENO)
+ 		close(fd);
+diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
+index ea5f938..e0866d6 100644
+--- a/src/lxc/tools/arguments.h
++++ b/src/lxc/tools/arguments.h
+@@ -44,6 +44,7 @@ struct lxc_arguments {
+ 	const char *container_info; /* isulad: file used to store pid and ppid info of container */
+ 	char *terminal_fifos[3]; /* isulad add, fifos used to redirct stdin/out/err */
+ 	const char *exit_monitor_fifo; /* isulad: fifo used to monitor state of monitor process */
++	const char *suffix; /* isulad add, suffix used for connect with parent of execed process*/
+ #endif
+ 
+ 	/* for lxc-console */
+diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
+index a8f493a..47ac2f2 100644
+--- a/src/lxc/tools/lxc_attach.c
++++ b/src/lxc/tools/lxc_attach.c
+@@ -74,6 +74,12 @@ static const struct option my_longopts[] = {
+ 	{"rcfile", required_argument, 0, 'f'},
+ 	{"uid", required_argument, 0, 'u'},
+ 	{"gid", required_argument, 0, 'g'},
++#ifdef HAVE_ISULAD
++	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO}, /* isulad add terminal fifos*/
++	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
++	{"err-fifo", required_argument, 0, OPT_STDERR_FIFO},
++	{"suffix", required_argument, 0, OPT_ATTACH_SUFFIX},
++#endif
+ 	LXC_COMMON_OPTIONS
+ };
+ 
+@@ -201,6 +207,20 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 		if (lxc_safe_uint(arg, &args->gid) < 0)
+ 			return -1;
+ 		break;
++#ifdef HAVE_ISULAD
++	case OPT_INPUT_FIFO:
++		args->terminal_fifos[0] = arg;
++		break;
++	case OPT_OUTPUT_FIFO:
++		args->terminal_fifos[1] = arg;
++		break;
++	case OPT_STDERR_FIFO:
++		args->terminal_fifos[2] = arg;
++		break;
++	case OPT_ATTACH_SUFFIX:
++		args->suffix = arg;
++		break;
++#endif
+ 	}
+ 
+ 	return 0;
+@@ -264,6 +284,258 @@ static int lxc_attach_create_log_file(const char *log_file)
+ 	return fd;
+ }
+ 
++#ifdef HAVE_ISULAD
++// isulad: send '128 + signal' if container is killed by signal.
++#define ExitSignalOffset 128
++
++/*isulad: attach with terminal*/
++static int do_attach_foreground(struct lxc_container *c, lxc_attach_command_t *command,
++				lxc_attach_options_t *attach_options,
++				char **errmsg)
++{
++	int ret = 0;
++	pid_t pid;
++	int wexit = -1;
++	int signal;
++
++	if (command->program)
++		ret = c->attach(c, lxc_attach_run_command, command, attach_options, &pid);
++	else
++		ret = c->attach(c, lxc_attach_run_shell, NULL, attach_options, &pid);
++	if (ret < 0)
++		goto out;
++
++	ret = lxc_wait_for_pid_status(pid);
++	if (ret < 0)
++		goto out;
++
++	if (WIFEXITED(ret))
++		wexit = WEXITSTATUS(ret);
++	else
++		wexit = -1;
++
++	if (WIFSIGNALED(ret)) {
++		signal = WTERMSIG(ret);
++		wexit = ExitSignalOffset + signal;
++	}
++out:
++	if (c->lxc_conf->errmsg)
++		*errmsg = safe_strdup(c->lxc_conf->errmsg);
++	return wexit;
++}
++
++static void close_msg_pipe(int *errpipe)
++{
++	if (errpipe[0] >= 0) {
++		close(errpipe[0]);
++		errpipe[0] = -1;
++	}
++	if (errpipe[1] >= 0) {
++		close(errpipe[1]);
++		errpipe[1] = -1;
++	}
++}
++
++/*isulad: attach without terminal in background */
++static int do_attach_background(struct lxc_container *c, lxc_attach_command_t *command,
++				lxc_attach_options_t *attach_options,
++				char **errmsg)
++{
++	int ret = 0;
++	int msgpipe[2];
++	pid_t pid = 0;
++	ssize_t size_read;
++	char msgbuf[BUFSIZ + 1] = {0};
++
++	//pipdfd for get error message of child or grandchild process.
++	if (pipe2(msgpipe, O_CLOEXEC) != 0) {
++		SYSERROR("Failed to init msgpipe");
++		return -1;
++	}
++
++	pid = fork();
++	if (pid < 0) {
++		close_msg_pipe(msgpipe);
++		return -1;
++	}
++
++	if (pid != 0) {
++		close(msgpipe[1]);
++		msgpipe[1] = -1;
++		size_read = read(msgpipe[0], msgbuf, BUFSIZ);
++		if (size_read > 0) {
++			*errmsg = safe_strdup(msgbuf);
++			ret = -1;
++		}
++
++		close(msgpipe[0]);
++		msgpipe[0] = -1;
++
++		return ret;
++	}
++
++	/* second fork to be reparented by init */
++	pid = fork();
++	if (pid < 0) {
++		SYSERROR("Error doing dual-fork");
++		close_msg_pipe(msgpipe);
++		exit(1);
++	}
++	if (pid != 0) {
++		close_msg_pipe(msgpipe);
++		exit(0);
++	}
++
++	close(msgpipe[0]);
++	msgpipe[0] = -1;
++
++	if (null_stdfds() < 0) {
++		ERROR("failed to close fds");
++		exit(1);
++	}
++	setsid();
++
++	if (command->program)
++		ret = c->attach(c, lxc_attach_run_command, command, attach_options, &pid);
++	else
++		ret = c->attach(c, lxc_attach_run_shell, NULL, attach_options, &pid);
++	if (ret < 0) {
++		if (c->lxc_conf->errmsg)
++			lxc_write_error_message(msgpipe[1], "%s", c->lxc_conf->errmsg);
++		else
++			lxc_write_error_message(msgpipe[1], "Failed to attach container");
++		close(msgpipe[1]);
++		msgpipe[1] = -1;
++		ret = -1;
++		goto out;
++	}
++
++	close(msgpipe[1]);
++	msgpipe[1] = -1;
++
++	ret = wait_for_pid(pid);
++out:
++	lxc_container_put(c);
++	if (ret)
++		exit(EXIT_FAILURE);
++	else
++		exit(0);
++}
++
++int main(int argc, char *argv[])
++{
++	int ret = -1;
++	int wexit = 0;
++	struct lxc_log log;
++	char *errmsg = NULL;
++	pid_t pid;
++	lxc_attach_options_t attach_options = LXC_ATTACH_OPTIONS_DEFAULT;
++	lxc_attach_command_t command = (lxc_attach_command_t){.program = NULL};
++
++	if (lxc_caps_init())
++		exit(EXIT_FAILURE);
++
++	if (lxc_arguments_parse(&my_args, argc, argv))
++		exit(EXIT_FAILURE);
++
++	log.name = my_args.name;
++	log.file = my_args.log_file;
++	log.level = my_args.log_priority;
++	log.prefix = my_args.progname;
++	log.quiet = my_args.quiet;
++	log.lxcpath = my_args.lxcpath[0];
++
++	if (lxc_log_init(&log))
++		exit(EXIT_FAILURE);
++
++	if (geteuid())
++		if (access(my_args.lxcpath[0], O_RDONLY) < 0) {
++			ERROR("You lack access to %s", my_args.lxcpath[0]);
++			exit(EXIT_FAILURE);
++		}
++
++	struct lxc_container *c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
++	if (!c)
++		exit(EXIT_FAILURE);
++
++	if (my_args.rcfile) {
++		c->clear_config(c);
++		if (!c->load_config(c, my_args.rcfile)) {
++			ERROR("Failed to load rcfile");
++			lxc_container_put(c);
++			exit(EXIT_FAILURE);
++		}
++
++		c->configfile = strdup(my_args.rcfile);
++		if (!c->configfile) {
++			ERROR("Out of memory setting new config filename");
++			lxc_container_put(c);
++			exit(EXIT_FAILURE);
++		}
++	}
++
++	if (!c->may_control(c)) {
++		ERROR("Insufficent privileges to control %s", c->name);
++		lxc_container_put(c);
++		exit(EXIT_FAILURE);
++	}
++
++	if (remount_sys_proc)
++		attach_options.attach_flags |= LXC_ATTACH_REMOUNT_PROC_SYS;
++
++	if (elevated_privileges)
++		attach_options.attach_flags &= ~(elevated_privileges);
++
++	if (my_args.terminal_fifos[0] || my_args.terminal_fifos[1] || my_args.terminal_fifos[2]) {
++		attach_options.init_fifo[0] = my_args.terminal_fifos[0];
++		attach_options.init_fifo[1] = my_args.terminal_fifos[1];
++		attach_options.init_fifo[2] = my_args.terminal_fifos[2];
++		attach_options.attach_flags |= LXC_ATTACH_TERMINAL;
++	} else if (stdfd_is_pty()) {
++		attach_options.attach_flags |= LXC_ATTACH_TERMINAL;
++	}
++
++	attach_options.namespaces = namespace_flags;
++	attach_options.personality = new_personality;
++	attach_options.env_policy = env_policy;
++	attach_options.extra_env_vars = extra_env;
++	attach_options.extra_keep_env = extra_keep;
++
++	if (my_args.argc > 0) {
++		command.program = my_args.argv[0];
++		command.argv = (char**)my_args.argv;
++	}
++
++	if (my_args.console_log) {
++		attach_options.log_fd = lxc_attach_create_log_file(my_args.console_log);
++		if (attach_options.log_fd < 0) {
++			ERROR("Failed to create log file for %s", c->name);
++			lxc_container_put(c);
++			exit(EXIT_FAILURE);
++		}
++	}
++
++	attach_options.suffix = my_args.suffix;
++
++	/* isulad: add do attach background */
++	if (attach_options.attach_flags & LXC_ATTACH_TERMINAL)
++		wexit = do_attach_foreground(c, &command, &attach_options, &errmsg);
++	else
++		wexit = do_attach_background(c, &command, &attach_options, &errmsg);
++
++	if (errmsg) {
++		fprintf(stderr, "%s:%s:%s:%d starting container process caused \"%s\"", c->name,
++		__FILE__, __func__, __LINE__, errmsg);
++		free(errmsg);
++	}
++
++	lxc_container_put(c);
++	if (wexit >= 0)
++		exit(wexit);
++
++	exit(EXIT_FAILURE);
++}
++#else
+ int main(int argc, char *argv[])
+ {
+ 	int ret = -1;
+@@ -377,3 +649,4 @@ out:
+ 
+ 	exit(EXIT_FAILURE);
+ }
++#endif
+-- 
+1.8.3.1
+

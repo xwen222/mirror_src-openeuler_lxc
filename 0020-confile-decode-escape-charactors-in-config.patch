@@ -1,0 +1,104 @@
+From 200cc2a1e95c0c0f17cf14f16d8ceb60ca3628c0 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Tue, 14 Apr 2020 16:16:14 +0800
+Subject: [PATCH 20/49] confile: decode escape charactors in config
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/confile.c | 62 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 62 insertions(+)
+
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index bf0fdf0..a28c5da 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -2732,6 +2732,54 @@ struct parse_line_conf {
+ 	bool from_include;
+ };
+ 
++#ifdef HAVE_ISULAD
++// escape_string_decode compress some escape characters
++static char *escape_string_decode(const char *src)
++{
++	size_t src_end = 0;
++	size_t dst_end = 0;
++	size_t len = 0;
++	char *dst = NULL;
++
++	if (src == NULL) {
++		return NULL;
++	}
++
++	len = strlen(src);
++	if (len == 0) {
++		return NULL;
++	}
++
++	dst = calloc(1, len + 1);
++	if (dst == NULL) {
++		ERROR("Out of memory");
++		return NULL;
++	}
++
++	while(src_end < len) {
++		if (src[src_end] == '\\') {
++			switch (src[++src_end])
++			{
++				case 'r': dst[dst_end] = '\r'; break;
++				case 'n': dst[dst_end] = '\n'; break;
++				case 'f': dst[dst_end] = '\f'; break;
++				case 'b': dst[dst_end] = '\b'; break;
++				case 't': dst[dst_end] = '\t'; break;
++				case '\\': dst[dst_end] = '\\'; break;
++				// default do not decode
++				default: dst[dst_end++] = '\\'; dst[dst_end] = src[src_end]; break;
++			}
++		} else {
++			dst[dst_end] = src[src_end];
++		}
++		dst_end++;
++		src_end++;
++	}
++
++	return dst;
++}
++#endif
++
+ static int parse_line(char *buffer, void *data)
+ {
+ 	char *dot, *key, *line, *linep, *value;
+@@ -2740,6 +2788,9 @@ static int parse_line(char *buffer, void *data)
+ 	int ret = 0;
+ 	char *dup = buffer;
+ 	struct parse_line_conf *plc = data;
++#ifdef HAVE_ISULAD
++	char *value_decode = NULL;
++#endif
+ 
+ 	/* If there are newlines in the config file we should keep them. */
+ 	empty_line = lxc_is_line_empty(dup);
+@@ -2806,10 +2857,21 @@ static int parse_line(char *buffer, void *data)
+ 		goto on_error;
+ 	}
+ 
++#ifdef HAVE_ISULAD
++	value_decode = escape_string_decode(value);
++	if (value_decode == NULL) {
++		ERROR("Value %s decode failed", value);
++	}
++	ret = config->set(key, value_decode ? value_decode: value, plc->conf, NULL);
++#else
+ 	ret = config->set(key, value, plc->conf, NULL);
++#endif
+ 
+ on_error:
+ 	free(linep);
++#ifdef HAVE_ISULAD
++	free(value_decode);
++#endif
+ 
+ 	return ret;
+ }
+-- 
+1.8.3.1
+
