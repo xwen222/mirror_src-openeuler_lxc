@@ -1,62 +1,105 @@
-From b4e5d9e162a17f50367aad1ea92df7dc09fa34e9 Mon Sep 17 00:00:00 2001
+From 481e3bf2c164d5303c6f827fc2bcbb67508d0ff5 Mon Sep 17 00:00:00 2001
 From: LiFeng <lifeng68@huawei.com>
-Date: Fri, 11 Jan 2019 01:51:25 -0500
-Subject: [PATCH 003/140] confile: add lxc.isulad.populate.device interface
+Date: Sat, 11 Apr 2020 17:12:44 +0800
+Subject: [PATCH 03/49] confile: add lxc.isulad.populate.device interface
 
 Signed-off-by: LiFeng <lifeng68@huawei.com>
 ---
- src/lxc/conf.c    | 125 +++++++++++++++++++++++++++++++++++++++++++++++++++---
- src/lxc/conf.h    |  28 +++++++++++-
- src/lxc/confile.c | 124 +++++++++++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 269 insertions(+), 8 deletions(-)
+ src/lxc/Makefile.am    |   9 +
+ src/lxc/conf.c         | 126 ++++++++++
+ src/lxc/conf.h         |  25 ++
+ src/lxc/confile.c      | 120 ++++++++-
+ src/lxc/isulad_utils.c |  99 ++++++++
+ src/lxc/isulad_utils.h |  20 ++
+ src/lxc/path.c         | 655 +++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/path.h         |  65 +++++
+ src/lxc/utils.h        |   3 +
+ 9 files changed, 1121 insertions(+), 1 deletion(-)
+ create mode 100644 src/lxc/isulad_utils.c
+ create mode 100644 src/lxc/isulad_utils.h
+ create mode 100644 src/lxc/path.c
+ create mode 100644 src/lxc/path.h
 
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index e7fc844..21441c0 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -52,6 +52,10 @@ noinst_HEADERS = api_extensions.h \
+ 		 utils.h \
+ 		 uuid.h
+ 
++#if HAVE_ISULAD
++noinst_HEADERS += isulad_utils.h path.h
++#endif
++
+ if IS_BIONIC
+ noinst_HEADERS += ../include/fexecve.h \
+ 		  ../include/lxcmntent.h \
+@@ -154,6 +158,11 @@ liblxc_la_SOURCES = af_unix.c af_unix.h \
+ 		    version.h \
+ 		    $(LSM_SOURCES)
+ 
++#if HAVE_ISULAD
++liblxc_la_SOURCES += isulad_utils.c isulad_utils.h \
++			path.c path.h
++#endif
++
+ if IS_BIONIC
+ liblxc_la_SOURCES += ../include/fexecve.c ../include/fexecve.h \
+ 		     ../include/lxcmntent.c ../include/lxcmntent.h \
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index f20d629..20b7aba 100644
+index 62a6979..e9c0a37 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
-@@ -2745,6 +2745,10 @@ struct lxc_conf *lxc_conf_init(void)
- 	memset(&new->cgroup_meta, 0, sizeof(struct lxc_cgroup));
+@@ -2564,6 +2564,11 @@ struct lxc_conf *lxc_conf_init(void)
  	memset(&new->ns_share, 0, sizeof(char *) * LXC_NS_MAX);
+ 	seccomp_conf_init(new);
  
++#ifdef HAVE_ISULAD
 +	/* isulad add begin */
 +	lxc_list_init(&new->populate_devs);
-+	/* isulad add end */
++#endif
 +
  	return new;
  }
  
-@@ -3487,6 +3491,85 @@ static bool execveat_supported(void)
- 	return true;
+@@ -3274,6 +3279,99 @@ static int lxc_setup_boot_id(void)
+ 	return 0;
  }
  
++#ifdef HAVE_ISULAD
 +/* isulad: setup devices which will be populated in the container.*/
 +static int setup_populate_devs(const struct lxc_rootfs *rootfs, struct lxc_list *devs)
 +{
-+	int ret;
-+	char *pathdirname;
++	int ret = 0;
++	char *pathdirname = NULL;
 +	char path[MAXPATHLEN];
-+	mode_t cmask;
 +	mode_t file_mode = 0;
-+	struct lxc_populate_devs *dev_elem;
-+        struct lxc_list *it;
++	struct lxc_populate_devs *dev_elem = NULL;
++	struct lxc_list *it = NULL;
++	mode_t cur_mask;
 +
 +	INFO("Populating devices into container");
-+	cmask = umask(S_IXUSR | S_IXGRP | S_IXOTH);
++	cur_mask = umask(0000);
 +	lxc_list_for_each(it, devs) {
++		ret = 0;
 +		dev_elem = it->elem;
 +
 +		ret = snprintf(path, MAXPATHLEN, "%s/%s", rootfs->path ? rootfs->mount : "", dev_elem->name);
-+		if (ret < 0 || ret >= MAXPATHLEN)
-+			return -1;
++		if (ret < 0 || ret >= MAXPATHLEN) {
++			ret = -1;
++			goto reset_umask;
++		}
 +
 +		/* create any missing directories */
-+		pathdirname = strdup(path);
++		pathdirname = safe_strdup(path);
 +		pathdirname = dirname(pathdirname);
-+		ret = mkdir_p(pathdirname, 0750);
++		ret = mkdir_p(pathdirname, 0755);
 +		free(pathdirname);
 +		if (ret < 0) {
 +			WARN("Failed to create target directory");
-+			return -1;
++			ret = -1;
++			goto reset_umask;
 +		}
 +
 +		if (!strcmp(dev_elem->type, "c")) {
@@ -65,95 +108,95 @@ index f20d629..20b7aba 100644
 +			file_mode = dev_elem->file_mode | S_IFBLK;
 +		} else {
 +			ERROR("Failed to parse devices type '%s'", dev_elem->type);
-+			return -1;
++			ret = -1;
++			goto reset_umask;
 +		}
 +
 +		DEBUG("Try to mknod '%s':'%d':'%d':'%d'\n", path,
-+				file_mode, dev_elem->maj, dev_elem->min);
++		      file_mode, dev_elem->maj, dev_elem->min);
 +
 +		ret = mknod(path, file_mode, makedev(dev_elem->maj, dev_elem->min));
 +		if (ret && errno != EEXIST) {
 +			SYSERROR("Failed to mknod '%s':'%d':'%d':'%d'", dev_elem->name,
-+				file_mode, dev_elem->maj, dev_elem->min);
++			         file_mode, dev_elem->maj, dev_elem->min);
 +
 +			char hostpath[MAXPATHLEN];
-+			FILE *pathfile;
++			FILE *pathfile = NULL;
 +
 +			// Unprivileged containers cannot create devices, so
 +			// try to bind mount the device from the host
 +			ret = snprintf(hostpath, MAXPATHLEN, "/dev/%s", dev_elem->name);
-+			if (ret < 0 || ret >= MAXPATHLEN)
-+				return -1;
-+			pathfile = fopen(path, "wb");
++			if (ret < 0 || ret >= MAXPATHLEN) {
++				ret = -1;
++				goto reset_umask;
++			}
++			pathfile = lxc_fopen(path, "wb");
 +			if (!pathfile) {
 +				SYSERROR("Failed to create device mount target '%s'", path);
-+				return -1;
++				ret = -1;
++				goto reset_umask;
 +			}
 +			fclose(pathfile);
 +			if (safe_mount(hostpath, path, 0, MS_BIND, NULL,
-+						rootfs->path ? rootfs->mount : NULL) != 0) {
++			                rootfs->path ? rootfs->mount : NULL) != 0) {
 +				SYSERROR("Failed bind mounting device %s from host into container",
-+					dev_elem->name);
-+				return -1;
++				         dev_elem->name);
++				ret = -1;
++				goto reset_umask;
 +			}
 +		}
 +		if (chown(path, dev_elem->uid, dev_elem->gid) < 0) {
 +			ERROR("Error chowning %s", path);
-+			return -1;
++			ret = -1;
++			goto reset_umask;
 +		}
 +	}
-+	umask(cmask);
++
++reset_umask:
++	(void)umask(cur_mask);
 +
 +	INFO("Populated devices into container /dev");
-+	return 0;
++	return ret;
 +}
++#endif
 +
  int lxc_setup(struct lxc_handler *handler)
  {
  	int ret;
-@@ -3584,6 +3667,16 @@ int lxc_setup(struct lxc_handler *handler)
- 		return -1;
+@@ -3382,6 +3480,15 @@ int lxc_setup(struct lxc_handler *handler)
+ 			return log_error(-1, "Failed to populate \"/dev\"");
  	}
  
-+	/*isulad: move mount entrues here, before we do lxc_fill_autodev and populate devices  */
-+	if (!lxc_list_empty(&lxc_conf->mount_list)) {
-+		ret = setup_mount_entries(lxc_conf, &lxc_conf->rootfs,
-+					  &lxc_conf->mount_list, name, lxcpath);
-+		if (ret < 0) {
-+			ERROR("Failed to setup mount entries");
-+			return -1;
-+		}
-+	}
-+
- 	ret = run_lxc_hooks(name, "mount", lxc_conf, NULL);
- 	if (ret < 0) {
- 		ERROR("Failed to run mount hooks");
-@@ -3604,12 +3697,11 @@ int lxc_setup(struct lxc_handler *handler)
- 		}
- 	}
- 
--	if (!lxc_list_empty(&lxc_conf->mount_list)) {
--		ret = setup_mount_entries(lxc_conf, &lxc_conf->rootfs,
--					  &lxc_conf->mount_list, name, lxcpath);
--		if (ret < 0) {
--			ERROR("Failed to setup mount entries");
--			return -1;
++#ifdef HAVE_ISULAD
 +	/* isulad: setup devices which will be populated in the container. */
 +	if (!lxc_list_empty(&lxc_conf->populate_devs)) {
-+		if (setup_populate_devs(&lxc_conf->rootfs, &lxc_conf->populate_devs)) {
-+			ERROR("Failed to setup devices in the container");
-+			return -1;;
- 		}
- 	}
++		if (setup_populate_devs(&lxc_conf->rootfs, &lxc_conf->populate_devs) != 0) {
++			return log_error(-1, "Failed to setup devices in the container");
++		}
++	}
++#endif
++
+ 	/* Make sure any start hooks are in the container */
+ 	if (!verify_start_hooks(lxc_conf))
+ 		return log_error(-1, "Failed to verify start hooks");
+@@ -3837,6 +3944,7 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 	free(conf->shmount.path_cont);
+ #ifdef HAVE_ISULAD
+ 	lxc_clear_init_args(conf);
++	lxc_clear_populate_devices(conf);
+ #endif
+ 	free(conf);
+ }
+@@ -4661,4 +4769,22 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
  
-@@ -4026,6 +4118,22 @@ int lxc_clear_init_args(struct lxc_conf *lxc_conf)
  	return 0;
  }
- 
++
 +/*isulad: clear populate devices*/
 +int lxc_clear_populate_devices(struct lxc_conf *c)
 +{
-+	struct lxc_list *it,*next;
++	struct lxc_list *it = NULL;
++	struct lxc_list *next = NULL;
 +
 +	lxc_list_for_each_safe(it, &c->populate_devs, next) {
 +		struct lxc_populate_devs *dev_elem = it->elem;
@@ -166,31 +209,17 @@ index f20d629..20b7aba 100644
 +	return 0;
 +}
 +
- void lxc_conf_free(struct lxc_conf *conf)
- {
- 	if (!conf)
-@@ -4069,9 +4177,12 @@ void lxc_conf_free(struct lxc_conf *conf)
- 	lxc_clear_limits(conf, "lxc.prlimit");
- 	lxc_clear_sysctls(conf, "lxc.sysctl");
- 	lxc_clear_procs(conf, "lxc.proc");
--        lxc_clear_init_args(conf);
- 	free(conf->cgroup_meta.dir);
- 	free(conf->cgroup_meta.controllers);
-+	/* isulad add begin */
-+	lxc_clear_init_args(conf);
-+	lxc_clear_populate_devices(conf);
-+	/* isulad add end */
- 	free(conf);
- }
- 
+ #endif
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index 95c3027..cced868 100644
+index 8a198e4..452458c 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
-@@ -171,6 +171,26 @@ struct lxc_rootfs {
+@@ -230,6 +230,27 @@ struct device_item {
+ 	int global_rule;
  };
  
- /*
++#ifdef HAVE_ISULAD
++/*
 + * iSulad: Defines a structure to store the devices which will
 + * be attached in container
 + * @name       : the target device name in container
@@ -208,164 +237,146 @@ index 95c3027..cced868 100644
 +	uid_t uid;
 +	gid_t gid;
 +};
++#endif
 +
-+
-+/*
-  * Automatic mounts for LXC to perform inside the container
-  */
- enum {
-@@ -377,9 +397,13 @@ struct lxc_conf {
- 	/* procs */
- 	struct lxc_list procs;
- 
--    /* isulad add: init args used to repalce init_cmd*/
-+	/* isulad add begin */
-+	/* init args used to repalce init_cmd*/
+ struct lxc_conf {
+ 	/* Pointer to the name of the container. Do not free! */
+ 	const char *name;
+@@ -403,6 +424,9 @@ struct lxc_conf {
+ 	/* isulad add: init args used to repalce init_cmd*/
  	char **init_argv;
  	size_t init_argc;
++
 +	/* populate devices*/
 +	struct lxc_list populate_devs;
-+	/* isulad add end */
+ #endif
+ 
  };
- 
- extern int write_id_mapping(enum idtype idtype, pid_t pid, const char *buf,
-@@ -448,6 +472,8 @@ extern int lxc_clear_procs(struct lxc_conf *c, const char *key);
- 
- /* isulad add begin */
+@@ -479,5 +503,6 @@ extern int userns_exec_minimal(const struct lxc_conf *conf,
+ 			       int (*fn_child)(void *), void *fn_child_data);
+ #ifdef HAVE_ISULAD
  int lxc_clear_init_args(struct lxc_conf *lxc_conf);
 +int lxc_clear_populate_devices(struct lxc_conf *c);
-+
- /* isulad add end */
- 
+ #endif
  #endif /* __LXC_CONF_H */
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 7297b35..e3212d3 100644
+index e535beb..f0772f9 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
-@@ -152,6 +152,7 @@ lxc_config_define(sysctl);
+@@ -149,6 +149,7 @@ lxc_config_define(sysctl);
  lxc_config_define(proc);
- /*isulad add begin*/
+ #ifdef HAVE_ISULAD
  lxc_config_define(init_args);
 +lxc_config_define(populate_device);
- /*isulad add end*/
+ #endif
  
- 
-@@ -241,6 +242,7 @@ static struct lxc_config_t config_jump_table[] = {
- 
-         /*isulad add begin*/
-         { "lxc.isulad.init.args",          set_config_init_args,                   get_config_init_args,                   clr_config_init_args,                 },
-+        { "lxc.isulad.populate.device",    set_config_populate_device,             get_config_populate_device,             clr_config_populate_device,           },
-         /*isulad add end*/
+ /*
+@@ -264,7 +265,7 @@ static struct lxc_config_t config_jump_table[] = {
+ 	{ "lxc.proc",                      set_config_proc,                        get_config_proc,                        clr_config_proc,                      },
+ #ifdef HAVE_ISULAD
+ 	{ "lxc.isulad.init.args",          set_config_init_args,                   get_config_init_args,                   clr_config_init_args,                 },
+-
++	{ "lxc.isulad.populate.device",    set_config_populate_device,             get_config_populate_device,             clr_config_populate_device,           },
+ #endif
  };
  
-@@ -2219,6 +2221,93 @@ static int set_config_init_args(const char *key, const char *value,
- 	return 0;
+@@ -6155,4 +6156,121 @@ static inline int clr_config_init_args(const char *key, struct lxc_conf *c,
+ {
+ 	return lxc_clear_init_args(c);
  }
- 
-+/* isulad: set config for init args */
++
++/* isulad: set config for populate device */
 +static int set_config_populate_device(const char *key, const char *value,
-+				 struct lxc_conf *lxc_conf, void *data)
++                                      struct lxc_conf *lxc_conf, void *data)
 +{
-+        int ret = 0, major = 0, minor = 0;
-+        uid_t uid = (uid_t)-1;
-+        gid_t gid = (gid_t)-1;
-+        char name[PATH_MAX] = {0};
-+        char type[3] = {0};
-+        char *replace_value = NULL;
-+        mode_t filemode = 0;
-+        struct lxc_list *iter;
-+        struct lxc_list *dev_list = NULL;
-+        struct lxc_populate_devs *dev_elem = NULL;
++	int ret = 0, major = 0, minor = 0;
++	uid_t uid = (uid_t)-1;
++	gid_t gid = (gid_t)-1;
++	char name[4096] = {0}; /* MAX dev path name */
++	char type[3] = {0};
++	char *replace_value = NULL;
++	mode_t filemode = 0;
++	struct lxc_list *iter = NULL;
++	struct lxc_list *dev_list = NULL;
++	struct lxc_populate_devs *dev_elem = NULL;
 +
-+        if (lxc_config_value_empty(value))
-+                return lxc_clear_populate_devices(lxc_conf);
++	if (lxc_config_value_empty(value))
++		return lxc_clear_populate_devices(lxc_conf);
 +
-+        /* lxc.populate.device = PATH_IN_CONTAINER:DEVICETYPE:MAJOR:MINOR:MODE:UID:GID
-+         * For e.g. lxc.populate.device = /dev/sda:b:8:0:0666:0:0
-+         */
-+        ret = sscanf(value, "%[^:]:%2[^:]:%i:%i:%i:%u:%u", name, type, &major, &minor, &filemode, &uid, &gid);
-+        if (ret != 7)
-+                return -1;
++	/* lxc.populate.device = PATH_IN_CONTAINER:DEVICETYPE:MAJOR:MINOR:MODE:UID:GID
++	 * For e.g. lxc.populate.device = /dev/sda:b:8:0:0666:0:0
++	 */
++	ret = sscanf(value, "%4095[^:]:%2[^:]:%i:%i:%i:%u:%u", name, type, &major, &minor, &filemode, &uid, &gid);
++	if (ret != 7)
++		return -1;
 +
-+        /* find existing list element */
-+        lxc_list_for_each(iter, &lxc_conf->populate_devs) {
-+                dev_elem = iter->elem;
++	/* find existing list element */
++	lxc_list_for_each(iter, &lxc_conf->populate_devs) {
++		dev_elem = iter->elem;
 +
-+                if (strcmp(name, dev_elem->name) != 0)
-+                        continue;
++		if (strcmp(name, dev_elem->name) != 0)
++			continue;
 +
-+                replace_value = strdup(type);
-+                if (!replace_value)
-+                        return -1;
++		replace_value = safe_strdup(type);
 +
-+                free(dev_elem->type);
-+                dev_elem->type = replace_value;
-+                dev_elem->file_mode = filemode;
-+                dev_elem->maj = major;
-+                dev_elem->min = minor;
-+                dev_elem->uid = (uid_t)uid;
-+                dev_elem->gid = (gid_t)gid;
-+                return 0;
-+        }
++		free(dev_elem->type);
++		dev_elem->type = replace_value;
++		dev_elem->file_mode = filemode;
++		dev_elem->maj = major;
++		dev_elem->min = minor;
++		dev_elem->uid = (uid_t)uid;
++		dev_elem->gid = (gid_t)gid;
++		return 0;
++	}
 +
-+        /* allocate list element */
-+        dev_list = malloc(sizeof(*dev_list));
-+        if (!dev_list)
-+                goto on_error;
++	/* allocate list element */
++	dev_list = malloc(sizeof(*dev_list));
++	if (dev_list == NULL)
++		goto on_error;
 +
-+        lxc_list_init(dev_list);
++	lxc_list_init(dev_list);
 +
-+        dev_elem = malloc(sizeof(*dev_elem));
-+        if (!dev_elem)
-+                goto on_error;
-+        memset(dev_elem, 0, sizeof(*dev_elem));
++	dev_elem = malloc(sizeof(*dev_elem));
++	if (dev_elem == NULL)
++		goto on_error;
++	memset(dev_elem, 0, sizeof(*dev_elem));
 +
-+        dev_elem->name = strdup(name);
-+        if (!dev_elem->name)
-+                goto on_error;
++	dev_elem->name = safe_strdup(name);
 +
-+        dev_elem->type = strdup(type);
-+        if (!dev_elem->type)
-+                goto on_error;
++	dev_elem->type = safe_strdup(type);
 +
-+        dev_elem->file_mode = filemode;
-+        dev_elem->maj = major;
-+        dev_elem->min = minor;
++	dev_elem->file_mode = filemode;
++	dev_elem->maj = major;
++	dev_elem->min = minor;
++	dev_elem->uid = (uid_t)uid;
++	dev_elem->gid = (gid_t)gid;
 +
-+        lxc_list_add_elem(dev_list, dev_elem);
++	lxc_list_add_elem(dev_list, dev_elem);
 +
-+        lxc_list_add_tail(&lxc_conf->populate_devs, dev_list);
++	lxc_list_add_tail(&lxc_conf->populate_devs, dev_list);
 +
-+        return 0;
++	return 0;
 +
 +on_error:
-+        free(dev_list);
-+        if (dev_elem) {
-+                free(dev_elem->name);
-+                free(dev_elem->type);
-+                free(dev_elem);
-+        }
-+        return -1;
-+
++	free(dev_list);
++	if (dev_elem) {
++		free(dev_elem->name);
++		free(dev_elem->type);
++		free(dev_elem);
++	}
++	return -1;
 +}
 +
- struct parse_line_conf {
- 	struct lxc_conf *conf;
- 	bool from_include;
-@@ -3770,6 +3859,34 @@ static int get_config_init_args(const char *key, char *retv, int inlen,
- 	return fulllen;
- }
- 
 +/* isulad: get config populate device
 + * If you ask for 'lxc.populate.device', then all populate device
 + * entries will be printed, in 'lxc.populate.device = path_in_container:type:major:minor:mode:uid:gid' format.
 + * For e.g. lxc.populate.device = /dev/sda:b:8:0:0666:0:0
 + */
 +static int get_config_populate_device(const char *key, char *retv, int inlen,
-+				  struct lxc_conf *c, void *data)
++                                      struct lxc_conf *c, void *data)
 +{
 +	int len;
-+	struct lxc_list *it;
++	struct lxc_list *it = NULL;
 +	int fulllen = 0;
 +
 +	if (!retv)
@@ -376,31 +387,898 @@ index 7297b35..e3212d3 100644
 +	lxc_list_for_each(it, &c->populate_devs) {
 +		struct lxc_populate_devs *elem = it->elem;
 +		strprint(retv, inlen, "lxc.populate.device = %s:%s:%d:%d:%o:%u:%u\n",
-+			 elem->name, elem->type, elem->maj,
-+			 elem->min, elem->file_mode, elem->uid, elem->gid);
++		         elem->name, elem->type, elem->maj,
++		         elem->min, elem->file_mode, elem->uid, elem->gid);
 +	}
 +
 +	return fulllen;
 +}
 +
-+
- /* Callbacks to clear config items. */
- static inline int clr_config_personality(const char *key, struct lxc_conf *c,
- 					 void *data)
-@@ -4581,6 +4698,13 @@ static inline int clr_config_init_args(const char *key, struct lxc_conf *c,
- 	return lxc_clear_init_args(c);
- }
- 
 +/* isulad: clr config populate devices*/
 +static inline int clr_config_populate_device(const char *key, struct lxc_conf *c,
-+				   void *data)
++                void *data)
 +{
 +	return lxc_clear_populate_devices(c);
 +}
 +
- static int get_config_net_nic(const char *key, char *retv, int inlen,
- 			      struct lxc_conf *c, void *data)
- {
+ #endif
+diff --git a/src/lxc/isulad_utils.c b/src/lxc/isulad_utils.c
+new file mode 100644
+index 0000000..b282404
+--- /dev/null
++++ b/src/lxc/isulad_utils.c
+@@ -0,0 +1,99 @@
++/* SPDX-License-Identifier: LGPL-2.1+ */
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2020. Allrights reserved
++ * Description: isulad utils
++ * Author: lifeng
++ * Create: 2020-04-11
++******************************************************************************/
++
++#include <stdlib.h>
++#include <string.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++
++#include "isulad_utils.h"
++#include "log.h"
++#include "path.h"
++#include "file_utils.h"
++
++lxc_log_define(isulad_utils, lxc);
++
++void *lxc_common_calloc_s(size_t size)
++{
++	if (size == 0 || size > SIZE_MAX) {
++		return NULL;
++	}
++
++	return calloc((size_t)1, size);
++}
++
++int lxc_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
++{
++	void *tmp = NULL;
++
++	if (newsize == 0) {
++		goto err_out;
++	}
++
++	tmp = lxc_common_calloc_s(newsize);
++	if (tmp == NULL) {
++		ERROR("Failed to malloc memory");
++		goto err_out;
++	}
++
++	if (oldptr != NULL) {
++		memcpy(tmp, oldptr, (newsize < oldsize) ? newsize : oldsize);
++
++		memset(oldptr, 0, oldsize);
++
++		free(oldptr);
++	}
++
++	*newptr = tmp;
++	return 0;
++
++err_out:
++	return -1;
++}
++
++char *safe_strdup(const char *src)
++{
++	char *dst = NULL;
++
++	if (src == NULL) {
++		return NULL;
++	}
++
++	dst = strdup(src);
++	if (dst == NULL) {
++		abort();
++	}
++
++	return dst;
++}
++
++int lxc_open(const char *filename, int flags, mode_t mode)
++{
++	char rpath[PATH_MAX] = {0x00};
++
++	if (cleanpath(filename, rpath, sizeof(rpath)) == NULL) {
++		return -1;
++	}
++	if (mode) {
++		return open(rpath, (int)((unsigned int)flags | O_CLOEXEC), mode);
++	} else {
++		return open(rpath, (int)((unsigned int)flags | O_CLOEXEC));
++	}
++}
++
++FILE *lxc_fopen(const char *filename, const char *mode)
++{
++	char rpath[PATH_MAX] = {0x00};
++
++	if (cleanpath(filename, rpath, sizeof(rpath)) == NULL) {
++		return NULL;
++	}
++
++	return fopen_cloexec(rpath, mode);
++}
+diff --git a/src/lxc/isulad_utils.h b/src/lxc/isulad_utils.h
+new file mode 100644
+index 0000000..7a6ab00
+--- /dev/null
++++ b/src/lxc/isulad_utils.h
+@@ -0,0 +1,20 @@
++/* SPDX-License-Identifier: LGPL-2.1+ */
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2020. Allrights reserved
++ * Description: isulad utils
++ * Author: lifeng
++ * Create: 2020-04-11
++******************************************************************************/
++#ifndef __iSULAD_UTILS_H
++#define __iSULAD_UTILS_H
++
++#include <stdio.h>
++
++extern int lxc_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize);
++extern void *lxc_common_calloc_s(size_t size);
++extern char *safe_strdup(const char *src);
++
++extern int lxc_open(const char *filename, int flags, mode_t mode);
++extern FILE *lxc_fopen(const char *filename, const char *mode);
++
++#endif
+diff --git a/src/lxc/path.c b/src/lxc/path.c
+new file mode 100644
+index 0000000..65b8aad
+--- /dev/null
++++ b/src/lxc/path.c
+@@ -0,0 +1,655 @@
++/* SPDX-License-Identifier: LGPL-2.1+ */
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2020. Allrights reserved
++ * Description: isulad utils
++ * Author: lifeng
++ * Create: 2020-04-11
++******************************************************************************/
++#include <unistd.h>
++#include <stdlib.h>
++#include <limits.h>
++#include <string.h>
++#include <stdio.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <sys/param.h>
++#include <libgen.h>
++
++#include "path.h"
++#include "log.h"
++#include "isulad_utils.h"
++
++lxc_log_define(lxc_path_ui, lxc);
++
++#define ISSLASH(C) ((C) == '/')
++#define IS_ABSOLUTE_FILE_NAME(F) (ISSLASH ((F)[0]))
++#define IS_RELATIVE_FILE_NAME(F) (! IS_ABSOLUTE_FILE_NAME (F))
++
++bool specify_current_dir(const char *path)
++{
++	char *basec = NULL, *bname = NULL;
++	bool res = false;
++
++	basec = safe_strdup(path);
++
++	bname = basename(basec);
++	if (bname == NULL) {
++		free(basec);
++		ERROR("Out of memory");
++		return false;
++	}
++	res = !strcmp(bname, ".");
++	free(basec);
++	return res;
++}
++
++bool has_traling_path_separator(const char *path)
++{
++	return path && strlen(path) && (path[strlen(path) - 1] == '/');
++}
++
++// PreserveTrailingDotOrSeparator returns the given cleaned path
++// and appends a trailing `/.` or `/` if its corresponding  original
++// path ends with a trailing `/.` or `/`. If the cleaned
++// path already ends in a `.` path segment, then another is not added. If the
++// clean path already ends in a path separator, then another is not added.
++char *preserve_trailing_dot_or_separator(const char *cleanedpath,
++                const char *originalpath)
++{
++	char *respath = NULL;
++	size_t len;
++
++	if (strlen(cleanedpath) > (SIZE_MAX - 3)) {
++		return NULL;
++	}
++
++	len = strlen(cleanedpath) + 3;
++	respath = malloc(len);
++	if (respath == NULL) {
++		ERROR("Out of memory");
++		return NULL;
++	}
++	memset(respath, 0x00, len);
++	strcat(respath, cleanedpath);
++
++	if (!specify_current_dir(cleanedpath) && specify_current_dir(originalpath)) {
++		if (!has_traling_path_separator(respath))
++			strcat(respath, "/");
++		strcat(respath, ".");
++	}
++
++	if (!has_traling_path_separator(respath) &&
++	                has_traling_path_separator(originalpath))
++		strcat(respath, "/");
++
++	return respath;
++}
++
++
++// Split splits path immediately following the final Separator,
++// separating it into a directory and file name component.
++// If there is no Separator in path, Split returns an empty dir
++// and file set to path.
++// The returned values have the property that path = dir+file.
++bool filepath_split(const char *path, char **dir, char **base)
++{
++	ssize_t i;
++	size_t len;
++
++	len = strlen(path);
++	if (len >= PATH_MAX) {
++		ERROR("Invalid path");
++		return false;
++	}
++	i = len - 1;
++	while (i >= 0 && path[i] != '/')
++		i--;
++
++	*dir = malloc(i + 2);
++	if (*dir == NULL) {
++		ERROR("Out of memory");
++		return false;
++	}
++	memcpy(*dir, path, i + 1);
++	*(*dir + i + 1) = '\0';
++
++	*base = safe_strdup(path + i + 1);
++
++	return true;
++}
++
++
++static bool do_clean_path_continue(const char *endpos, const char *stpos, const char *respath, char **dst)
++{
++	if (endpos - stpos == 1 && stpos[0] == '.') {
++		return true;
++	} else if (endpos - stpos == 2 && stpos[0] == '.' && stpos[1] == '.') {
++		char *dest = *dst;
++		if (dest <= respath + 1) {
++			return true;
++		}
++		for (--dest; dest > respath && !ISSLASH(dest[-1]); --dest) {
++			*dst = dest;
++			return true;
++		}
++		*dst = dest;
++		return true;
++	}
++	return false;
++}
++
++int do_clean_path(const char *respath, const char *limit_respath,
++                  const char *stpos, char **dst)
++{
++	char *dest = *dst;
++	const char *endpos = NULL;
++
++	for (endpos = stpos; *stpos; stpos = endpos) {
++		while (ISSLASH(*stpos)) {
++			++stpos;
++		}
++
++		for (endpos = stpos; *endpos && !ISSLASH(*endpos); ++endpos) {
++		}
++
++		if (endpos - stpos == 0) {
++			break;
++		} else if (do_clean_path_continue(endpos, stpos, respath, &dest)) {
++			continue;
++		}
++
++		if (!ISSLASH(dest[-1])) {
++			*dest++ = '/';
++		}
++
++		if (dest + (endpos - stpos) >= limit_respath) {
++			ERROR("Path is too long");
++			if (dest > respath + 1) {
++				dest--;
++			}
++			*dest = '\0';
++			return -1;
++		}
++
++		memcpy(dest, stpos, (size_t)(endpos - stpos));
++		dest += endpos - stpos;
++		*dest = '\0';
++	}
++	*dst = dest;
++	return 0;
++}
++
++char *cleanpath(const char *path, char *realpath, size_t realpath_len)
++{
++	char *respath = NULL;
++	char *dest = NULL;
++	const char *stpos = NULL;
++	const char *limit_respath = NULL;
++
++	if (path == NULL || path[0] == '\0' || \
++	                realpath == NULL || (realpath_len < PATH_MAX)) {
++		return NULL;
++	}
++
++	respath = realpath;
++
++	memset(respath, 0, realpath_len);
++	limit_respath = respath + PATH_MAX;
++
++	if (!IS_ABSOLUTE_FILE_NAME(path)) {
++		if (!getcwd(respath, PATH_MAX)) {
++			ERROR("Failed to getcwd");
++			respath[0] = '\0';
++			goto error;
++		}
++		dest = strchr(respath, '\0');
++		if (dest == NULL) {
++			ERROR("Failed to get the end of respath");
++			goto error;
++		}
++		if (strlen(path) > (PATH_MAX - strlen(respath) - 1)) {
++			ERROR("Path is too long");
++			goto error;
++		}
++		strcat(respath, path);
++		stpos = path;
++	} else {
++		dest = respath;
++		*dest++ = '/';
++		stpos = path;
++	}
++
++	if (do_clean_path(respath, limit_respath, stpos, &dest)) {
++		goto error;
++	}
++
++	if (dest > respath + 1 && ISSLASH(dest[-1])) {
++		--dest;
++	}
++	*dest = '\0';
++
++	return respath;
++
++error:
++	return NULL;
++}
++
++static int do_path_realloc(const char *start, const char *end,
++                           char **rpath, char **dest, const char **rpath_limit)
++{
++	long long dest_offset = *dest - *rpath;
++	char *new_rpath = NULL;
++	size_t new_size;
++	int nret = 0;
++	size_t gap = 0;
++
++	if (*dest + (end - start) < *rpath_limit) {
++		return 0;
++	}
++
++	gap = (size_t)(end - start) + 1;
++	new_size = (size_t)(*rpath_limit - *rpath);
++	if (new_size > SIZE_MAX - gap) {
++		ERROR("Out of range!");
++		return -1;
++	}
++
++	if (gap > PATH_MAX) {
++		new_size += gap;
++	} else {
++		new_size += PATH_MAX;
++	}
++	nret = lxc_mem_realloc((void **)&new_rpath, new_size, *rpath, PATH_MAX);
++	if (nret) {
++		ERROR("Failed to realloc memory for files limit variables");
++		return -1;
++	}
++	*rpath = new_rpath;
++	*rpath_limit = *rpath + new_size;
++
++	*dest = *rpath + dest_offset;
++
++	return 0;
++}
++
++static int do_get_symlinks_copy_buf(const char *buf, const char *prefix, size_t prefix_len,
++                                    char **rpath, char **dest)
++{
++	if (IS_ABSOLUTE_FILE_NAME(buf)) {
++		if (prefix_len) {
++			memcpy(*rpath, prefix, prefix_len);
++		}
++		*dest = *rpath + prefix_len;
++		*(*dest)++ = '/';
++	} else {
++		if (*dest > *rpath + prefix_len + 1) {
++			for (--(*dest); *dest > *rpath && !ISSLASH((*dest)[-1]); --(*dest)) {
++				continue;
++			}
++		}
++	}
++	return 0;
++}
++
++static int do_get_symlinks(const char **fullpath, const char *prefix, size_t prefix_len,
++                           char **rpath, char **dest, const char **end,
++                           int *num_links, char **extra_buf)
++{
++	char *buf = NULL;
++	size_t len;
++	ssize_t n;
++	int ret = -1;
++
++	if (++(*num_links) > MAXSYMLINKS) {
++		ERROR("Too many links in '%s'", *fullpath);
++		goto out;
++	}
++
++	buf = lxc_common_calloc_s(PATH_MAX);
++	if (buf == NULL) {
++		ERROR("Out of memory");
++		goto out;
++	}
++
++	n = readlink(*rpath, buf, PATH_MAX - 1);
++	if (n < 0) {
++		goto out;
++	}
++	buf[n] = '\0';
++
++	if (*extra_buf == NULL) {
++		*extra_buf = lxc_common_calloc_s(PATH_MAX);
++		if (*extra_buf == NULL) {
++			ERROR("Out of memory");
++			goto out;
++		}
++	}
++
++	len = strlen(*end);
++	if (len >= PATH_MAX - n) {
++		ERROR("Path is too long");
++		goto out;
++	}
++
++	memmove(&(*extra_buf)[n], *end, len + 1);
++	memcpy(*extra_buf, buf, (size_t)n);
++
++	*fullpath = *end = *extra_buf;
++
++	if (do_get_symlinks_copy_buf(buf, prefix, prefix_len, rpath, dest) != 0) {
++		goto out;
++	}
++
++	ret = 0;
++out:
++	free(buf);
++	return ret;
++}
++
++static bool do_eval_symlinks_in_scope_is_symlink(const char *path)
++{
++	struct stat st;
++
++	if (lstat(path, &st) < 0) {
++		return true;
++	}
++
++	if (!S_ISLNK(st.st_mode)) {
++		return true;
++	}
++	return false;
++}
++
++static void do_eval_symlinks_skip_slash(const char **start, const char **end)
++{
++	while (ISSLASH(**start)) {
++		++(*start);
++	}
++
++	for (*end = *start; **end && !ISSLASH(**end); ++(*end)) {
++	}
++}
++
++static inline void skip_dest_traling_slash(char **dest, char **rpath, size_t prefix_len)
++{
++	if (*dest > *rpath + prefix_len + 1) {
++		for (--(*dest); *dest > *rpath && !ISSLASH((*dest)[-1]); --(*dest)) {
++			continue;
++		}
++	}
++}
++
++static inline bool is_current_char(const char c)
++{
++	return c == '.';
++}
++
++static inline bool is_specify_current(const char *end, const char *start)
++{
++	return (end - start == 1) && is_current_char(start[0]);
++}
++
++static inline bool is_specify_parent(const char *end, const char *start)
++{
++	return (end - start == 2) && is_current_char(start[0]) && is_current_char(start[1]);
++}
++
++static int do_eval_symlinks_in_scope(const char *fullpath, const char *prefix,
++                                     size_t prefix_len,
++                                     char **rpath, char **dest, const char *rpath_limit)
++{
++	const char *start = NULL;
++	const char *end = NULL;
++	char *extra_buf = NULL;
++	int nret = 0;
++	int num_links = 0;
++
++	start = fullpath + prefix_len;
++	for (end = start; *start; start = end) {
++		do_eval_symlinks_skip_slash(&start, &end);
++		if (end - start == 0) {
++			break;
++		} else if (is_specify_current(end, start)) {
++			;
++		} else if (is_specify_parent(end, start)) {
++			skip_dest_traling_slash(dest, rpath, prefix_len);
++		} else {
++			if (!ISSLASH((*dest)[-1])) {
++				*(*dest)++ = '/';
++			}
++
++			nret = do_path_realloc(start, end, rpath, dest, &rpath_limit);
++			if (nret != 0) {
++				nret = -1;
++				goto out;
++			}
++
++			memcpy(*dest, start, (size_t)(end - start));
++			*dest += end - start;
++			**dest = '\0';
++
++			if (do_eval_symlinks_in_scope_is_symlink(*rpath)) {
++				continue;
++			}
++
++			nret = do_get_symlinks(&fullpath, prefix, prefix_len, rpath, dest, &end, &num_links, &extra_buf);
++			if (nret != 0) {
++				nret = -1;
++				goto out;
++			}
++		}
++	}
++out:
++	free(extra_buf);
++	return nret;
++}
++static char *eval_symlinks_in_scope(const char *fullpath, const char *rootpath)
++{
++	char resroot[PATH_MAX] = {0};
++	char *root = NULL;
++	char *rpath = NULL;
++	char *dest = NULL;
++	char *prefix = NULL;
++	const char *rpath_limit = NULL;
++	size_t prefix_len;
++
++	if (fullpath == NULL || rootpath == NULL) {
++		return NULL;
++	}
++
++	root = cleanpath(rootpath, resroot, sizeof(resroot));
++	if (root == NULL) {
++		ERROR("Failed to get cleaned path");
++		return NULL;
++	}
++
++	if (!strcmp(fullpath, root)) {
++		return safe_strdup(fullpath);
++	}
++
++	if (strstr(fullpath, root) == NULL) {
++		ERROR("Path '%s' is not in '%s'", fullpath, root);
++		return NULL;
++	}
++
++	rpath = lxc_common_calloc_s(PATH_MAX);
++	if (rpath == NULL) {
++		ERROR("Out of memory");
++		goto out;
++	}
++	rpath_limit = rpath + PATH_MAX;
++
++	prefix = root;
++	prefix_len = (size_t)strlen(prefix);
++	if (!strcmp(prefix, "/")) {
++		prefix_len = 0;
++	}
++
++	dest = rpath;
++	if (prefix_len) {
++		memcpy(rpath, prefix, prefix_len);
++		dest += prefix_len;
++	}
++	*dest++ = '/';
++
++	if (do_eval_symlinks_in_scope(fullpath, prefix, prefix_len, &rpath, &dest,
++	                              rpath_limit)) {
++		goto out;
++	}
++
++	if (dest > rpath + prefix_len + 1 && ISSLASH(dest[-1])) {
++		--dest;
++	}
++	*dest = '\0';
++	return rpath;
++
++out:
++	free(rpath);
++	return NULL;
++}
++
++// FollowSymlinkInScope is a wrapper around evalSymlinksInScope that returns an
++// absolute path. This function handles paths in a platform-agnostic manner.
++char *follow_symlink_in_scope(const char *fullpath, const char *rootpath)
++{
++	char resfull[PATH_MAX] = {0}, *full = NULL;
++	char resroot[PATH_MAX] = {0}, *root = NULL;
++
++	full = cleanpath(fullpath, resfull, PATH_MAX);
++	if (!full) {
++		ERROR("Failed to get cleaned path");
++		return NULL;
++	}
++
++	root = cleanpath(rootpath, resroot, PATH_MAX);
++	if (!root) {
++		ERROR("Failed to get cleaned path");
++		return NULL;
++	}
++
++	return eval_symlinks_in_scope(full, root);
++}
++
++// GetResourcePath evaluates `path` in the scope of the container's rootpath, with proper path
++// sanitisation. Symlinks are all scoped to the rootpath of the container, as
++// though the container's rootpath was `/`.
++//
++// The BaseFS of a container is the host-facing path which is bind-mounted as
++// `/` inside the container. This method is essentially used to access a
++// particular path inside the container as though you were a process in that
++// container.
++int get_resource_path(const char *rootpath, const char *path,
++                      char **scopepath)
++{
++	char resolved[PATH_MAX] = {0}, *cleanedpath = NULL;
++	char *fullpath = NULL;
++	size_t len;
++
++	if (!rootpath || !path || !scopepath)
++		return -1;
++
++	*scopepath = NULL;
++
++	cleanedpath = cleanpath(path, resolved, PATH_MAX);
++	if (!cleanedpath) {
++		ERROR("Failed to get cleaned path");
++		return -1;
++	}
++
++	len = strlen(rootpath) + strlen(cleanedpath) + 1;
++	fullpath = malloc(len);
++	if (!fullpath) {
++		ERROR("Out of memory");
++		return -1;
++	}
++	snprintf(fullpath, len, "%s%s", rootpath, cleanedpath);
++
++	*scopepath = follow_symlink_in_scope(fullpath, rootpath);
++
++	free(fullpath);
++	return 0;
++}
++
++// Rel returns a relative path that is lexically equivalent to targpath when
++// joined to basepath with an intervening separator. That is,
++// Join(basepath, Rel(basepath, targpath)) is equivalent to targpath itself.
++// On success, the returned path will always be relative to basepath,
++// even if basepath and targpath share no elements.
++// An error is returned if targpath can't be made relative to basepath or if
++// knowing the current working directory would be necessary to compute it.
++// Rel calls Clean on the result.
++char *path_relative(const char *basepath, const char *targpath)
++{
++	char resbase[PATH_MAX] = {0}, *base = NULL;
++	char restarg[PATH_MAX] = {0}, *targ = NULL;
++	size_t bl = 0, tl = 0, b0 = 0, bi = 0, t0 = 0, ti = 0;
++
++	base = cleanpath(basepath, resbase, PATH_MAX);
++	if (!base) {
++		ERROR("Failed to get cleaned path");
++		return NULL;
++	}
++
++	targ = cleanpath(targpath, restarg, PATH_MAX);
++	if (!targ) {
++		ERROR("Failed to get cleaned path");
++		return NULL;
++	}
++
++	if (strcmp(base, targ) == 0)
++		return safe_strdup(".");
++
++	bl = strlen(base);
++	tl = strlen(targ);
++	while(true) {
++		while(bi < bl && !ISSLASH(base[bi]))
++			bi++;
++		while(ti < tl && !ISSLASH(targ[ti]))
++			ti++;
++		//not the same string
++		if (((bi - b0) != (ti - t0)) || strncmp(base + b0, targ + t0, bi - b0))
++			break;
++		if (bi < bl)
++			bi++;
++		if (ti < tl)
++			ti++;
++		b0 = bi;
++		t0 = ti;
++	}
++
++	if (b0 != bl) {
++		// Base elements left. Must go up before going down.
++		int seps = 0, i;
++		size_t ncopyed = 0, seps_size;
++		char *buf = NULL;
++
++		for (bi = b0; bi < bl; bi++) {
++			if (ISSLASH(base[bi]))
++				seps++;
++		}
++		//strlen(..) + strlen(/..) + '\0'
++		seps_size = 2 + seps * 3 + 1;
++		if (t0 != tl)
++			seps_size += 1 + tl - t0;
++
++		buf = calloc(seps_size, 1);
++		if (!buf) {
++			ERROR("Out of memory");
++			return NULL;
++		}
++		buf[ncopyed++] = '.';
++		buf[ncopyed++] = '.';
++		for (i = 0; i < seps; i++) {
++			buf[ncopyed++] = '/';
++			buf[ncopyed++] = '.';
++			buf[ncopyed++] = '.';
++		}
++		if (t0 != tl) {
++			buf[ncopyed++] = '/';
++			memcpy(buf + ncopyed, targ + t0, tl - t0 + 1);
++		}
++		return buf;
++	}
++
++	return safe_strdup(targ + t0);
++}
+diff --git a/src/lxc/path.h b/src/lxc/path.h
+new file mode 100644
+index 0000000..2c60fb9
+--- /dev/null
++++ b/src/lxc/path.h
+@@ -0,0 +1,65 @@
++/* SPDX-License-Identifier: LGPL-2.1+ */
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2020. Allrights reserved
++ * Description: isulad utils
++ * Author: lifeng
++ * Create: 2020-04-11
++******************************************************************************/
++#ifndef __ISULAD_PATH_H_
++#define __ISULAD_PATH_H_
++
++#include <stdbool.h>
++
++bool specify_current_dir(const char *path);
++
++bool has_traling_path_separator(const char *path);
++
++// PreserveTrailingDotOrSeparator returns the given cleaned path
++// and appends a trailing `/.` or `/` if its corresponding  original
++// path ends with a trailing `/.` or `/`. If the cleaned
++// path already ends in a `.` path segment, then another is not added. If the
++// clean path already ends in a path separator, then another is not added.
++char *preserve_trailing_dot_or_separator(const char *cleanedpath,
++                const char *originalpath);
++
++
++// Split splits path immediately following the final Separator,
++// separating it into a directory and file name component.
++// If there is no Separator in path, Split returns an empty dir
++// and file set to path.
++// The returned values have the property that path = dir+file.
++bool filepath_split(const char *path, char **dir, char **base);
++
++/*
++ * cleanpath is similar to realpath of glibc, but not expands symbolic links,
++ * and not check the existence of components of the path.
++ */
++char *cleanpath(const char *path, char *realpath, size_t realpath_len);
++
++
++// FollowSymlinkInScope is a wrapper around evalSymlinksInScope that returns an
++// absolute path. This function handles paths in a platform-agnostic manner.
++char *follow_symlink_in_scope(const char *fullpath, const char *rootpath);
++
++// GetResourcePath evaluates `path` in the scope of the container's rootpath, with proper path
++// sanitisation. Symlinks are all scoped to the rootpath of the container, as
++// though the container's rootpath was `/`.
++//
++// The BaseFS of a container is the host-facing path which is bind-mounted as
++// `/` inside the container. This method is essentially used to access a
++// particular path inside the container as though you were a process in that
++// container.
++int get_resource_path(const char *rootpath, const char *path,
++                      char **scopepath);
++
++// Rel returns a relative path that is lexically equivalent to targpath when
++// joined to basepath with an intervening separator. That is,
++// Join(basepath, Rel(basepath, targpath)) is equivalent to targpath itself.
++// On success, the returned path will always be relative to basepath,
++// even if basepath and targpath share no elements.
++// An error is returned if targpath can't be made relative to basepath or if
++// knowing the current working directory would be necessary to compute it.
++// Rel calls Clean on the result.
++char *path_relative(const char *basepath, const char *targpath);
++
++#endif
+diff --git a/src/lxc/utils.h b/src/lxc/utils.h
+index 339217c..7b36133 100644
+--- a/src/lxc/utils.h
++++ b/src/lxc/utils.h
+@@ -27,6 +27,9 @@
+ #include "memory_utils.h"
+ #include "raw_syscalls.h"
+ #include "string_utils.h"
++#ifdef HAVE_ISULAD
++#include "isulad_utils.h"
++#endif
+ 
+ /* returns 1 on success, 0 if there were any failures */
+ extern int lxc_rmdir_onedev(const char *path, const char *exclude);
 -- 
 1.8.3.1
 

@@ -1,0 +1,3568 @@
+From 1dce19b2ce4d01c12f3f4eda0666457f2fd3c42c Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 13 Apr 2020 18:11:59 +0800
+Subject: [PATCH 10/49] IO: refact terminal progress
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ configure.ac                     |    3 +
+ src/lxc/Makefile.am              |   24 +-
+ src/lxc/attach.c                 |   20 +-
+ src/lxc/attach_options.h         |    5 +
+ src/lxc/conf.c                   |   10 +
+ src/lxc/json/defs.c              |  205 +++++++
+ src/lxc/json/defs.h              |   37 ++
+ src/lxc/json/json_common.c       | 1153 ++++++++++++++++++++++++++++++++++++++
+ src/lxc/json/json_common.h       |  185 ++++++
+ src/lxc/json/logger_json_file.c  |  246 ++++++++
+ src/lxc/json/logger_json_file.h  |   45 ++
+ src/lxc/json/oci_runtime_hooks.c |   52 ++
+ src/lxc/json/oci_runtime_hooks.h |   15 +
+ src/lxc/json/oci_runtime_spec.c  |  195 +++++++
+ src/lxc/json/oci_runtime_spec.h  |   37 ++
+ src/lxc/json/read-file.c         |   95 ++++
+ src/lxc/json/read-file.h         |   11 +
+ src/lxc/lxccontainer.c           |   36 ++
+ src/lxc/lxccontainer.h           |   24 +
+ src/lxc/terminal.c               |  783 ++++++++++++++++++++++++++
+ src/lxc/terminal.h               |   20 +
+ src/lxc/tools/arguments.h        |    1 +
+ src/lxc/tools/lxc_start.c        |   12 +
+ 23 files changed, 3208 insertions(+), 6 deletions(-)
+ create mode 100644 src/lxc/json/defs.c
+ create mode 100644 src/lxc/json/defs.h
+ create mode 100755 src/lxc/json/json_common.c
+ create mode 100755 src/lxc/json/json_common.h
+ create mode 100644 src/lxc/json/logger_json_file.c
+ create mode 100644 src/lxc/json/logger_json_file.h
+ create mode 100644 src/lxc/json/oci_runtime_hooks.c
+ create mode 100644 src/lxc/json/oci_runtime_hooks.h
+ create mode 100644 src/lxc/json/oci_runtime_spec.c
+ create mode 100644 src/lxc/json/oci_runtime_spec.h
+ create mode 100644 src/lxc/json/read-file.c
+ create mode 100644 src/lxc/json/read-file.h
+
+diff --git a/configure.ac b/configure.ac
+index 5f386d9..56d0cb7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -119,6 +119,9 @@ AM_CONDITIONAL([DISTRO_UBUNTU], [test "x$with_distro" = "xubuntu"])
+ 
+ AC_CONFIG_LINKS([config/etc/default.conf:config/etc/${distroconf}])
+ 
++# Check yajl
++PKG_CHECK_MODULES([YAJL], [yajl >= 2],[],[AC_MSG_ERROR([You must install yajl >= 2])])
++
+ # Check for init system type
+ AC_MSG_CHECKING([for init system type])
+ AC_ARG_WITH([init-script],
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index d8c2492..23935e5 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -53,7 +53,12 @@ noinst_HEADERS = api_extensions.h \
+ 		 uuid.h
+ 
+ #if HAVE_ISULAD
+-noinst_HEADERS += isulad_utils.h path.h
++noinst_HEADERS += isulad_utils.h path.h \
++				  json/json_common.h json/defs.h \
++				  json/oci_runtime_hooks.h \
++				  json/logger_json_file.h \
++				  json/oci_runtime_spec.h \
++				  json/read-file.h
+ #endif
+ 
+ if IS_BIONIC
+@@ -159,10 +164,16 @@ liblxc_la_SOURCES = af_unix.c af_unix.h \
+ 		    version.h \
+ 		    $(LSM_SOURCES)
+ 
+-#if HAVE_ISULAD
++if HAVE_ISULAD
+ liblxc_la_SOURCES += isulad_utils.c isulad_utils.h \
+-			path.c path.h
+-#endif
++			path.c path.h \
++			json/json_common.c json/json_common.h \
++			json/defs.h json/defs.c \
++			json/oci_runtime_hooks.c json/oci_runtime_hooks.h \
++			json/logger_json_file.c json/logger_json_file.h \
++			json/oci_runtime_spec.c json/oci_runtime_spec.h \
++			json/read-file.c json/read-file.h
++endif
+ 
+ if IS_BIONIC
+ liblxc_la_SOURCES += ../include/fexecve.c ../include/fexecve.h \
+@@ -223,6 +234,7 @@ AM_CFLAGS = -DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
+ 	    -I $(top_srcdir)/src/lxc/cgroups
+ 
+ if HAVE_ISULAD
++AM_CFLAGS += -I $(top_srcdir)/src/lxc/json
+ AM_CFLAGS += -DHAVE_ISULAD
+ endif
+ if ENABLE_APPARMOR
+@@ -271,6 +283,10 @@ liblxc_la_LDFLAGS = -pthread \
+ 		    -Wl,-soname,liblxc.so.$(firstword $(subst ., ,@LXC_ABI@)) \
+ 		    -version-info @LXC_ABI_MAJOR@
+ 
++if HAVE_ISULAD
++liblxc_la_LDFLAGS += @YAJL_LIBS@
++endif
++
+ liblxc_la_LIBADD = $(CAP_LIBS) \
+ 		   $(OPENSSL_LIBS) \
+ 		   $(SELINUX_LIBS) \
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 56d62ed..78b4700 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -898,12 +898,28 @@ on_error:
+ }
+ 
+ static int lxc_attach_terminal(struct lxc_conf *conf,
+-			       struct lxc_terminal *terminal)
++			       struct lxc_terminal *terminal, lxc_attach_options_t *options)
+ {
+ 	int ret;
+ 
+ 	lxc_terminal_init(terminal);
+ 
++#ifdef HAVE_ISULAD
++	/* isulad: if we pass fifo in option, use them as init fifos */
++	if (options->init_fifo[0]) {
++		free(terminal->init_fifo[0]);
++		terminal->init_fifo[0] = safe_strdup(options->init_fifo[0]);
++	}
++	if (options->init_fifo[1]) {
++		free(terminal->init_fifo[1]);
++		terminal->init_fifo[1] = safe_strdup(options->init_fifo[1]);
++	}
++	if (options->init_fifo[2]) {
++		free(terminal->init_fifo[2]);
++		terminal->init_fifo[2] = safe_strdup(options->init_fifo[2]);
++	}
++#endif
++
+ 	ret = lxc_terminal_create(terminal);
+ 	if (ret < 0)
+ 		return log_error(-1, "Failed to create terminal");
+@@ -1097,7 +1113,7 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 	}
+ 
+ 	if (options->attach_flags & LXC_ATTACH_TERMINAL) {
+-		ret = lxc_attach_terminal(conf, &terminal);
++		ret = lxc_attach_terminal(conf, &terminal, options);
+ 		if (ret < 0) {
+ 			ERROR("Failed to setup new terminal");
+ 			free(cwd);
+diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
+index ec8bea1..3a02ee5 100644
+--- a/src/lxc/attach_options.h
++++ b/src/lxc/attach_options.h
+@@ -113,6 +113,11 @@ typedef struct lxc_attach_options_t {
+ 
+ 	/*! File descriptor to log output. */
+ 	int log_fd;
++#ifdef HAVE_ISULAD
++	char *init_fifo[3]; /* isulad: default fifos for the start */
++	int64_t timeout;/* isulad: Seconds for waiting on a container to attach/exec before it is killed*/
++#endif
++
+ } lxc_attach_options_t;
+ 
+ /*! Default attach options to use */
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 1f779b9..1487b73 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -2669,6 +2669,16 @@ struct lxc_conf *lxc_conf_init(void)
+ 	/* isulad add begin */
+ 	lxc_list_init(&new->populate_devs);
+ 	new->umask = 0027; /*default umask 0027*/
++	new->console.init_fifo[0] = NULL;
++	new->console.init_fifo[1] = NULL;
++	new->console.init_fifo[2] = NULL;
++	new->console.pipes[0][0] = -1;
++	new->console.pipes[0][1] = -1;
++	new->console.pipes[1][0] = -1;
++	new->console.pipes[1][1] = -1;
++	new->console.pipes[2][0] = -1;
++	new->console.pipes[2][1] = -1;
++	lxc_list_init(&new->console.fifos);
+ #endif
+ 
+ 	return new;
+diff --git a/src/lxc/json/defs.c b/src/lxc/json/defs.c
+new file mode 100644
+index 0000000..4bf569a
+--- /dev/null
++++ b/src/lxc/json/defs.c
+@@ -0,0 +1,205 @@
++// Generated from defs.json. Do not edit!
++#ifndef _GNU_SOURCE
++#define _GNU_SOURCE
++#endif
++#include <string.h>
++#include <read-file.h>
++#include "defs.h"
++
++defs_hook *make_defs_hook(yajl_val tree, struct parser_context *ctx, parser_error *err) {
++    defs_hook *ret = NULL;
++    *err = 0;
++    if (tree == NULL)
++        return ret;
++    ret = safe_malloc(sizeof(*ret));
++    {
++        yajl_val val = get_val(tree, "path", yajl_t_string);
++        if (val != NULL) {
++            char *str = YAJL_GET_STRING(val);
++            ret->path = safe_strdup(str ? str : "");
++        }
++    }
++    {
++        yajl_val tmp = get_val(tree, "args", yajl_t_array);
++        if (tmp != NULL && YAJL_GET_ARRAY(tmp) != NULL && YAJL_GET_ARRAY(tmp)->len > 0) {
++            size_t i;
++            ret->args_len = YAJL_GET_ARRAY(tmp)->len;
++            if (YAJL_GET_ARRAY(tmp)->len > SIZE_MAX / sizeof(*ret->args) - 1) {
++                free_defs_hook(ret);
++                return NULL;
++            }
++            ret->args = safe_malloc((YAJL_GET_ARRAY(tmp)->len + 1) * sizeof(*ret->args));
++            for (i = 0; i < YAJL_GET_ARRAY(tmp)->len; i++) {
++                yajl_val val = YAJL_GET_ARRAY(tmp)->values[i];
++                if (val != NULL) {
++                    char *str = YAJL_GET_STRING(val);
++                    ret->args[i] = safe_strdup(str ? str : "");
++                }
++            }
++        }
++    }
++    {
++        yajl_val tmp = get_val(tree, "env", yajl_t_array);
++        if (tmp != NULL && YAJL_GET_ARRAY(tmp) != NULL && YAJL_GET_ARRAY(tmp)->len > 0) {
++            size_t i;
++            ret->env_len = YAJL_GET_ARRAY(tmp)->len;
++            if (YAJL_GET_ARRAY(tmp)->len > SIZE_MAX / sizeof(*ret->env) - 1) {
++                free_defs_hook(ret);
++                return NULL;
++            }
++            ret->env = safe_malloc((YAJL_GET_ARRAY(tmp)->len + 1) * sizeof(*ret->env));
++            for (i = 0; i < YAJL_GET_ARRAY(tmp)->len; i++) {
++                yajl_val val = YAJL_GET_ARRAY(tmp)->values[i];
++                if (val != NULL) {
++                    char *str = YAJL_GET_STRING(val);
++                    ret->env[i] = safe_strdup(str ? str : "");
++                }
++            }
++        }
++    }
++    {
++        yajl_val val = get_val(tree, "timeout", yajl_t_number);
++        if (val != NULL) {
++            int invalid = common_safe_int(YAJL_GET_NUMBER(val), (int *)&ret->timeout);
++            if (invalid) {
++                if (asprintf(err, "Invalid value '%s' with type 'integer' for key 'timeout': %s", YAJL_GET_NUMBER(val), strerror(-invalid)) < 0)
++                    *err = safe_strdup("error allocating memory");
++                free_defs_hook(ret);
++                return NULL;
++            }
++        }
++    }
++    if (ret->path == NULL) {
++        if (asprintf(err, "Required field '%s' not present", "path") < 0)
++            *err = safe_strdup("error allocating memory");
++        free_defs_hook(ret);
++        return NULL;
++    }
++
++    if (tree->type == yajl_t_object && (ctx->options & PARSE_OPTIONS_STRICT)) {
++        int i;
++        for (i = 0; i < tree->u.object.len; i++)
++            if (strcmp(tree->u.object.keys[i], "path") &&
++                strcmp(tree->u.object.keys[i], "args") &&
++                strcmp(tree->u.object.keys[i], "env") &&
++                strcmp(tree->u.object.keys[i], "timeout")) {
++                if (ctx->stderr > 0)
++                    fprintf(ctx->stderr, "WARNING: unknown key found: %s\n", tree->u.object.keys[i]);
++            }
++        }
++    return ret;
++}
++
++void free_defs_hook(defs_hook *ptr) {
++    if (ptr == NULL)
++        return;
++    free(ptr->path);
++    ptr->path = NULL;
++    if (ptr->args != NULL) {
++        size_t i;
++        for (i = 0; i < ptr->args_len; i++) {
++            if (ptr->args[i] != NULL) {
++                free(ptr->args[i]);
++                ptr->args[i] = NULL;
++            }
++        }
++        free(ptr->args);
++        ptr->args = NULL;
++    }
++    if (ptr->env != NULL) {
++        size_t i;
++        for (i = 0; i < ptr->env_len; i++) {
++            if (ptr->env[i] != NULL) {
++                free(ptr->env[i]);
++                ptr->env[i] = NULL;
++            }
++        }
++        free(ptr->env);
++        ptr->env = NULL;
++    }
++    free(ptr);
++}
++
++yajl_gen_status gen_defs_hook(yajl_gen g, defs_hook *ptr, struct parser_context *ctx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    *err = 0;
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat)
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) ||(ptr != NULL && ptr->path != NULL)) {
++        char *str = "";
++        stat = reformat_map_key(g, "path", strlen("path"));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (ptr != NULL && ptr->path != NULL) {
++            str = ptr->path;
++        }
++        stat = reformat_string(g, str, strlen(str));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) || (ptr != NULL && ptr->args != NULL)) {
++        size_t len = 0, i;
++        stat = reformat_map_key(g, "args", strlen("args"));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (ptr != NULL && ptr->args != NULL) {
++            len = ptr->args_len;
++        }
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 0);
++        stat = reformat_start_array(g);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        for (i = 0; i < len; i++) {
++            stat = reformat_string(g, ptr->args[i], strlen(ptr->args[i]));
++            if (yajl_gen_status_ok != stat)
++                GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_end_array(g);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) || (ptr != NULL && ptr->env != NULL)) {
++        size_t len = 0, i;
++        stat = reformat_map_key(g, "env", strlen("env"));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (ptr != NULL && ptr->env != NULL) {
++            len = ptr->env_len;
++        }
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 0);
++        stat = reformat_start_array(g);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        for (i = 0; i < len; i++) {
++            stat = reformat_string(g, ptr->env[i], strlen(ptr->env[i]));
++            if (yajl_gen_status_ok != stat)
++                GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_end_array(g);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) ||(ptr != NULL && ptr->timeout)) {
++        long long int num = 0;
++        stat = reformat_map_key(g, "timeout", strlen("timeout"));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (ptr != NULL && ptr->timeout) {
++            num = (long long int)ptr->timeout;
++        }
++        stat = reformat_int(g, num);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat)
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    return yajl_gen_status_ok;
++}
+diff --git a/src/lxc/json/defs.h b/src/lxc/json/defs.h
+new file mode 100644
+index 0000000..0bbd8ac
+--- /dev/null
++++ b/src/lxc/json/defs.h
+@@ -0,0 +1,37 @@
++// Generated from defs.json. Do not edit!
++#ifndef DEFS_SCHEMA_H
++#define DEFS_SCHEMA_H
++
++#include <sys/types.h>
++#include <stdint.h>
++#include "json_common.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct {
++    char *path;
++
++    char **args;
++    size_t args_len;
++
++    char **env;
++    size_t env_len;
++
++    int timeout;
++
++}
++defs_hook;
++
++void free_defs_hook(defs_hook *ptr);
++
++defs_hook *make_defs_hook(yajl_val tree, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_defs_hook(yajl_gen g, defs_hook *ptr, struct parser_context *ctx, parser_error *err);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
+diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
+new file mode 100755
+index 0000000..ec20c59
+--- /dev/null
++++ b/src/lxc/json/json_common.c
+@@ -0,0 +1,1153 @@
++// Auto generated file. Do not edit!
++#define _GNU_SOURCE
++#include <stdio.h>
++#include <errno.h>
++#include <limits.h>
++#include "json_common.h"
++
++#define MAX_NUM_STR_LEN 21
++
++yajl_gen_status reformat_number(void *ctx, const char *str, size_t len) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_number(g, str, len);
++}
++
++yajl_gen_status reformat_uint(void *ctx, long long unsigned int num) {
++    char numstr[MAX_NUM_STR_LEN];
++    int ret;
++
++    ret = snprintf(numstr, MAX_NUM_STR_LEN, "%llu", num);
++    if (ret < 0 || ret >= MAX_NUM_STR_LEN) {
++        return yajl_gen_in_error_state;
++    }
++    return reformat_number(ctx, (const char *)numstr, strlen(numstr));
++}
++
++yajl_gen_status reformat_int(void *ctx, long long int num) {
++    char numstr[MAX_NUM_STR_LEN];
++    int ret;
++
++    ret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", num);
++    if (ret < 0 || ret >= MAX_NUM_STR_LEN) {
++        return yajl_gen_in_error_state;
++    }
++    return reformat_number(ctx, (const char *)numstr, strlen(numstr));
++}
++
++yajl_gen_status reformat_double(void *ctx, double num) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_double(g, num);
++}
++
++yajl_gen_status reformat_string(void *ctx, const char *str, size_t len) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_string(g, (const unsigned char *)str, len);
++}
++
++yajl_gen_status reformat_null(void *ctx) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_null(g);
++}
++
++yajl_gen_status reformat_bool(void *ctx, int boolean) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_bool(g, boolean);
++}
++
++yajl_gen_status reformat_map_key(void *ctx, const char *str, size_t len) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_string(g, (const unsigned char *)str, len);
++}
++
++yajl_gen_status reformat_start_map(void *ctx) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_map_open(g);
++}
++
++yajl_gen_status reformat_end_map(void *ctx) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_map_close(g);
++}
++
++yajl_gen_status reformat_start_array(void *ctx) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_array_open(g);
++}
++
++yajl_gen_status reformat_end_array(void *ctx) {
++    yajl_gen g = (yajl_gen) ctx;
++    return yajl_gen_array_close(g);
++}
++
++bool json_gen_init(yajl_gen *g, struct parser_context *ctx) {
++    *g = yajl_gen_alloc(NULL);
++    if (NULL == *g) {
++        return false;
++
++    }
++    yajl_gen_config(*g, yajl_gen_beautify, !(ctx->options & GEN_OPTIONS_SIMPLIFY));
++    yajl_gen_config(*g, yajl_gen_validate_utf8, !(ctx->options & GEN_OPTIONS_NOT_VALIDATE_UTF8));
++    return true;
++}
++
++yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {
++    const char *path[] = { name, NULL };
++    return yajl_tree_get(tree, path, type);
++}
++
++void *safe_malloc(size_t size) {
++    void *ret = NULL;
++    if (size == 0) {
++        abort();
++    }
++    ret = calloc(1, size);
++    if (ret == NULL) {
++        abort();
++    }
++    return ret;
++}
++
++int common_safe_double(const char *numstr, double *converted) {
++    char *err_str = NULL;
++    double d;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    d = strtod(numstr, &err_str);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err_str == NULL || err_str == numstr || *err_str != '\0') {
++        return -EINVAL;
++    }
++
++    *converted = d;
++    return 0;
++}
++
++int common_safe_uint8(const char *numstr, uint8_t *converted) {
++    char *err = NULL;
++    unsigned long int uli;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    uli = strtoul(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (uli > UINT8_MAX) {
++        return -ERANGE;
++    }
++
++    *converted = (uint8_t)uli;
++    return 0;
++}
++
++int common_safe_uint16(const char *numstr, uint16_t *converted) {
++    char *err = NULL;
++    unsigned long int uli;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    uli = strtoul(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (uli > UINT16_MAX) {
++        return -ERANGE;
++    }
++
++    *converted = (uint16_t)uli;
++    return 0;
++}
++
++int common_safe_uint32(const char *numstr, uint32_t *converted) {
++    char *err = NULL;
++    unsigned long long int ull;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    ull = strtoull(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (ull > UINT32_MAX) {
++        return -ERANGE;
++    }
++
++    *converted = (uint32_t)ull;
++    return 0;
++}
++
++int common_safe_uint64(const char *numstr, uint64_t *converted) {
++    char *err = NULL;
++    unsigned long long int ull;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    ull = strtoull(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    *converted = (uint64_t)ull;
++    return 0;
++}
++
++int common_safe_uint(const char *numstr, unsigned int *converted) {
++    char *err = NULL;
++    unsigned long long int ull;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    ull = strtoull(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (ull > UINT_MAX) {
++        return -ERANGE;
++    }
++
++    *converted = (unsigned int)ull;
++    return 0;
++}
++
++int common_safe_int8(const char *numstr, int8_t *converted) {
++    char *err = NULL;
++    long int li;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    li = strtol(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (li > INT8_MAX || li < INT8_MIN) {
++        return -ERANGE;
++    }
++
++    *converted = (int8_t)li;
++    return 0;
++}
++
++int common_safe_int16(const char *numstr, int16_t *converted) {
++    char *err = NULL;
++    long int li;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    li = strtol(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (li > INT16_MAX || li < INT16_MIN) {
++        return -ERANGE;
++    }
++
++    *converted = (int16_t)li;
++    return 0;
++}
++
++int common_safe_int32(const char *numstr, int32_t *converted) {
++    char *err = NULL;
++    long long int lli;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    lli = strtol(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (lli > INT32_MAX || lli < INT32_MIN) {
++        return -ERANGE;
++    }
++
++    *converted = (int32_t)lli;
++    return 0;
++}
++
++int common_safe_int64(const char *numstr, int64_t *converted) {
++    char *err = NULL;
++    long long int lli;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    lli = strtoll(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    *converted = (int64_t)lli;
++    return 0;
++}
++
++int common_safe_int(const char *numstr, int *converted) {
++    char *err = NULL;
++    long long int lli;
++
++    if (numstr == NULL) {
++        return -EINVAL;
++    }
++
++    errno = 0;
++    lli = strtol(numstr, &err, 0);
++    if (errno > 0) {
++        return -errno;
++    }
++
++    if (err == NULL || err == numstr || *err != '\0') {
++        return -EINVAL;
++    }
++
++    if (lli > INT_MAX || lli < INT_MIN) {
++        return -ERANGE;
++    }
++
++    *converted = (int)lli;
++    return 0;
++}
++
++yajl_gen_status gen_json_map_int_int(void *ctx, json_map_int_int *map, struct parser_context *ptx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    yajl_gen g = (yajl_gen) ctx;
++    size_t len = 0, i = 0;
++    if (map != NULL) {
++        len = map->len;
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 0);
++    }
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++
++    }
++    for (i = 0; i < len; i++) {
++        char numstr[MAX_NUM_STR_LEN];
++        int nret;
++        nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
++        if (nret < 0 || nret >= MAX_NUM_STR_LEN) {
++            if (!*err && asprintf(err, "Error to print string") < 0) {
++                *(err) = safe_strdup("error allocating memory");
++            }
++            return yajl_gen_in_error_state;
++        }
++        stat = reformat_string(g, numstr, strlen(numstr));
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_int(g, map->values[i]);
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++    }
++
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    return yajl_gen_status_ok;
++}
++
++void free_json_map_int_int(json_map_int_int *map) {
++    if (map != NULL) {
++        size_t i;
++        for (i = 0; i < map->len; i++) {
++            // No need to free key for type int
++            // No need to free value for type int
++        }
++        free(map->keys);
++        map->keys = NULL;
++        free(map->values);
++        map->values = NULL;
++        free(map);
++    }
++}
++json_map_int_int *make_json_map_int_int(yajl_val src, struct parser_context *ctx, parser_error *err) {
++    json_map_int_int *ret = NULL;
++    if (src != NULL && YAJL_GET_OBJECT(src) != NULL) {
++        size_t i;
++        size_t len = YAJL_GET_OBJECT(src)->len;
++        if (len > SIZE_MAX / sizeof(int) - 1) {
++            return NULL;
++        }
++        ret = safe_malloc(sizeof(*ret));
++        ret->len = len;
++        ret->keys = safe_malloc((len + 1) * sizeof(int));
++        ret->values = safe_malloc((len + 1) * sizeof(int));
++        for (i = 0; i < len; i++) {
++            const char *srckey = YAJL_GET_OBJECT(src)->keys[i];
++            yajl_val srcval = YAJL_GET_OBJECT(src)->values[i];
++
++            if (srckey != NULL) {
++                int invalid;
++                invalid = common_safe_int(srckey, &(ret->keys[i]));
++                if (invalid) {
++                    if (*err == NULL && asprintf(err, "Invalid key '%s' with type 'int': %s", srckey, strerror(-invalid)) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_int_int(ret);
++                    return NULL;
++                }
++            }
++
++            if (srcval != NULL) {
++                int invalid;
++                if (!YAJL_IS_NUMBER(srcval)) {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'int' for key '%s'", srckey) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_int_int(ret);
++                    return NULL;
++                }
++                invalid = common_safe_int(YAJL_GET_NUMBER(srcval), &(ret->values[i]));
++                if (invalid) {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'int' for key '%s': %s", srckey, strerror(-invalid)) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_int_int(ret);
++                    return NULL;
++                }
++            }
++        }
++    }
++    return ret;
++}
++int append_json_map_int_int(json_map_int_int *map, int key, int val) {
++    size_t len;
++    int *keys = NULL;
++    int *vals = NULL;
++
++    if (map == NULL) {
++        return -1;
++    }
++
++    if ((SIZE_MAX / sizeof(int) - 1) < map->len) {
++        return -1;
++    }
++
++    len = map->len + 1;
++    keys = safe_malloc(len * sizeof(int));
++    vals = safe_malloc(len * sizeof(int));
++
++    if (map->len) {
++        (void)memcpy(keys, map->keys, map->len * sizeof(int));
++        (void)memcpy(vals, map->values, map->len * sizeof(int));
++    }
++    free(map->keys);
++    map->keys = keys;
++    free(map->values);
++    map->values = vals;
++    map->keys[map->len] = key;
++    map->values[map->len] = val;
++
++    map->len++;
++    return 0;
++}
++
++yajl_gen_status gen_json_map_int_bool(void *ctx, json_map_int_bool *map, struct parser_context *ptx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    yajl_gen g = (yajl_gen) ctx;
++    size_t len = 0, i = 0;
++    if (map != NULL) {
++        len = map->len;
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 0);
++    }
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++
++    }
++    for (i = 0; i < len; i++) {
++        char numstr[MAX_NUM_STR_LEN];
++        int nret;
++        nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
++        if (nret < 0 || nret >= MAX_NUM_STR_LEN) {
++            if (!*err && asprintf(err, "Error to print string") < 0) {
++                *(err) = safe_strdup("error allocating memory");
++            }
++            return yajl_gen_in_error_state;
++        }
++        stat = reformat_string(g, numstr, strlen(numstr));
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_bool(g, map->values[i]);
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++    }
++
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    return yajl_gen_status_ok;
++}
++
++void free_json_map_int_bool(json_map_int_bool *map) {
++    if (map != NULL) {
++        free(map->keys);
++        map->keys = NULL;
++        free(map->values);
++        map->values = NULL;
++        free(map);
++    }
++}
++json_map_int_bool *make_json_map_int_bool(yajl_val src, struct parser_context *ctx, parser_error *err) {
++    json_map_int_bool *ret = NULL;
++    if (src != NULL && YAJL_GET_OBJECT(src) != NULL) {
++        size_t i;
++        size_t len = YAJL_GET_OBJECT(src)->len;
++        if (len > SIZE_MAX / sizeof(int) - 1) {
++            return NULL;
++        }
++        ret = safe_malloc(sizeof(*ret));
++        ret->len = len;
++        ret->keys = safe_malloc((len + 1) * sizeof(int));
++        ret->values = safe_malloc((len + 1) * sizeof(bool));
++        for (i = 0; i < len; i++) {
++            const char *srckey = YAJL_GET_OBJECT(src)->keys[i];
++            yajl_val srcval = YAJL_GET_OBJECT(src)->values[i];
++
++            if (srckey != NULL) {
++                int invalid;
++                invalid = common_safe_int(srckey, &(ret->keys[i]));
++                if (invalid) {
++                    if (*err == NULL && asprintf(err, "Invalid key '%s' with type 'int': %s", srckey, strerror(-invalid)) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_int_bool(ret);
++                    return NULL;
++                }
++            }
++
++            if (srcval != NULL) {
++                if (YAJL_IS_TRUE(srcval)) {
++                    ret->values[i] = true;
++                } else if (YAJL_IS_FALSE(srcval)) {
++                    ret->values[i] = false;
++                } else {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'bool' for key '%s'", srckey) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_int_bool(ret);
++                    return NULL;
++                }
++            }
++        }
++    }
++    return ret;
++}
++int append_json_map_int_bool(json_map_int_bool *map, int key, bool val) {
++    size_t len;
++    int *keys = NULL;
++    bool *vals = NULL;
++
++    if (map == NULL) {
++        return -1;
++    }
++
++    if ((SIZE_MAX / sizeof(int) - 1) < map->len || (SIZE_MAX / sizeof(bool) - 1) < map->len) {
++        return -1;
++    }
++
++    len = map->len + 1;
++    keys = safe_malloc(len * sizeof(int));
++    vals = safe_malloc(len * sizeof(bool));
++
++    if (map->len) {
++        (void)memcpy(keys, map->keys, map->len * sizeof(int));
++        (void)memcpy(vals, map->values, map->len * sizeof(bool));
++    }
++    free(map->keys);
++    map->keys = keys;
++    free(map->values);
++    map->values = vals;
++    map->keys[map->len] = key;
++    map->values[map->len] = val;
++
++    map->len++;
++    return 0;
++}
++
++yajl_gen_status gen_json_map_int_string(void *ctx, json_map_int_string *map, struct parser_context *ptx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    yajl_gen g = (yajl_gen) ctx;
++    size_t len = 0, i = 0;
++    if (map != NULL) {
++        len = map->len;
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 0);
++    }
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++
++    }
++    for (i = 0; i < len; i++) {
++        char numstr[MAX_NUM_STR_LEN];
++        int nret;
++        nret = snprintf(numstr, MAX_NUM_STR_LEN, "%lld", (long long int)map->keys[i]);
++        if (nret < 0 || nret >= MAX_NUM_STR_LEN) {
++            if (!*err && asprintf(err, "Error to print string") < 0) {
++                *(err) = safe_strdup("error allocating memory");
++            }
++            return yajl_gen_in_error_state;
++        }
++        stat = reformat_string(g, numstr, strlen(numstr));
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_string(g, map->values[i], strlen(map->values[i]));;
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++    }
++
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    return yajl_gen_status_ok;
++}
++
++void free_json_map_int_string(json_map_int_string *map) {
++    if (map != NULL) {
++        size_t i;
++        for (i = 0; i < map->len; i++) {
++            // No need to free key for type int
++            free(map->values[i]);
++            map->values[i] = NULL;
++        }
++        free(map->keys);
++        map->keys = NULL;
++        free(map->values);
++        map->values = NULL;
++        free(map);
++    }
++}
++json_map_int_string *make_json_map_int_string(yajl_val src, struct parser_context *ctx, parser_error *err) {
++    json_map_int_string *ret = NULL;
++    if (src != NULL && YAJL_GET_OBJECT(src) != NULL) {
++        size_t i;
++        size_t len = YAJL_GET_OBJECT(src)->len;
++        if (len > SIZE_MAX / sizeof(char *) - 1) {
++            return NULL;
++        }
++        ret = safe_malloc(sizeof(*ret));
++        ret->len = len;
++        ret->keys = safe_malloc((len + 1) * sizeof(int));
++        ret->values = safe_malloc((len + 1) * sizeof(char *));
++        for (i = 0; i < len; i++) {
++            const char *srckey = YAJL_GET_OBJECT(src)->keys[i];
++            yajl_val srcval = YAJL_GET_OBJECT(src)->values[i];
++
++            if (srckey != NULL) {
++                int invalid;
++                invalid = common_safe_int(srckey, &(ret->keys[i]));
++                if (invalid) {
++                    if (*err == NULL && asprintf(err, "Invalid key '%s' with type 'int': %s", srckey, strerror(-invalid)) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_int_string(ret);
++                    return NULL;
++                }
++            }
++
++            if (srcval != NULL) {
++                if (!YAJL_IS_STRING(srcval)) {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'string' for key '%s'", srckey) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_int_string(ret);
++                    return NULL;
++                }
++                char *str = YAJL_GET_STRING(srcval);
++                ret->values[i] = safe_strdup(str ? str : "");
++            }
++        }
++    }
++    return ret;
++}
++int append_json_map_int_string(json_map_int_string *map, int key, const char *val) {
++    size_t len;
++    int *keys = NULL;
++    char **vals = NULL;
++
++    if (map == NULL) {
++        return -1;
++    }
++
++    if ((SIZE_MAX / sizeof(int) - 1) < map->len || (SIZE_MAX / sizeof(char *) - 1) < map->len) {
++        return -1;
++    }
++
++    len = map->len + 1;
++    keys = safe_malloc(len * sizeof(int));
++    vals = safe_malloc(len * sizeof(char *));
++
++    if (map->len) {
++        (void)memcpy(keys, map->keys, map->len * sizeof(int));
++        (void)memcpy(vals, map->values, map->len * sizeof(char *));
++    }
++    free(map->keys);
++    map->keys = keys;
++    free(map->values);
++    map->values = vals;
++    map->keys[map->len] = key;
++    map->values[map->len] = safe_strdup(val ? val : "");
++
++    map->len++;
++    return 0;
++}
++
++yajl_gen_status gen_json_map_string_int(void *ctx, json_map_string_int *map, struct parser_context *ptx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    yajl_gen g = (yajl_gen) ctx;
++    size_t len = 0, i = 0;
++    if (map != NULL) {
++        len = map->len;
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 0);
++    }
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++
++    }
++    for (i = 0; i < len; i++) {
++        stat = reformat_string(g, map->keys[i], strlen(map->keys[i]));
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_int(g, map->values[i]);
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++    }
++
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    return yajl_gen_status_ok;
++}
++
++void free_json_map_string_int(json_map_string_int *map) {
++    if (map != NULL) {
++        size_t i;
++        for (i = 0; i < map->len; i++) {
++            free(map->keys[i]);
++            map->keys[i] = NULL;
++            // No need to free value for type int
++        }
++        free(map->keys);
++        map->keys = NULL;
++        free(map->values);
++        map->values = NULL;
++        free(map);
++    }
++}
++json_map_string_int *make_json_map_string_int(yajl_val src, struct parser_context *ctx, parser_error *err) {
++    json_map_string_int *ret = NULL;
++    if (src != NULL && YAJL_GET_OBJECT(src) != NULL) {
++        size_t i;
++        size_t len = YAJL_GET_OBJECT(src)->len;
++        if (len > SIZE_MAX / sizeof(char *) - 1) {
++            return NULL;
++        }
++        ret = safe_malloc(sizeof(*ret));
++        ret->len = len;
++        ret->keys = safe_malloc((len + 1) * sizeof(char *));
++        ret->values = safe_malloc((len + 1) * sizeof(int));
++        for (i = 0; i < len; i++) {
++            const char *srckey = YAJL_GET_OBJECT(src)->keys[i];
++            yajl_val srcval = YAJL_GET_OBJECT(src)->values[i];
++            ret->keys[i] = safe_strdup(srckey ? srckey : "");
++
++            if (srcval != NULL) {
++                int invalid;
++                if (!YAJL_IS_NUMBER(srcval)) {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'int' for key '%s'", srckey) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_string_int(ret);
++                    return NULL;
++                }
++                invalid = common_safe_int(YAJL_GET_NUMBER(srcval), &(ret->values[i]));
++                if (invalid) {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'int' for key '%s': %s", srckey, strerror(-invalid)) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_string_int(ret);
++                    return NULL;
++                }
++            }
++        }
++    }
++    return ret;
++}
++int append_json_map_string_int(json_map_string_int *map, const char *key, int val) {
++    size_t len;
++    char **keys = NULL;
++    int *vals = NULL;
++
++    if (map == NULL) {
++        return -1;
++    }
++
++    if ((SIZE_MAX / sizeof(char *) - 1) < map->len || (SIZE_MAX / sizeof(int) - 1) < map->len) {
++        return -1;
++    }
++
++    len = map->len + 1;
++    keys = safe_malloc(len * sizeof(char *));
++    vals = safe_malloc(len * sizeof(int));
++
++    if (map->len) {
++        (void)memcpy(keys, map->keys, map->len * sizeof(char *));
++        (void)memcpy(vals, map->values, map->len * sizeof(int));
++    }
++    free(map->keys);
++    map->keys = keys;
++    free(map->values);
++    map->values = vals;
++    map->keys[map->len] = safe_strdup(key ? key : "");
++    map->values[map->len] = val;
++
++    map->len++;
++    return 0;
++}
++
++yajl_gen_status gen_json_map_string_bool(void *ctx, json_map_string_bool *map, struct parser_context *ptx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    yajl_gen g = (yajl_gen) ctx;
++    size_t len = 0, i = 0;
++    if (map != NULL) {
++        len = map->len;
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 0);
++    }
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++
++    }
++    for (i = 0; i < len; i++) {
++        stat = reformat_string(g, map->keys[i], strlen(map->keys[i]));
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_bool(g, map->values[i]);
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++    }
++
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    return yajl_gen_status_ok;
++}
++
++void free_json_map_string_bool(json_map_string_bool *map) {
++    if (map != NULL) {
++        size_t i;
++        for (i = 0; i < map->len; i++) {
++            free(map->keys[i]);
++            map->keys[i] = NULL;
++            // No need to free value for type bool
++        }
++        free(map->keys);
++        map->keys = NULL;
++        free(map->values);
++        map->values = NULL;
++        free(map);
++    }
++}
++json_map_string_bool *make_json_map_string_bool(yajl_val src, struct parser_context *ctx, parser_error *err) {
++    json_map_string_bool *ret = NULL;
++    if (src != NULL && YAJL_GET_OBJECT(src) != NULL) {
++        size_t i;
++        size_t len = YAJL_GET_OBJECT(src)->len;
++        if (len > SIZE_MAX / sizeof(char *) - 1) {
++            return NULL;
++        }
++        ret = safe_malloc(sizeof(*ret));
++        ret->len = len;
++        ret->keys = safe_malloc((len + 1) * sizeof(char *));
++        ret->values = safe_malloc((len + 1) * sizeof(bool));
++        for (i = 0; i < len; i++) {
++            const char *srckey = YAJL_GET_OBJECT(src)->keys[i];
++            yajl_val srcval = YAJL_GET_OBJECT(src)->values[i];
++            ret->keys[i] = safe_strdup(srckey ? srckey : "");
++
++            if (srcval != NULL) {
++                if (YAJL_IS_TRUE(srcval)) {
++                    ret->values[i] = true;
++                } else if (YAJL_IS_FALSE(srcval)) {
++                    ret->values[i] = false;
++                } else {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'bool' for key '%s'", srckey) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_string_bool(ret);
++                    return NULL;
++                }
++            }
++        }
++    }
++    return ret;
++}
++
++int append_json_map_string_bool(json_map_string_bool *map, const char *key, bool val) {
++    size_t len;
++    char **keys = NULL;
++    bool *vals = NULL;
++
++    if (map == NULL) {
++        return -1;
++    }
++
++    if ((SIZE_MAX / sizeof(char *) - 1) < map->len || (SIZE_MAX / sizeof(bool) - 1) < map->len) {
++        return -1;
++    }
++
++    len = map->len + 1;
++    keys = safe_malloc(len * sizeof(char *));
++    vals = safe_malloc(len * sizeof(bool));
++
++    if (map->len) {
++        (void)memcpy(keys, map->keys, map->len * sizeof(char *));
++        (void)memcpy(vals, map->values, map->len * sizeof(bool));
++    }
++    free(map->keys);
++    map->keys = keys;
++    free(map->values);
++    map->values = vals;
++    map->keys[map->len] = safe_strdup(key ? key : "");
++    map->values[map->len] = val;
++
++    map->len++;
++    return 0;
++}
++
++yajl_gen_status gen_json_map_string_string(void *ctx, json_map_string_string *map, struct parser_context *ptx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    yajl_gen g = (yajl_gen) ctx;
++    size_t len = 0, i = 0;
++    if (map != NULL) {
++        len = map->len;
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 0);
++    }
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++
++    }
++    for (i = 0; i < len; i++) {
++        stat = reformat_string(g, map->keys[i], strlen(map->keys[i]));
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_string(g, map->values[i], strlen(map->values[i]));;
++        if (yajl_gen_status_ok != stat) {
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++    }
++
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat) {
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if (!len && !(ptx->options & GEN_OPTIONS_SIMPLIFY)) {
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    }
++    return yajl_gen_status_ok;
++}
++
++void free_json_map_string_string(json_map_string_string *map) {
++    if (map != NULL) {
++        size_t i;
++        for (i = 0; i < map->len; i++) {
++            free(map->keys[i]);
++            map->keys[i] = NULL;
++            free(map->values[i]);
++            map->values[i] = NULL;
++        }
++        free(map->keys);
++        map->keys = NULL;
++        free(map->values);
++        map->values = NULL;
++        free(map);
++    }
++}
++json_map_string_string *make_json_map_string_string(yajl_val src, struct parser_context *ctx, parser_error *err) {
++    json_map_string_string *ret = NULL;
++    if (src != NULL && YAJL_GET_OBJECT(src) != NULL) {
++        size_t i;
++        size_t len = YAJL_GET_OBJECT(src)->len;
++        if (len > SIZE_MAX / sizeof(char *) - 1) {
++            return NULL;
++        }
++        ret = safe_malloc(sizeof(*ret));
++        ret->len = len;
++        ret->keys = safe_malloc((len + 1) * sizeof(char *));
++        ret->values = safe_malloc((len + 1) * sizeof(char *));
++        for (i = 0; i < len; i++) {
++            const char *srckey = YAJL_GET_OBJECT(src)->keys[i];
++            yajl_val srcval = YAJL_GET_OBJECT(src)->values[i];
++            ret->keys[i] = safe_strdup(srckey ? srckey : "");
++
++            if (srcval != NULL) {
++                if (!YAJL_IS_STRING(srcval)) {
++                    if (*err == NULL && asprintf(err, "Invalid value with type 'string' for key '%s'", srckey) < 0) {
++                        *(err) = safe_strdup("error allocating memory");
++                    }
++                    free_json_map_string_string(ret);
++                    return NULL;
++                }
++                char *str = YAJL_GET_STRING(srcval);
++                ret->values[i] = safe_strdup(str ? str : "");
++            }
++        }
++    }
++    return ret;
++}
++int append_json_map_string_string(json_map_string_string *map, const char *key, const char *val) {
++    size_t len, i;
++    char **keys = NULL;
++    char **vals = NULL;
++
++    if (map == NULL) {
++        return -1;
++    }
++
++    for (i = 0; i < map->len; i++) {
++        if (strcmp(map->keys[i], key) == 0) {
++            free(map->values[i]);
++            map->values[i] = safe_strdup(val ? val : "");
++            return 0;
++        }
++    }
++
++    if ((SIZE_MAX / sizeof(char *) - 1) < map->len) {
++        return -1;
++    }
++
++    len = map->len + 1;
++    keys = safe_malloc(len * sizeof(char *));
++    vals = safe_malloc(len * sizeof(char *));
++
++    if (map->len) {
++        (void)memcpy(keys, map->keys, map->len * sizeof(char *));
++        (void)memcpy(vals, map->values, map->len * sizeof(char *));
++    }
++    free(map->keys);
++    map->keys = keys;
++    free(map->values);
++    map->values = vals;
++    map->keys[map->len] = safe_strdup(key ? key : "");
++    map->values[map->len] = safe_strdup(val ? val : "");
++
++    map->len++;
++    return 0;
++}
+diff --git a/src/lxc/json/json_common.h b/src/lxc/json/json_common.h
+new file mode 100755
+index 0000000..60aa5fd
+--- /dev/null
++++ b/src/lxc/json/json_common.h
+@@ -0,0 +1,185 @@
++// Auto generated file. Do not edit!
++#ifndef _JSON_COMMON_H
++#define _JSON_COMMON_H
++
++#include <stdbool.h>
++#include <stdio.h>
++#include <string.h>
++#include <stdlib.h>
++#include <stdint.h>
++#include <yajl/yajl_tree.h>
++#include <yajl/yajl_gen.h>
++#include "utils.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++# undef linux
++
++//options to report error if there is unknown key found in json
++# define PARSE_OPTIONS_STRICT 0x01
++//options to generate all key and value
++# define GEN_OPTIONS_ALLKEYVALUE 0x02
++//options to generate simplify(no indent) json string
++# define GEN_OPTIONS_SIMPLIFY 0x04
++//options not to validate utf8 data
++# define GEN_OPTIONS_NOT_VALIDATE_UTF8 0x08
++
++#define GEN_SET_ERROR_AND_RETURN(stat, err) { \
++        if (*(err) == NULL) {\
++            if (asprintf(err, "%s: %s: %d: error generating json, errcode: %d", __FILE__, __func__, __LINE__, stat) < 0) { \
++                *(err) = safe_strdup("error allocating memory"); \
++            } \
++        }\
++        return stat; \
++    }
++
++typedef char *parser_error;
++
++struct parser_context {
++    unsigned int options;
++    FILE *stderr;
++};
++
++yajl_gen_status reformat_number(void *ctx, const char *str, size_t len);
++
++yajl_gen_status reformat_uint(void *ctx, long long unsigned int num);
++
++yajl_gen_status reformat_int(void *ctx, long long int num);
++
++yajl_gen_status reformat_double(void *ctx, double num);
++
++yajl_gen_status reformat_string(void *ctx, const char *str, size_t len);
++
++yajl_gen_status reformat_null(void *ctx);
++
++yajl_gen_status reformat_bool(void *ctx, int boolean);
++
++yajl_gen_status reformat_map_key(void *ctx, const char *str, size_t len);
++
++yajl_gen_status reformat_start_map(void *ctx);
++
++yajl_gen_status reformat_end_map(void *ctx);
++
++yajl_gen_status reformat_start_array(void *ctx);
++
++yajl_gen_status reformat_end_array(void *ctx);
++
++bool json_gen_init(yajl_gen *g, struct parser_context *ctx);
++
++yajl_val get_val(yajl_val tree, const char *name, yajl_type type);
++
++void *safe_malloc(size_t size);
++
++int common_safe_double(const char *numstr, double *converted);
++
++int common_safe_uint8(const char *numstr, uint8_t *converted);
++
++int common_safe_uint16(const char *numstr, uint16_t *converted);
++
++int common_safe_uint32(const char *numstr, uint32_t *converted);
++
++int common_safe_uint64(const char *numstr, uint64_t *converted);
++
++int common_safe_uint(const char *numstr, unsigned int *converted);
++
++int common_safe_int8(const char *numstr, int8_t *converted);
++
++int common_safe_int16(const char *numstr, int16_t *converted);
++
++int common_safe_int32(const char *numstr, int32_t *converted);
++
++int common_safe_int64(const char *numstr, int64_t *converted);
++
++int common_safe_int(const char *numstr, int *converted);
++
++typedef struct {
++    int *keys;
++    int *values;
++    size_t len;
++} json_map_int_int;
++
++void free_json_map_int_int(json_map_int_int *map);
++
++json_map_int_int *make_json_map_int_int(yajl_val src, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_json_map_int_int(void *ctx, json_map_int_int *map, struct parser_context *ptx, parser_error *err);
++
++int append_json_map_int_int(json_map_int_int *map, int key, int val);
++
++typedef struct {
++    int *keys;
++    bool *values;
++    size_t len;
++} json_map_int_bool;
++
++void free_json_map_int_bool(json_map_int_bool *map);
++
++json_map_int_bool *make_json_map_int_bool(yajl_val src, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_json_map_int_bool(void *ctx, json_map_int_bool *map, struct parser_context *ptx, parser_error *err);
++
++int append_json_map_int_bool(json_map_int_bool *map, int key, bool val);
++
++typedef struct {
++    int *keys;
++    char **values;
++    size_t len;
++} json_map_int_string;
++
++void free_json_map_int_string(json_map_int_string *map);
++
++json_map_int_string *make_json_map_int_string(yajl_val src, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_json_map_int_string(void *ctx, json_map_int_string *map, struct parser_context *ptx, parser_error *err);
++
++int append_json_map_int_string(json_map_int_string *map, int key, const char *val);
++
++typedef struct {
++    char **keys;
++    int *values;
++    size_t len;
++} json_map_string_int;
++
++void free_json_map_string_int(json_map_string_int *map);
++
++json_map_string_int *make_json_map_string_int(yajl_val src, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_json_map_string_int(void *ctx, json_map_string_int *map, struct parser_context *ptx, parser_error *err);
++
++int append_json_map_string_int(json_map_string_int *map, const char *key, int val);
++
++typedef struct {
++    char **keys;
++    bool *values;
++    size_t len;
++} json_map_string_bool;
++
++void free_json_map_string_bool(json_map_string_bool *map);
++
++json_map_string_bool *make_json_map_string_bool(yajl_val src, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_json_map_string_bool(void *ctx, json_map_string_bool *map, struct parser_context *ptx, parser_error *err);
++
++int append_json_map_string_bool(json_map_string_bool *map, const char *key, bool val);
++
++typedef struct {
++    char **keys;
++    char **values;
++    size_t len;
++} json_map_string_string;
++
++void free_json_map_string_string(json_map_string_string *map);
++
++json_map_string_string *make_json_map_string_string(yajl_val src, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_json_map_string_string(void *ctx, json_map_string_string *map, struct parser_context *ptx, parser_error *err);
++
++int append_json_map_string_string(json_map_string_string *map, const char *key, const char *val);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
+\ No newline at end of file
+diff --git a/src/lxc/json/logger_json_file.c b/src/lxc/json/logger_json_file.c
+new file mode 100644
+index 0000000..6abeef4
+--- /dev/null
++++ b/src/lxc/json/logger_json_file.c
+@@ -0,0 +1,246 @@
++// Generated from json-file.json. Do not edit!
++#ifndef _GNU_SOURCE
++#define _GNU_SOURCE
++#endif
++#include <string.h>
++#include <read-file.h>
++#include "logger_json_file.h"
++
++logger_json_file *make_logger_json_file(yajl_val tree, struct parser_context *ctx, parser_error *err) {
++	logger_json_file *ret = NULL;
++	*err = 0;
++	if (tree == NULL)
++		return ret;
++	ret = safe_malloc(sizeof(*ret));
++	{
++		yajl_val tmp = get_val(tree, "log", yajl_t_string);
++		if (tmp != NULL) {
++			char *str = YAJL_GET_STRING(tmp);
++			ret->log = (uint8_t *)safe_strdup(str ? str : "");
++			ret->log_len = str != NULL ? strlen(str) : 0;
++		}
++	}
++	{
++		yajl_val val = get_val(tree, "stream", yajl_t_string);
++		if (val != NULL) {
++			char *str = YAJL_GET_STRING(val);
++			ret->stream = safe_strdup(str ? str : "");
++		}
++	}
++	{
++		yajl_val val = get_val(tree, "time", yajl_t_string);
++		if (val != NULL) {
++			char *str = YAJL_GET_STRING(val);
++			ret->time = safe_strdup(str ? str : "");
++		}
++	}
++	{
++		yajl_val tmp = get_val(tree, "attrs", yajl_t_string);
++		if (tmp != NULL) {
++			char *str = YAJL_GET_STRING(tmp);
++			ret->attrs = (uint8_t *)safe_strdup(str ? str : "");
++			ret->attrs_len = str != NULL ? strlen(str) : 0;
++		}
++	}
++
++	if (tree->type == yajl_t_object && (ctx->options & PARSE_OPTIONS_STRICT)) {
++		int i;
++		for (i = 0; i < tree->u.object.len; i++)
++			if (strcmp(tree->u.object.keys[i], "log") &&
++			                strcmp(tree->u.object.keys[i], "stream") &&
++			                strcmp(tree->u.object.keys[i], "time") &&
++			                strcmp(tree->u.object.keys[i], "attrs")) {
++				if (ctx->stderr > 0)
++					fprintf(ctx->stderr, "WARNING: unknown key found: %s\n", tree->u.object.keys[i]);
++			}
++	}
++	return ret;
++}
++
++void free_logger_json_file(logger_json_file *ptr) {
++	if (ptr == NULL)
++		return;
++	free(ptr->log);
++	ptr->log = NULL;
++	free(ptr->stream);
++	ptr->stream = NULL;
++	free(ptr->time);
++	ptr->time = NULL;
++	free(ptr->attrs);
++	ptr->attrs = NULL;
++	free(ptr);
++}
++
++yajl_gen_status gen_logger_json_file(yajl_gen g, logger_json_file *ptr, struct parser_context *ctx, parser_error *err) {
++	yajl_gen_status stat = yajl_gen_status_ok;
++	*err = 0;
++	stat = reformat_start_map(g);
++	if (yajl_gen_status_ok != stat)
++		GEN_SET_ERROR_AND_RETURN(stat, err);
++	if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) || (ptr != NULL && ptr->log != NULL && ptr->log_len)) {
++		const char *str = "";
++		size_t len = 0;
++		stat = reformat_map_key(g, "log", strlen("log"));
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++		if (ptr != NULL && ptr->log != NULL) {
++			str = (const char *)ptr->log;
++			len = ptr->log_len;
++		}
++		stat = reformat_string(g, str, len);
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++	}
++	if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) ||(ptr != NULL && ptr->stream != NULL)) {
++		char *str = "";
++		stat = reformat_map_key(g, "stream", strlen("stream"));
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++		if (ptr != NULL && ptr->stream != NULL) {
++			str = ptr->stream;
++		}
++		stat = reformat_string(g, str, strlen(str));
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++	}
++	if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) ||(ptr != NULL && ptr->time != NULL)) {
++		char *str = "";
++		stat = reformat_map_key(g, "time", strlen("time"));
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++		if (ptr != NULL && ptr->time != NULL) {
++			str = ptr->time;
++		}
++		stat = reformat_string(g, str, strlen(str));
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++	}
++	if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) || (ptr != NULL && ptr->attrs != NULL && ptr->attrs_len)) {
++		const char *str = "";
++		size_t len = 0;
++		stat = reformat_map_key(g, "attrs", strlen("attrs"));
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++		if (ptr != NULL && ptr->attrs != NULL) {
++			str = (const char *)ptr->attrs;
++			len = ptr->attrs_len;
++		}
++		stat = reformat_string(g, str, len);
++		if (yajl_gen_status_ok != stat)
++			GEN_SET_ERROR_AND_RETURN(stat, err);
++	}
++	stat = reformat_end_map(g);
++	if (yajl_gen_status_ok != stat)
++		GEN_SET_ERROR_AND_RETURN(stat, err);
++	return yajl_gen_status_ok;
++}
++
++
++logger_json_file *logger_json_file_parse_file(const char *filename, struct parser_context *ctx, parser_error *err) {
++	logger_json_file *ptr = NULL;
++	size_t filesize;
++	char *content = NULL;
++
++	if (filename == NULL || err == NULL)
++		return NULL;
++
++	*err = NULL;
++	content = read_file(filename, &filesize);
++	if (content == NULL) {
++		if (asprintf(err, "cannot read the file: %s", filename) < 0)
++			*err = safe_strdup("error allocating memory");
++		return NULL;
++	}
++	ptr = logger_json_file_parse_data(content, ctx, err);
++	free(content);
++	return ptr;
++}
++
++logger_json_file *logger_json_file_parse_file_stream(FILE *stream, struct parser_context *ctx, parser_error *err) {
++	logger_json_file *ptr = NULL;
++	size_t filesize;
++	char *content = NULL ;
++
++	if (stream == NULL || err == NULL)
++		return NULL;
++
++	*err = NULL;
++	content = fread_file(stream, &filesize);
++	if (content == NULL) {
++		*err = safe_strdup("cannot read the file");
++		return NULL;
++	}
++	ptr = logger_json_file_parse_data(content, ctx, err);
++	free(content);
++	return ptr;
++}
++
++logger_json_file *logger_json_file_parse_data(const char *jsondata, struct parser_context *ctx, parser_error *err) {
++	logger_json_file *ptr  = NULL;
++	yajl_val tree;
++	char errbuf[1024];
++	struct parser_context tmp_ctx;
++
++	if (jsondata == NULL || err == NULL)
++		return NULL;
++
++	*err = NULL;
++	if (ctx == NULL) {
++		ctx = &tmp_ctx;
++		memset(&tmp_ctx, 0, sizeof(tmp_ctx));
++	}
++	tree = yajl_tree_parse(jsondata, errbuf, sizeof(errbuf));
++	if (tree == NULL) {
++		if (asprintf(err, "cannot parse the data: %s", errbuf) < 0)
++			*err = safe_strdup("error allocating memory");
++		return NULL;
++	}
++	ptr = make_logger_json_file(tree, ctx, err);
++	yajl_tree_free(tree);
++	return ptr;
++}
++char *logger_json_file_generate_json(logger_json_file *ptr, struct parser_context *ctx, parser_error *err) {
++	yajl_gen g = NULL;
++	struct parser_context tmp_ctx;
++	const unsigned char *gen_buf = NULL;
++	char *json_buf = NULL;
++	size_t gen_len = 0;
++
++	if (ptr == NULL || err == NULL)
++		return NULL;
++
++	*err = NULL;
++	if (ctx == NULL) {
++		ctx = &tmp_ctx;
++		memset(&tmp_ctx, 0, sizeof(tmp_ctx));
++	}
++
++	if (!json_gen_init(&g, ctx)) {
++		*err = safe_strdup("Json_gen init failed");
++		goto out;
++	}
++	if (yajl_gen_status_ok != gen_logger_json_file(g, ptr, ctx, err)) {
++		if (*err == NULL)
++			*err = safe_strdup("Failed to generate json");
++		goto free_out;
++	}
++	yajl_gen_get_buf(g, &gen_buf, &gen_len);
++	if (gen_buf == NULL) {
++		*err = safe_strdup("Error to get generated json");
++		goto free_out;
++	}
++
++	if (gen_len == SIZE_MAX) {
++		*err = safe_strdup("Invalid buffer length");
++		goto free_out;
++	}
++	json_buf = safe_malloc(gen_len + 1);
++	(void)memcpy(json_buf, gen_buf, gen_len);
++	json_buf[gen_len] = '\0';
++
++free_out:
++	yajl_gen_clear(g);
++	yajl_gen_free(g);
++out:
++	return json_buf;
++}
+diff --git a/src/lxc/json/logger_json_file.h b/src/lxc/json/logger_json_file.h
+new file mode 100644
+index 0000000..ad5af7b
+--- /dev/null
++++ b/src/lxc/json/logger_json_file.h
+@@ -0,0 +1,45 @@
++// Generated from json-file.json. Do not edit!
++#ifndef LOGGER_JSON_FILE_SCHEMA_H
++#define LOGGER_JSON_FILE_SCHEMA_H
++
++#include <sys/types.h>
++#include <stdint.h>
++#include "json_common.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct {
++    uint8_t *log;
++    size_t log_len;
++
++    char *stream;
++
++    char *time;
++
++    uint8_t *attrs;
++    size_t attrs_len;
++
++}
++logger_json_file;
++
++void free_logger_json_file(logger_json_file *ptr);
++
++logger_json_file *make_logger_json_file(yajl_val tree, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_logger_json_file(yajl_gen g, logger_json_file *ptr, struct parser_context *ctx, parser_error *err);
++
++logger_json_file *logger_json_file_parse_file(const char *filename, struct parser_context *ctx, parser_error *err);
++
++logger_json_file *logger_json_file_parse_file_stream(FILE *stream, struct parser_context *ctx, parser_error *err);
++
++logger_json_file *logger_json_file_parse_data(const char *jsondata, struct parser_context *ctx, parser_error *err);
++
++char *logger_json_file_generate_json(logger_json_file *ptr, struct parser_context *ctx, parser_error *err);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
+diff --git a/src/lxc/json/oci_runtime_hooks.c b/src/lxc/json/oci_runtime_hooks.c
+new file mode 100644
+index 0000000..41ddb67
+--- /dev/null
++++ b/src/lxc/json/oci_runtime_hooks.c
+@@ -0,0 +1,52 @@
++/******************************************************************************
++ * Copyright (C), 1988-1999, Huawei Tech. Co., Ltd.
++ * FileName: oci_runtime_hooks.c
++ * Author: maoweiyong   Version: 0.1   Date: 2018-11-07
++ * Explanation: provide oci runtime hooks functions
++ ******************************************************************************/
++#ifndef _GNU_SOURCE
++#define _GNU_SOURCE
++#endif
++#include <read-file.h>
++#include "oci_runtime_hooks.h"
++
++#include "log.h"
++#include "utils.h"
++
++#define PARSE_ERR_BUFFER_SIZE 1024
++
++oci_runtime_spec_hooks *oci_runtime_spec_hooks_parse_file(const char *filename,
++                                                          struct parser_context *ctx, parser_error *err)
++{
++    yajl_val tree;
++    size_t filesize;
++
++    if (!filename || !err) {
++        return NULL;
++    }
++    *err = NULL;
++    struct parser_context tmp_ctx;
++    if (!ctx) {
++        ctx = &tmp_ctx;
++        memset(&tmp_ctx, 0, sizeof(tmp_ctx));
++    }
++    char *content = read_file(filename, &filesize);
++    char errbuf[PARSE_ERR_BUFFER_SIZE];
++    if (content == NULL) {
++        if (asprintf(err, "cannot read the file: %s", filename) < 0) {
++            *err = safe_strdup("error allocating memory");
++        }
++        return NULL;
++    }
++    tree = yajl_tree_parse(content, errbuf, sizeof(errbuf));
++    free(content);
++    if (tree == NULL) {
++        if (asprintf(err, "cannot parse the file: %s", errbuf) < 0) {
++            *err = safe_strdup("error allocating memory");
++        }
++        return NULL;
++    }
++    oci_runtime_spec_hooks *ptr = make_oci_runtime_spec_hooks(tree, ctx, err);
++    yajl_tree_free(tree);
++    return ptr;
++}
+diff --git a/src/lxc/json/oci_runtime_hooks.h b/src/lxc/json/oci_runtime_hooks.h
+new file mode 100644
+index 0000000..bf570c9
+--- /dev/null
++++ b/src/lxc/json/oci_runtime_hooks.h
+@@ -0,0 +1,15 @@
++/******************************************************************************
++ * Copyright (C), 1988-1999, Huawei Tech. Co., Ltd.
++ * FileName: oci_runtime_hooks.h
++ * Author: tanyifeng  Version: 0.1   Date: 2018-11-08
++ * Explanation: provide container oci runtime hooks function definition
++ ******************************************************************************/
++#ifndef _CONTAINER_HOOKS_H
++# define _CONTAINER_HOOKS_H
++
++# include "oci_runtime_spec.h"
++
++oci_runtime_spec_hooks *oci_runtime_spec_hooks_parse_file(const char *filename,
++                                                          struct parser_context *ctx, parser_error *err);
++
++#endif
+diff --git a/src/lxc/json/oci_runtime_spec.c b/src/lxc/json/oci_runtime_spec.c
+new file mode 100644
+index 0000000..fd342de
+--- /dev/null
++++ b/src/lxc/json/oci_runtime_spec.c
+@@ -0,0 +1,195 @@
++// Generated from spec.json. Do not edit!
++#ifndef _GNU_SOURCE
++#define _GNU_SOURCE
++#endif
++#include <string.h>
++#include <read-file.h>
++#include "oci_runtime_spec.h"
++
++oci_runtime_spec_hooks *make_oci_runtime_spec_hooks(yajl_val tree, struct parser_context *ctx, parser_error *err) {
++    oci_runtime_spec_hooks *ret = NULL;
++    *err = 0;
++    if (tree == NULL)
++        return ret;
++    ret = safe_malloc(sizeof(*ret));
++    {
++        yajl_val tmp = get_val(tree, "prestart", yajl_t_array);
++        if (tmp != NULL && YAJL_GET_ARRAY(tmp) != NULL && YAJL_GET_ARRAY(tmp)->len > 0) {
++            size_t i;
++            ret->prestart_len = YAJL_GET_ARRAY(tmp)->len;
++            ret->prestart = safe_malloc((YAJL_GET_ARRAY(tmp)->len + 1) * sizeof(*ret->prestart));
++            for (i = 0; i < YAJL_GET_ARRAY(tmp)->len; i++) {
++                yajl_val val = YAJL_GET_ARRAY(tmp)->values[i];
++                ret->prestart[i] = make_defs_hook(val, ctx, err);
++                if (ret->prestart[i] == NULL) {
++                    free_oci_runtime_spec_hooks(ret);
++                    return NULL;
++                }
++            }
++        }
++    }
++    {
++        yajl_val tmp = get_val(tree, "poststart", yajl_t_array);
++        if (tmp != NULL && YAJL_GET_ARRAY(tmp) != NULL && YAJL_GET_ARRAY(tmp)->len > 0) {
++            size_t i;
++            ret->poststart_len = YAJL_GET_ARRAY(tmp)->len;
++            ret->poststart = safe_malloc((YAJL_GET_ARRAY(tmp)->len + 1) * sizeof(*ret->poststart));
++            for (i = 0; i < YAJL_GET_ARRAY(tmp)->len; i++) {
++                yajl_val val = YAJL_GET_ARRAY(tmp)->values[i];
++                ret->poststart[i] = make_defs_hook(val, ctx, err);
++                if (ret->poststart[i] == NULL) {
++                    free_oci_runtime_spec_hooks(ret);
++                    return NULL;
++                }
++            }
++        }
++    }
++    {
++        yajl_val tmp = get_val(tree, "poststop", yajl_t_array);
++        if (tmp != NULL && YAJL_GET_ARRAY(tmp) != NULL && YAJL_GET_ARRAY(tmp)->len > 0) {
++            size_t i;
++            ret->poststop_len = YAJL_GET_ARRAY(tmp)->len;
++            ret->poststop = safe_malloc((YAJL_GET_ARRAY(tmp)->len + 1) * sizeof(*ret->poststop));
++            for (i = 0; i < YAJL_GET_ARRAY(tmp)->len; i++) {
++                yajl_val val = YAJL_GET_ARRAY(tmp)->values[i];
++                ret->poststop[i] = make_defs_hook(val, ctx, err);
++                if (ret->poststop[i] == NULL) {
++                    free_oci_runtime_spec_hooks(ret);
++                    return NULL;
++                }
++            }
++        }
++    }
++
++    if (tree->type == yajl_t_object && (ctx->options & PARSE_OPTIONS_STRICT)) {
++        int i;
++        for (i = 0; i < tree->u.object.len; i++)
++            if (strcmp(tree->u.object.keys[i], "prestart") &&
++                strcmp(tree->u.object.keys[i], "poststart") &&
++                strcmp(tree->u.object.keys[i], "poststop")) {
++                if (ctx->stderr > 0)
++                    fprintf(ctx->stderr, "WARNING: unknown key found: %s\n", tree->u.object.keys[i]);
++            }
++        }
++    return ret;
++}
++
++void free_oci_runtime_spec_hooks(oci_runtime_spec_hooks *ptr) {
++    if (ptr == NULL)
++        return;
++    if (ptr->prestart != NULL) {
++        size_t i;
++        for (i = 0; i < ptr->prestart_len; i++)
++            if (ptr->prestart[i] != NULL) {
++                free_defs_hook(ptr->prestart[i]);
++                ptr->prestart[i] = NULL;
++            }
++        free(ptr->prestart);
++        ptr->prestart = NULL;
++    }
++    if (ptr->poststart != NULL) {
++        size_t i;
++        for (i = 0; i < ptr->poststart_len; i++)
++            if (ptr->poststart[i] != NULL) {
++                free_defs_hook(ptr->poststart[i]);
++                ptr->poststart[i] = NULL;
++            }
++        free(ptr->poststart);
++        ptr->poststart = NULL;
++    }
++    if (ptr->poststop != NULL) {
++        size_t i;
++        for (i = 0; i < ptr->poststop_len; i++)
++            if (ptr->poststop[i] != NULL) {
++                free_defs_hook(ptr->poststop[i]);
++                ptr->poststop[i] = NULL;
++            }
++        free(ptr->poststop);
++        ptr->poststop = NULL;
++    }
++    free(ptr);
++}
++
++yajl_gen_status gen_oci_runtime_spec_hooks(yajl_gen g, oci_runtime_spec_hooks *ptr, struct parser_context *ctx, parser_error *err) {
++    yajl_gen_status stat = yajl_gen_status_ok;
++    *err = 0;
++    stat = reformat_start_map(g);
++    if (yajl_gen_status_ok != stat)
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) ||(ptr != NULL && ptr->prestart != NULL)) {
++        size_t len = 0, i;
++        stat = reformat_map_key(g, "prestart", strlen("prestart"));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (ptr != NULL && ptr->prestart != NULL) {
++            len = ptr->prestart_len;
++        }
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 0);
++        stat = reformat_start_array(g);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        for (i = 0; i < len; i++) {
++            stat = gen_defs_hook(g, ptr->prestart[i], ctx, err);
++            if (yajl_gen_status_ok != stat)
++                GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_end_array(g);
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 1);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) ||(ptr != NULL && ptr->poststart != NULL)) {
++        size_t len = 0, i;
++        stat = reformat_map_key(g, "poststart", strlen("poststart"));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (ptr != NULL && ptr->poststart != NULL) {
++            len = ptr->poststart_len;
++        }
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 0);
++        stat = reformat_start_array(g);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        for (i = 0; i < len; i++) {
++            stat = gen_defs_hook(g, ptr->poststart[i], ctx, err);
++            if (yajl_gen_status_ok != stat)
++                GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_end_array(g);
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 1);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    if ((ctx->options & GEN_OPTIONS_ALLKEYVALUE) ||(ptr != NULL && ptr->poststop != NULL)) {
++        size_t len = 0, i;
++        stat = reformat_map_key(g, "poststop", strlen("poststop"));
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        if (ptr != NULL && ptr->poststop != NULL) {
++            len = ptr->poststop_len;
++        }
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 0);
++        stat = reformat_start_array(g);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++        for (i = 0; i < len; i++) {
++            stat = gen_defs_hook(g, ptr->poststop[i], ctx, err);
++            if (yajl_gen_status_ok != stat)
++                GEN_SET_ERROR_AND_RETURN(stat, err);
++        }
++        stat = reformat_end_array(g);
++        if (!len && !(ctx->options & GEN_OPTIONS_SIMPLIFY))
++            yajl_gen_config(g, yajl_gen_beautify, 1);
++        if (yajl_gen_status_ok != stat)
++            GEN_SET_ERROR_AND_RETURN(stat, err);
++    }
++    stat = reformat_end_map(g);
++    if (yajl_gen_status_ok != stat)
++        GEN_SET_ERROR_AND_RETURN(stat, err);
++    return yajl_gen_status_ok;
++}
+diff --git a/src/lxc/json/oci_runtime_spec.h b/src/lxc/json/oci_runtime_spec.h
+new file mode 100644
+index 0000000..ef3f161
+--- /dev/null
++++ b/src/lxc/json/oci_runtime_spec.h
+@@ -0,0 +1,37 @@
++// Generated from spec.json. Do not edit!
++#ifndef OCI_RUNTIME_SPEC_SCHEMA_H
++#define OCI_RUNTIME_SPEC_SCHEMA_H
++
++#include <sys/types.h>
++#include <stdint.h>
++#include "json_common.h"
++#include "defs.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct {
++    defs_hook **prestart;
++    size_t prestart_len;
++
++    defs_hook **poststart;
++    size_t poststart_len;
++
++    defs_hook **poststop;
++    size_t poststop_len;
++
++}
++oci_runtime_spec_hooks;
++
++void free_oci_runtime_spec_hooks(oci_runtime_spec_hooks *ptr);
++
++oci_runtime_spec_hooks *make_oci_runtime_spec_hooks(yajl_val tree, struct parser_context *ctx, parser_error *err);
++
++yajl_gen_status gen_oci_runtime_spec_hooks(yajl_gen g, oci_runtime_spec_hooks *ptr, struct parser_context *ctx, parser_error *err);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
+diff --git a/src/lxc/json/read-file.c b/src/lxc/json/read-file.c
+new file mode 100644
+index 0000000..70e73e5
+--- /dev/null
++++ b/src/lxc/json/read-file.c
+@@ -0,0 +1,95 @@
++#include <unistd.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <errno.h>
++#include <stdlib.h>
++#include <string.h>
++#include <limits.h>
++
++#include <config.h>
++#include "read-file.h"
++
++#ifndef O_CLOEXEC
++#define O_CLOEXEC 02000000
++#endif
++
++char *fread_file(FILE *stream, size_t *length)
++{
++	char *buf = NULL, *tmpbuf = NULL;
++	size_t off = 0;
++
++	while (1) {
++		size_t ret, newsize;
++
++		newsize = off + BUFSIZ + 1;
++		tmpbuf = (char *)calloc(1, newsize);
++		if (tmpbuf == NULL) {
++			goto out;
++		}
++
++		if (buf) {
++			memcpy(tmpbuf, buf, off);
++
++			memset(buf, 0, off);
++
++			free(buf);
++		}
++
++		buf = tmpbuf;
++		ret = fread(buf + off, 1, BUFSIZ, stream);
++		if (!ret && ferror(stream)) {
++			tmpbuf = NULL;
++			goto out;
++		}
++		if (ret < BUFSIZ || feof(stream)) {
++			*length = off + ret + 1;
++			buf[*length - 1] = '\0';
++			return buf;
++		}
++		off += BUFSIZ;
++	}
++out:
++	if (buf) {
++		free(buf);
++	}
++	if (tmpbuf) {
++		free(tmpbuf);
++	}
++	return NULL;
++
++}
++
++char *read_file(const char *path, size_t *length)
++{
++	char *buf = NULL;
++	char rpath[PATH_MAX + 1] = {0};
++	int fd = -1;
++	int tmperrno;
++	FILE *fp = NULL;
++
++	if (!path || !length) {
++		return NULL;
++	}
++
++	if (strlen(path) > PATH_MAX || NULL == realpath(path, rpath)) {
++		return NULL;
++	}
++
++	fd = open(rpath, O_RDONLY | O_CLOEXEC, 0640);
++	if (fd < 0) {
++		return NULL;
++	}
++
++	fp = fdopen(fd, "r");
++	tmperrno = errno;
++	if (!fp) {
++		close(fd);
++		errno = tmperrno;
++		return NULL;
++	}
++
++	buf = fread_file(fp, length);
++	fclose(fp);
++	return buf;
++}
+diff --git a/src/lxc/json/read-file.h b/src/lxc/json/read-file.h
+new file mode 100644
+index 0000000..5d6e0eb
+--- /dev/null
++++ b/src/lxc/json/read-file.h
+@@ -0,0 +1,11 @@
++#ifndef READ_FILE_H
++#define READ_FILE_H
++
++#include <stddef.h>
++#include <stdio.h>
++
++extern char *fread_file(FILE *stream, size_t *length);
++
++extern char *read_file(const char *path, size_t *length);
++
++#endif
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 33bb3ec..891fc62 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -5294,6 +5294,41 @@ static int do_lxcapi_seccomp_notify_fd(struct lxc_container *c)
+ WRAP_API(int, lxcapi_seccomp_notify_fd)
+ 
+ #ifdef HAVE_ISULAD
++/* isulad add set console fifos*/
++static bool do_lxcapi_set_terminal_default_fifos(struct lxc_container *c, const char *in, const char *out, const char *err)
++{
++	struct lxc_conf *conf = NULL;
++
++	if (!c || !c->lxc_conf)
++		return false;
++	if (container_mem_lock(c)) {
++		ERROR("Error getting mem lock");
++		return false;
++	}
++
++	conf = c->lxc_conf;
++	if (in) {
++		if (conf->console.init_fifo[0])
++			free(conf->console.init_fifo[0]);
++		conf->console.init_fifo[0] = safe_strdup(in);
++	}
++	if (out) {
++		if (conf->console.init_fifo[1])
++			free(conf->console.init_fifo[1]);
++		conf->console.init_fifo[1] = safe_strdup(out);
++	}
++	if (err) {
++		if (conf->console.init_fifo[2])
++			free(conf->console.init_fifo[2]);
++		conf->console.init_fifo[2] = safe_strdup(err);
++	}
++
++	container_mem_unlock(c);
++	return true;
++}
++
++WRAP_API_3(bool, lxcapi_set_terminal_default_fifos, const char *, const char *, const char *)
++
+ /* isulad add set info file path */
+ static bool do_lxcapi_set_container_info_file(struct lxc_container *c, const char *info_file)
+ {
+@@ -5461,6 +5496,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
+ 	c->seccomp_notify_fd = lxcapi_seccomp_notify_fd;
+ #ifdef HAVE_ISULAD
+ 	c->set_container_info_file = lxcapi_set_container_info_file;
++	c->set_terminal_init_fifos = lxcapi_set_terminal_default_fifos;
+ #endif
+ 	return c;
+ 
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index edfff32..4a9ba13 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -876,6 +876,30 @@ struct lxc_container {
+ 	 * \return \c true on success, else \c false.
+ 	 */
+ 	bool (*set_container_info_file) (struct lxc_container *c, const char *info_file);
++
++	/*! isulad add
++	 * \brief An API call to change the path of the console default fifos
++	 *
++	 * \param c Container.
++	 * \param path Value of the console path.
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*set_terminal_init_fifos)(struct lxc_container *c, const char *in, const char *out, const char *err);
++
++	/*! isulad add
++	 * \brief An API call to add the path of terminal fifos
++	 *
++	 * \param c Container.
++	 * \param path Value of the console path..
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*add_terminal_fifos)(struct lxc_container *c, const char *in, const char *out, const char *err);
++
++	bool (*set_terminal_winch)(struct lxc_container *c, unsigned int height, unsigned int width);
++
++	bool (*set_exec_terminal_winch)(struct lxc_container *c, const char *suffix, unsigned int height, unsigned int width);
+ #endif
+ };
+ 
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 1b170ca..c8cd83f 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -28,6 +28,9 @@
+ #include "syscall_wrappers.h"
+ #include "terminal.h"
+ #include "utils.h"
++#ifdef HAVE_ISULAD
++#include "logger_json_file.h"
++#endif
+ 
+ #if HAVE_PTY_H
+ #include <pty.h>
+@@ -318,6 +321,426 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
+ 	return bytes_read;
+ }
+ 
++#ifdef HAVE_ISULAD
++/* get time buffer */
++static bool get_time_buffer(struct timespec *timestamp, char *timebuffer,
++                            size_t maxsize)
++{
++	struct tm tm_utc = { 0 };
++	int32_t nanos = 0;
++	time_t seconds;
++	size_t len = 0;
++	int ret = 0;
++
++	if (!timebuffer || !maxsize) {
++		return false;
++	}
++
++	seconds = (time_t)timestamp->tv_sec;
++	gmtime_r(&seconds, &tm_utc);
++	strftime(timebuffer, maxsize, "%Y-%m-%dT%H:%M:%S", &tm_utc);
++
++	nanos = (int32_t)timestamp->tv_nsec;
++	len = strlen(timebuffer);
++	ret = snprintf(timebuffer + len, (maxsize - len), ".%09dZ", nanos);
++	if (ret < 0 || ret >= (maxsize - len)) {
++		return false;
++	}
++
++	return true;
++}
++
++/* get now time buffer */
++static bool get_now_time_buffer(char *timebuffer, size_t maxsize)
++{
++	int err = 0;
++	struct timespec ts;
++
++	err = clock_gettime(CLOCK_REALTIME, &ts);
++	if (err != 0) {
++		ERROR("failed to get time");
++		return false;
++	}
++
++	return get_time_buffer(&ts, timebuffer, maxsize);
++}
++
++static int isulad_lxc_terminal_rotate_write_data(struct lxc_terminal *terminal, const char *buf,
++                int bytes_read)
++{
++	int ret;
++	struct stat st;
++	int64_t space_left = -1;
++
++	if (terminal->log_fd < 0)
++		return 0;
++
++	/* A log size <= 0 means that there's no limit on the size of the log
++	 * file at which point we simply ignore whether the log is supposed to
++	 * be rotated or not.
++	 */
++	if (terminal->log_size <= 0)
++		return lxc_write_nointr(terminal->log_fd, buf, bytes_read);
++
++	/* Get current size of the log file. */
++	ret = fstat(terminal->log_fd, &st);
++	if (ret < 0) {
++		SYSERROR("Failed to stat the terminal log file descriptor");
++		return -1;
++	}
++
++	/* handle non-regular files */
++	if ((st.st_mode & S_IFMT) != S_IFREG) {
++		/* This isn't a regular file. so rotating the file seems a
++		 * dangerous thing to do, size limits are also very
++		 * questionable. Let's not risk anything and tell the user that
++		 * he's requesting us to do weird stuff.
++		 */
++		if (terminal->log_rotate > 0 || terminal->log_size > 0)
++			return -EINVAL;
++
++		/* I mean, sure log wherever you want to. */
++		return lxc_write_nointr(terminal->log_fd, buf, bytes_read);
++	}
++
++	space_left = terminal->log_size - st.st_size;
++
++	/* User doesn't want to rotate the log file and there's no more space
++	 * left so simply truncate it.
++	 */
++	if (space_left <= 0 && terminal->log_rotate <= 0) {
++		ret = lxc_terminal_truncate_log_file(terminal);
++		if (ret < 0)
++			return ret;
++
++		if (bytes_read <= terminal->log_size)
++			return lxc_write_nointr(terminal->log_fd, buf, bytes_read);
++
++		/* Write as much as we can into the buffer and loose the rest. */
++		return lxc_write_nointr(terminal->log_fd, buf, terminal->log_size);
++	}
++
++	/* There's enough space left. */
++	if (bytes_read <= space_left)
++		return lxc_write_nointr(terminal->log_fd, buf, bytes_read);
++
++	/* There'd be more to write but we aren't instructed to rotate the log
++	 * file so simply return. There's no error on our side here.
++	 */
++	if (terminal->log_rotate > 0)
++		ret = lxc_terminal_rotate_log_file(terminal);
++	else
++		ret = lxc_terminal_truncate_log_file(terminal);
++	if (ret < 0)
++		return ret;
++
++	if (terminal->log_size < bytes_read) {
++		/* Well, this is unfortunate because it means that there is more
++		 * to write than the user has granted us space. There are
++		 * multiple ways to handle this but let's use the simplest one:
++		 * write as much as we can, tell the user that there was more
++		 * stuff to write and move on.
++		 * Note that this scenario shouldn't actually happen with the
++		 * standard pty-based terminal that LXC allocates since it will
++		 * be switched into raw mode. In raw mode only 1 byte at a time
++		 * should be read and written.
++		 */
++		WARN("Size of terminal log file is smaller than the bytes to write");
++		ret = lxc_write_nointr(terminal->log_fd, buf, terminal->log_size);
++		if (ret < 0)
++			return -1;
++		bytes_read -= ret;
++		return bytes_read;
++	}
++
++	/* Yay, we made it. */
++	ret = lxc_write_nointr(terminal->log_fd, buf, bytes_read);
++	if (ret < 0)
++		return -1;
++	bytes_read -= ret;
++	return bytes_read;
++}
++
++static ssize_t isulad_logger_write(struct lxc_terminal *terminal, const char *type, const char *buf,
++                                int bytes_read)
++{
++	logger_json_file *msg = NULL;
++	ssize_t ret = -1;
++	size_t len;
++	char *json = NULL;
++	char timebuffer[64] = { 0 };
++	parser_error err = NULL;
++	struct parser_context ctx = { GEN_OPTIONS_SIMPLIFY | GEN_OPTIONS_NOT_VALIDATE_UTF8, stderr };
++
++	if (bytes_read < 0 || bytes_read >= INT_MAX) {
++		return -1;
++	}
++	msg = calloc(sizeof(logger_json_file), 1);
++	if (msg == NULL) {
++		return -errno;
++	}
++	msg->log = calloc(bytes_read, 1);
++	if (!msg->log) {
++		goto cleanup;
++	}
++	memcpy(msg->log, buf, bytes_read);
++	msg->log_len = bytes_read;
++	msg->stream = type ? safe_strdup(type) : safe_strdup("stdout");
++
++	get_now_time_buffer(timebuffer, sizeof(timebuffer));
++	msg->time = safe_strdup(timebuffer);
++
++	json = logger_json_file_generate_json(msg, &ctx, &err);
++	if (!json) {
++		ERROR("Failed to generate json: %s", err);
++		goto cleanup;
++	}
++	len = strlen(json);
++	json[len] = '\n';
++	ret = isulad_lxc_terminal_rotate_write_data(terminal, json, len + 1);
++cleanup:
++	free(json);
++	free_logger_json_file(msg);
++	free(err);
++	return ret;
++}
++
++static int isulad_lxc_terminal_write_log_file(struct lxc_terminal *terminal, const char *type, char *buf,
++                                       int bytes_read)
++{
++#define __BUF_CACHE_SIZE (16 * LXC_TERMINAL_BUFFER_SIZE)
++	static char cache[__BUF_CACHE_SIZE];
++	static int size = 0;
++	int upto, index;
++	int begin = 0, buf_readed = 0,  buf_left = 0;
++	int ret;
++
++	if (buf != NULL && bytes_read > 0) {
++		/* Work out how much more data we are okay with reading this time. */
++		upto = size + bytes_read;
++		if (upto > __BUF_CACHE_SIZE) {
++			upto = __BUF_CACHE_SIZE;
++		}
++
++		if (upto > size) {
++			buf_readed = upto - size;
++			memcpy(cache + size, buf, buf_readed);
++			buf_left = bytes_read - buf_readed;
++			size += buf_readed;
++		}
++	}
++
++	// If we have no data to log, and there's no more coming, we're done.
++	if (size == 0)
++		return 0;
++
++	// Break up the data that we've buffered up into lines, and log each in turn.
++	for (index = 0; index < size; index++) {
++		if (cache[index] == '\n') {
++			ret = isulad_logger_write(terminal, type, cache + begin, index - begin + 1);
++			if (ret < 0) {
++				WARN("Failed to log msg");
++			}
++			begin = index + 1;
++		}
++	}
++	/* If there's no more coming, or the buffer is full but
++	 * has no newlines, log whatever we haven't logged yet,
++	 * noting that it's a partial log line. */
++	if (buf == NULL || (begin == 0 && size == __BUF_CACHE_SIZE)) {
++		if (begin < size) {
++			ret = isulad_logger_write(terminal, type, cache + begin, size - begin);
++			if (ret < 0) {
++				WARN("Failed to log msg");
++			}
++			begin = 0;
++			size = 0;
++		}
++		if (buf == NULL) {
++			return 0;
++		}
++	}
++	/* Move any unlogged data to the front of the buffer in preparation for another read. */
++	if (begin > 0) {
++		memcpy(cache, cache + begin, size - begin);
++		size -= begin;
++	}
++	/* Move left data to cache buffer */
++	if (buf_left > 0) {
++		memcpy(cache + size, buf + buf_readed, buf_left);
++		size += buf_left;
++	}
++	return 0;
++}
++
++/* isulad: forward data to all fifos */
++static void lxc_forward_data_to_fifo(struct lxc_list *list, bool is_err, const char *buf, int r)
++{
++	struct lxc_list *it  = NULL;
++	struct lxc_list *next = NULL;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, list, next) {
++		elem = it->elem;
++		if (is_err) {
++			if (elem->err_fd >= 0)
++				lxc_write_nointr(elem->err_fd, buf, r);
++		} else {
++			if (elem->out_fd >= 0)
++				lxc_write_nointr(elem->out_fd, buf, r);
++		}
++	}
++
++	return;
++}
++
++/* isulad: judge the fd whether is fifo */
++static bool lxc_terminal_is_fifo(int fd, struct lxc_list *list)
++{
++	struct lxc_list *it = NULL;
++	struct lxc_list *next = NULL;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, list, next) {
++		elem = it->elem;
++		if (elem->in_fd == fd)
++			return true;
++	}
++
++	return false;
++}
++
++/* isulad: if fd == -1, means delete all the fifos*/
++int lxc_terminal_delete_fifo(int fd, struct lxc_list *list)
++{
++	struct lxc_list *it = NULL;
++	struct lxc_list *next = NULL;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, list, next) {
++		elem = it->elem;
++		if (elem->in_fd == fd || -1 == fd) {
++			INFO("Delete fifo fd %d", fd);
++			lxc_list_del(it);
++			if (elem->in_fifo)
++				free(elem->in_fifo);
++			if (elem->out_fifo)
++				free(elem->out_fifo);
++			if (elem->err_fifo)
++				free(elem->err_fifo);
++			if (elem->in_fd >= 0)
++				close(elem->in_fd);
++			if (elem->out_fd >= 0)
++				close(elem->out_fd);
++			if (elem->err_fd >= 0)
++				close(elem->err_fd);
++			free(elem);
++		}
++	}
++
++	return 0;
++}
++
++int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
++                       struct lxc_epoll_descr *descr)
++{
++	struct lxc_terminal *terminal = data;
++	char buf[2 * LXC_TERMINAL_BUFFER_SIZE];
++	int r, w, w_log, w_rbuf;
++
++	w = r = lxc_read_nointr(fd, buf, sizeof(buf));
++	if (r <= 0) {
++		INFO("Terminal client on fd %d has exited", fd);
++		lxc_mainloop_del_handler(descr, fd);
++
++		if (fd == terminal->master) {
++			terminal->master = -EBADF;
++			/* write remained buffer to terminal log */
++			if (terminal->log_fd >= 0) {
++				w_log = isulad_lxc_terminal_write_log_file(terminal, "stdout", NULL, 0);
++				if (w_log < 0)
++					TRACE("Failed to write %d bytes to terminal log", r);
++			}
++			/* notes: do not close the master fd due to if we close the fd, the process may
++			 * recive SIGHUP and the exit code will be 129 (128 + 1)
++			 */
++			return LXC_MAINLOOP_CLOSE;
++		} else if (fd == terminal->peer) {
++			lxc_terminal_signal_fini(terminal);
++			terminal->peer = -EBADF;
++			close(fd);
++			return LXC_MAINLOOP_CONTINUE; /* isulad: do not close mainloop when peer close*/
++		} else if (lxc_terminal_is_fifo(fd, &terminal->fifos)) {
++			/* isulad: delete fifos when the client close */
++			lxc_terminal_delete_fifo(fd, &terminal->fifos);
++			return LXC_MAINLOOP_CONTINUE;
++		} else if (fd == terminal->pipes[1][0] || fd == terminal->pipes[2][0]) {
++			if (fd == terminal->pipes[1][0]) {
++				w_log = isulad_lxc_terminal_write_log_file(terminal, "stdout", NULL, 0);
++				terminal->pipes[1][0] = -EBADF;
++			} else if (fd == terminal->pipes[2][0]) {
++				w_log = isulad_lxc_terminal_write_log_file(terminal, "stderr", NULL, 0);
++				terminal->pipes[2][0] = -EBADF;
++			}
++			if (w_log < 0)
++				TRACE("Failed to write %d bytes to terminal log", r);
++			close(fd);
++			return LXC_MAINLOOP_CONTINUE;
++		} else if (fd == terminal->pipes[0][1]) {
++			TRACE("closed stdin pipe of container stdin");
++			terminal->pipes[0][1] = -EBADF;
++			close(fd);
++			return LXC_MAINLOOP_CONTINUE;
++		} else {
++			ERROR("Handler received unexpected file descriptor");
++		}
++		close(fd);
++		return LXC_MAINLOOP_CLOSE;
++	}
++
++	if (fd == terminal->peer || lxc_terminal_is_fifo(fd, &terminal->fifos)) {
++		if (terminal->master > 0)
++			w = lxc_write_nointr(terminal->master, buf, r);
++		if (terminal->pipes[0][1] > 0)
++			w = lxc_write_nointr(terminal->pipes[0][1], buf, r);
++	}
++
++	w_rbuf = w_log = 0;
++	if (fd == terminal->master || fd == terminal->pipes[1][0] || fd == terminal->pipes[2][0]) {
++		/* write to peer first */
++		if (terminal->peer >= 0)
++			w = lxc_write_nointr(terminal->peer, buf, r);
++
++		/* isulad: forward data to fifos */
++		lxc_forward_data_to_fifo(&terminal->fifos, fd == terminal->pipes[2][0], buf, r);
++
++		/* write to terminal ringbuffer */
++		if (terminal->buffer_size > 0)
++			w_rbuf = lxc_ringbuf_write(&terminal->ringbuf, buf, r);
++
++		/* write to terminal log */
++		if (terminal->log_fd >= 0) {
++			if (fd == terminal->master || fd == terminal->pipes[1][0])
++				w_log = isulad_lxc_terminal_write_log_file(terminal, "stdout", buf, r);
++			else if (fd == terminal->pipes[2][0])
++				w_log = isulad_lxc_terminal_write_log_file(terminal, "stderr", buf, r);
++		}
++	}
++
++	if (w != r)
++		WARN("Short write on terminal r:%d != w:%d", r, w);
++
++	if (w_rbuf < 0) {
++		errno = -w_rbuf;
++		SYSTRACE("Failed to write %d bytes to terminal ringbuffer", r);
++	}
++
++	if (w_log < 0)
++		TRACE("Failed to write %d bytes to terminal log", r);
++
++	return LXC_MAINLOOP_CONTINUE;
++}
++#else
+ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 		       struct lxc_epoll_descr *descr)
+ {
+@@ -374,6 +797,7 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 
+ 	return LXC_MAINLOOP_CONTINUE;
+ }
++#endif
+ 
+ static int lxc_terminal_mainloop_add_peer(struct lxc_terminal *terminal)
+ {
+@@ -401,6 +825,110 @@ static int lxc_terminal_mainloop_add_peer(struct lxc_terminal *terminal)
+ 	return 0;
+ }
+ 
++#ifdef HAVE_ISULAD
++/* isulad add pipes to mainloop */
++static int lxc_terminal_mainloop_add_pipes(struct lxc_terminal *terminal)
++{
++	int ret = 0;
++
++	// parent read data from fifo, and send to stdin of container
++	if (terminal->pipes[0][1] > 0) {
++		ret = lxc_mainloop_add_handler(terminal->descr, terminal->pipes[0][1],
++		                               lxc_terminal_io_cb, terminal);
++		if (ret) {
++			ERROR("pipe fd %d not added to mainloop", terminal->pipes[0][1]);
++			return -1;
++		}
++	}
++	// parent read data from stdout of container, and send to fifo
++	if (terminal->pipes[1][0] > 0) {
++		ret = lxc_mainloop_add_handler(terminal->descr, terminal->pipes[1][0],
++		                               lxc_terminal_io_cb, terminal);
++		if (ret) {
++			ERROR("pipe fd %d not added to mainloop", terminal->pipes[1][0]);
++			return -1;
++		}
++	}
++	// parent read data from stderr of container, and send to fifo
++	if (terminal->pipes[2][0] > 0) {
++		ret = lxc_mainloop_add_handler(terminal->descr, terminal->pipes[2][0],
++		                               lxc_terminal_io_cb, terminal);
++		if (ret) {
++			ERROR("pipe fd %d not added to mainloop", terminal->pipes[2][0]);
++			return -1;
++		}
++	}
++	return ret;
++}
++
++/* isulad add fifo to mainloop */
++static int lxc_terminal_mainloop_add_fifo(struct lxc_terminal *terminal)
++{
++	int ret = 0;
++	struct lxc_list *it = NULL;
++	struct lxc_list *next = NULL;
++	struct lxc_fifos_fd *elem = NULL;
++
++	lxc_list_for_each_safe(it, &terminal->fifos, next) {
++		elem = it->elem;
++		if (elem->in_fd >= 0) {
++			ret = lxc_mainloop_add_handler(terminal->descr, elem->in_fd,
++			                               lxc_terminal_io_cb, terminal);
++			if (ret) {
++				ERROR("console fifo %s not added to mainloop", elem->in_fifo);
++				return -1;
++			}
++		}
++	}
++	return ret;
++}
++
++int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
++                              struct lxc_terminal *terminal)
++{
++	int ret;
++
++	/* We cache the descr so that we can add an fd to it when someone
++	 * does attach to it in lxc_terminal_allocate().
++	 */
++	terminal->descr = descr;
++
++	ret = lxc_terminal_mainloop_add_peer(terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal peer to mainloop");
++		return -1;
++	}
++
++	/* isulad add pipes to mainloop */
++	ret = lxc_terminal_mainloop_add_pipes(terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal fifos to mainloop");
++		return -1;
++	}
++
++	/* isulad add fifo to mainloop */
++	ret = lxc_terminal_mainloop_add_fifo(terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal fifos to mainloop");
++		return -1;
++	}
++
++	if (terminal->master < 0) {
++		INFO("Terminal is not initialized");
++		return 0;
++	}
++
++	ret = lxc_mainloop_add_handler(descr, terminal->master,
++	                               lxc_terminal_io_cb, terminal);
++	if (ret < 0) {
++		ERROR("Failed to add handler for terminal master fd %d to "
++		      "mainloop", terminal->master);
++		return -1;
++	}
++
++	return 0;
++}
++#else
+ int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
+ 			      struct lxc_terminal *terminal)
+ {
+@@ -426,6 +954,7 @@ int lxc_terminal_mainloop_add(struct lxc_epoll_descr *descr,
+ 
+ 	return lxc_terminal_mainloop_add_peer(terminal);
+ }
++#endif
+ 
+ int lxc_setup_tios(int fd, struct termios *oldtios)
+ {
+@@ -760,6 +1289,31 @@ void lxc_terminal_delete(struct lxc_terminal *terminal)
+ 	if (terminal->log_fd >= 0)
+ 		close(terminal->log_fd);
+ 	terminal->log_fd = -1;
++
++#ifdef HAVE_ISULAD
++	/* isulad: close all pipes */
++	if (terminal->pipes[0][0] >= 0)
++		close(terminal->pipes[0][0]);
++	terminal->pipes[0][0] = -1;
++	if (terminal->pipes[0][1] >= 0)
++		close(terminal->pipes[0][1]);
++	terminal->pipes[0][1] = -1;
++	if (terminal->pipes[1][0] >= 0)
++		close(terminal->pipes[1][0]);
++	terminal->pipes[1][0] = -1;
++	if (terminal->pipes[1][1] >= 0)
++		close(terminal->pipes[1][1]);
++	terminal->pipes[1][1] = -1;
++	if (terminal->pipes[2][0] >= 0)
++		close(terminal->pipes[2][0]);
++	terminal->pipes[2][0] = -1;
++	if (terminal->pipes[2][1] >= 0)
++		close(terminal->pipes[2][1]);
++	terminal->pipes[2][1] = -1;
++
++	/* isulad: delete all fifos */
++	lxc_terminal_delete_fifo(-1, &terminal->fifos);
++#endif
+ }
+ 
+ /**
+@@ -828,6 +1382,215 @@ int lxc_terminal_create_log_file(struct lxc_terminal *terminal)
+ 	return 0;
+ }
+ 
++#ifdef HAVE_ISULAD
++/* isulad: fd_nonblock */
++static int fd_nonblock(int fd)
++{
++	int flags;
++
++	flags = fcntl(fd, F_GETFL);
++
++	return fcntl(fd, F_SETFL, (int)((unsigned int)flags | O_NONBLOCK));
++}
++
++static int terminal_fifo_open(const char *fifo_path, int flags)
++{
++	int fd = -1;
++
++	fd = lxc_open(fifo_path, flags, 0);
++	if (fd < 0) {
++		WARN("Failed to open fifo %s to send message: %s.", fifo_path,
++		     strerror(errno));
++		return -1;
++	}
++
++	return fd;
++}
++
++bool fifo_exists(const char *path)
++{
++	struct stat sb;
++	int ret;
++
++	ret = stat(path, &sb);
++	if (ret < 0)
++		// could be something other than eexist, just say no
++		return false;
++	return S_ISFIFO(sb.st_mode);
++}
++
++/* isulad: set terminal fifos */
++static int lxc_terminal_set_fifo(struct lxc_terminal *console, const char *in, const char *out, const char *err, int *input_fd)
++{
++	int fifofd_in = -1, fifofd_out = -1, fifofd_err = -1;
++	struct lxc_fifos_fd *fifo_elem = NULL;
++
++	if ((in && !fifo_exists(in)) || (out && !fifo_exists(out)) || (err && !fifo_exists(err))) {
++		ERROR("File %s or %s or %s does not refer to a FIFO", in, out, err);
++		return -1;
++	}
++
++	if (in) {
++		fifofd_in = terminal_fifo_open(in, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
++		if (fifofd_in < 0) {
++			SYSERROR("Failed to open FIFO: %s", in);
++			return -1;
++		}
++	}
++
++	if (out) {
++		fifofd_out = terminal_fifo_open(out, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
++		if (fifofd_out < 0) {
++			SYSERROR("Failed to open FIFO: %s", out);
++			if (fifofd_in >= 0)
++				close(fifofd_in);
++			return -1;
++		}
++	}
++
++	if (err) {
++		fifofd_err = terminal_fifo_open(err, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
++		if (fifofd_err < 0) {
++			SYSERROR("Failed to open FIFO: %s", err);
++			if (fifofd_in >= 0)
++				close(fifofd_in);
++			if (fifofd_out >= 0)
++				close(fifofd_out);
++			return -1;
++		}
++	}
++
++	fifo_elem = malloc(sizeof(*fifo_elem));
++	if (fifo_elem == NULL) {
++		if (fifofd_in >= 0)
++			close(fifofd_in);
++		if (fifofd_out >= 0)
++			close(fifofd_out);
++		if (fifofd_err >= 0)
++			close(fifofd_err);
++		return -1;
++	}
++	memset(fifo_elem, 0, sizeof(*fifo_elem));
++
++	fifo_elem->in_fifo = safe_strdup(in ? in : "");
++	fifo_elem->out_fifo = safe_strdup(out ? out : "");
++	fifo_elem->err_fifo = safe_strdup(err ? err : "");
++	fifo_elem->in_fd = fifofd_in;
++	fifo_elem->out_fd = fifofd_out;
++	fifo_elem->err_fd = fifofd_err;
++	lxc_list_add_elem(&fifo_elem->node, fifo_elem);
++	lxc_list_add_tail(&console->fifos, &fifo_elem->node);
++
++	if (input_fd)
++		*input_fd = fifofd_in;
++
++	return 0;
++}
++
++/* isulad: add default fifos */
++static int lxc_terminal_fifo_default(struct lxc_terminal *terminal)
++{
++	if (terminal->init_fifo[0] || terminal->init_fifo[1] || terminal->init_fifo[2])
++		return lxc_terminal_set_fifo(terminal, terminal->init_fifo[0], terminal->init_fifo[1], terminal->init_fifo[2], NULL);
++	return 0;
++}
++
++static int use_unix_newline(int master_fd)
++{
++	struct termios oldtios;
++	int ret;
++
++	ret = tcgetattr(master_fd, &oldtios);
++	if (ret < 0)
++		return -1;
++	oldtios.c_oflag &= ~ONLCR;
++	ret = tcsetattr(master_fd, TCSAFLUSH, &oldtios);
++	if (ret < 0)
++		return -1;
++	return 0;
++}
++
++int lxc_terminal_create(struct lxc_terminal *terminal)
++{
++	int ret;
++
++	if (!terminal->disable_pty) {
++		ret = openpty(&terminal->master, &terminal->slave, NULL, NULL, NULL);
++		if (ret < 0) {
++			SYSERROR("Failed to open terminal");
++			return -1;
++		}
++
++		ret = ttyname_r(terminal->slave, terminal->name, sizeof(terminal->name));
++		if (ret < 0) {
++			SYSERROR("Failed to retrieve name of terminal slave");
++			goto err;
++		}
++
++		/* isulad: clear ONLCR flag */
++		ret = use_unix_newline(terminal->master);
++		if (ret < 0) {
++			SYSERROR("Failed to clear ONLCR flag on terminal master");
++			goto err;
++		}
++
++		ret = fd_cloexec(terminal->master, true);
++		if (ret < 0) {
++			SYSERROR("Failed to set FD_CLOEXEC flag on terminal master");
++			goto err;
++		}
++
++		/* isulad: make master NONBLOCK */
++		ret = fd_nonblock(terminal->master);
++		if (ret < 0) {
++			SYSERROR("Failed to set O_NONBLOCK flag on terminal master");
++			goto err;
++		}
++
++		ret = fd_cloexec(terminal->slave, true);
++		if (ret < 0) {
++			SYSERROR("Failed to set FD_CLOEXEC flag on terminal slave");
++			goto err;
++		}
++
++		ret = lxc_terminal_peer_default(terminal);
++		if (ret < 0) {
++			ERROR("Failed to allocate proxy terminal");
++			goto err;
++		}
++	} else {
++		/* isulad: create 3 pipes */
++		/* for stdin */
++		if (pipe2(terminal->pipes[0], O_CLOEXEC)) {
++			ERROR("Failed to create stdin pipe");
++			goto err;
++		}
++		/* for stdout */
++		if (pipe2(terminal->pipes[1], O_NONBLOCK | O_CLOEXEC)) {
++			ERROR("Failed to create stdout pipe");
++			goto err;
++		}
++		/* for stderr */
++		if (pipe2(terminal->pipes[2], O_NONBLOCK | O_CLOEXEC)) {
++			ERROR("Failed to create stderr pipe");
++			goto err;
++		}
++	}
++
++	/* isulad: open fifos */
++	ret = lxc_terminal_fifo_default(terminal);
++	if (ret < 0) {
++		ERROR("Failed to allocate fifo terminal");
++		goto err;
++	}
++
++	return 0;
++
++err:
++	lxc_terminal_delete(terminal);
++	return -ENODEV;
++}
++#else
+ int lxc_terminal_create(struct lxc_terminal *terminal)
+ {
+ 	int ret;
+@@ -868,6 +1631,7 @@ err:
+ 	lxc_terminal_delete(terminal);
+ 	return -ENODEV;
+ }
++#endif
+ 
+ int lxc_terminal_setup(struct lxc_conf *conf)
+ {
+@@ -1146,6 +1910,18 @@ void lxc_terminal_init(struct lxc_terminal *terminal)
+ 	terminal->peer = -EBADF;
+ 	terminal->log_fd = -EBADF;
+ 	lxc_terminal_info_init(&terminal->proxy);
++#ifdef HAVE_ISULAD
++	terminal->init_fifo[0] = NULL;
++	terminal->init_fifo[1] = NULL;
++	terminal->init_fifo[2] = NULL;
++	terminal->pipes[0][0] = -1;
++	terminal->pipes[0][1] = -1;
++	terminal->pipes[1][0] = -1;
++	terminal->pipes[1][1] = -1;
++	terminal->pipes[2][0] = -1;
++	terminal->pipes[2][1] = -1;
++	lxc_list_init(&terminal->fifos);
++#endif
+ }
+ 
+ void lxc_terminal_conf_free(struct lxc_terminal *terminal)
+@@ -1155,6 +1931,13 @@ void lxc_terminal_conf_free(struct lxc_terminal *terminal)
+ 	if (terminal->buffer_size > 0 && terminal->ringbuf.addr)
+ 		lxc_ringbuf_release(&terminal->ringbuf);
+ 	lxc_terminal_signal_fini(terminal);
++#ifdef HAVE_ISULAD
++	/*isulad: free console fifos */
++	free(terminal->init_fifo[0]);
++	free(terminal->init_fifo[1]);
++	free(terminal->init_fifo[2]);
++	lxc_terminal_delete_fifo(-1, &terminal->fifos);
++#endif
+ }
+ 
+ int lxc_terminal_map_ids(struct lxc_conf *c, struct lxc_terminal *terminal)
+diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
+index 1283cb3..dfc03c6 100644
+--- a/src/lxc/terminal.h
++++ b/src/lxc/terminal.h
+@@ -88,8 +88,28 @@ struct lxc_terminal {
+ 		/* the in-memory ringbuffer */
+ 		struct lxc_ringbuf ringbuf;
+ 	};
++#ifdef HAVE_ISULAD
++	char *init_fifo[3]; /* isulad: default fifos for the start */
++	struct lxc_list fifos; /* isulad: fifos used to forward teminal */
++	bool disable_pty;
++	bool open_stdin;
++	int pipes[3][2]; /* isulad: pipes for dup to container fds of stdin,stdout,stderr on daemonize mode*/
++#endif
+ };
+ 
++#ifdef HAVE_ISULAD
++/* isulad: fifo struct */
++struct lxc_fifos_fd {
++	char *in_fifo;
++	char *out_fifo;
++	char *err_fifo;
++	int in_fd;
++	int out_fd;
++	int err_fd;
++	struct lxc_list node;
++};
++#endif
++
+ /**
+  * lxc_terminal_allocate: allocate the console or a tty
+  *
+diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
+index 91f4e9a..214949b 100644
+--- a/src/lxc/tools/arguments.h
++++ b/src/lxc/tools/arguments.h
+@@ -42,6 +42,7 @@ struct lxc_arguments {
+ 	const char *share_ns[32]; /* size must be greater than LXC_NS_MAX */
+ #ifdef HAVE_ISULAD
+ 	const char *container_info; /* isulad: file used to store pid and ppid info of container */
++	char *terminal_fifos[3]; /* isulad add, fifos used to redirct stdin/out/err */
+ #endif
+ 
+ 	/* for lxc-console */
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 83ee75a..4c4c820 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -125,6 +125,15 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case OPT_CONTAINER_INFO:
+ 		args->container_info = arg;
+ 		break;
++	case OPT_INPUT_FIFO:
++		args->terminal_fifos[0] = arg;
++		break;
++	case OPT_OUTPUT_FIFO:
++		args->terminal_fifos[1] = arg;
++		break;
++	case OPT_STDERR_FIFO:
++		args->terminal_fifos[2] = arg;
++		break;
+ #endif
+ 	}
+ 	return 0;
+@@ -306,6 +315,9 @@ int main(int argc, char *argv[])
+ 			goto out;
+ 		}
+ 	}
++	if (my_args.terminal_fifos[0] || my_args.terminal_fifos[1] || my_args.terminal_fifos[2]) {
++		c->set_terminal_init_fifos(c, my_args.terminal_fifos[0], my_args.terminal_fifos[1], my_args.terminal_fifos[2]);
++	}
+ #endif
+ 
+ 	if (my_args.console)
+-- 
+1.8.3.1
+

@@ -1,0 +1,288 @@
+From 36f64e652afc7fe3feac6d93468cbc4f3d53ec9a Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Tue, 21 Apr 2020 15:36:55 +0800
+Subject: [PATCH] attach: seprate -i and -t flags
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/attach.c           | 100 ++++++++++++++++++++++++++++++++++++++++++++-
+ src/lxc/attach_options.h   |   2 +
+ src/lxc/start.c            |   1 +
+ src/lxc/terminal.c         |  14 ++++---
+ src/lxc/tools/lxc_attach.c |  17 +++++++-
+ 5 files changed, 125 insertions(+), 9 deletions(-)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 1dd2b47..5539fb1 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -653,6 +653,9 @@ struct attach_clone_payload {
+ 	struct lxc_proc_context_info *init_ctx;
+ 	lxc_attach_exec_t exec_function;
+ 	void *exec_payload;
++#ifdef HAVE_ISULAD
++	struct lxc_terminal *terminal;
++#endif
+ };
+ 
+ static void lxc_put_attach_clone_payload(struct attach_clone_payload *p)
+@@ -665,6 +668,49 @@ static void lxc_put_attach_clone_payload(struct attach_clone_payload *p)
+ 	}
+ }
+ 
++#ifdef HAVE_ISULAD
++static int isulad_set_attach_pipes(struct lxc_terminal *terminal)
++{
++	int ret = 0;
++	if (terminal->pipes[0][1] >= 0) {
++		close(terminal->pipes[0][1]);
++		terminal->pipes[0][1] = -1;
++	}
++
++	if (terminal->pipes[0][0] >= 0) {
++		ret = dup2(terminal->pipes[0][0], STDIN_FILENO);
++		if (ret < 0)
++			goto out;
++	}
++
++	if (terminal->pipes[1][0] >= 0) {
++		close(terminal->pipes[1][0]);
++		terminal->pipes[1][0] = -1;
++	}
++
++	if (terminal->pipes[1][1] >= 0) {
++		ret = dup2(terminal->pipes[1][1], STDOUT_FILENO);
++		if (ret < 0)
++			goto out;
++	}
++	if (terminal->pipes[2][0] >= 0) {
++		close(terminal->pipes[2][0]);
++		terminal->pipes[2][0] = -1;
++	}
++
++	if (terminal->pipes[2][1] >= 0) {
++		ret = dup2(terminal->pipes[2][1], STDERR_FILENO);
++		if (ret < 0)
++			goto out;
++	}
++
++	setsid();
++out:
++	return ret;
++}
++
++#endif
++
+ static int attach_child_main(struct attach_clone_payload *payload)
+ {
+ 	int lsm_fd, ret;
+@@ -933,6 +979,25 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 	}
+ 
+ 	if (options->attach_flags & LXC_ATTACH_TERMINAL) {
++
++#ifdef HAVE_ISULAD
++		/* isulad: dup2 pipe[0][0] to container stdin, pipe[1][1] to container stdout, pipe[2][1] to container stderr */
++		if (payload->terminal->disable_pty) {
++			ret = isulad_set_attach_pipes(payload->terminal);
++			if (ret < 0) {
++				SYSERROR("Failed to prepare terminal file pipes");
++				goto on_error;
++			}
++		}
++
++		if(!payload->terminal->disable_pty && payload->terminal_slave_fd >= 0) {
++			ret = lxc_terminal_prepare_login(payload->terminal_slave_fd);
++			if (ret < 0) {
++				SYSERROR("Failed to prepare terminal file descriptor %d", payload->terminal_slave_fd);
++				goto on_error;
++			}
++		}
++#else
+ 		ret = lxc_terminal_prepare_login(payload->terminal_slave_fd);
+ 		if (ret < 0) {
+ 			SYSERROR("Failed to prepare terminal file descriptor %d", payload->terminal_slave_fd);
+@@ -940,6 +1005,7 @@ static int attach_child_main(struct attach_clone_payload *payload)
+ 		}
+ 
+ 		TRACE("Prepared terminal file descriptor %d", payload->terminal_slave_fd);
++#endif
+ 	}
+ 
+ 	/* Avoid unnecessary syscalls. */
+@@ -1016,6 +1082,9 @@ static int lxc_attach_terminal(struct lxc_conf *conf,
+ 		free(terminal->init_fifo[2]);
+ 		terminal->init_fifo[2] = safe_strdup(options->init_fifo[2]);
+ 	}
++
++	terminal->disable_pty = options->disable_pty;
++	terminal->open_stdin = options->open_stdin;
+ #endif
+ 
+ 	ret = lxc_terminal_create(terminal);
+@@ -1410,6 +1479,21 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 		/* isulad: close errpipe */
+ 		close(conf->errpipe[1]);
+ 		conf->errpipe[1] = -1;
++		/* isulad: close pipe after clone */
++		if (terminal.pipes[0][0] >= 0) {
++			close(terminal.pipes[0][0]);
++			terminal.pipes[0][0] = -1;
++		}
++
++		if (terminal.pipes[1][1] >= 0) {
++			close(terminal.pipes[1][1]);
++			terminal.pipes[1][1] = -1;
++		}
++
++		if (terminal.pipes[2][1] >= 0) {
++			close(terminal.pipes[2][1]);
++			terminal.pipes[2][1] = -1;
++		}
+ #endif
+ 		lxc_proc_close_ns_fd(init_ctx);
+ 		if (options->attach_flags & LXC_ATTACH_TERMINAL)
+@@ -1568,6 +1652,15 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 		ret_parent = 0;
+ 		to_cleanup_pid = -1;
+ 
++	#ifdef HAVE_ISULAD
++		// iSulad: close stdin pipe if we do not want open_stdin with container stdin
++		if (!terminal.open_stdin) {
++			if (terminal.pipes[0][1] > 0) {
++				close(terminal.pipes[0][1]);
++				terminal.pipes[0][1] = -1;
++			}
++		}
++	#endif
+ 		if (options->attach_flags & LXC_ATTACH_TERMINAL) {
+ 			ret = lxc_mainloop(&descr, -1);
+ 			if (ret < 0) {
+@@ -1671,6 +1764,9 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 	payload.terminal_slave_fd = terminal.slave;
+ 	payload.exec_function = exec_function;
+ 	payload.exec_payload = exec_payload;
++#ifdef HAVE_ISULAD
++	payload.terminal = &terminal;
++#endif
+ 
+ 	pid = lxc_raw_clone(CLONE_PARENT, NULL);
+ 	if (pid < 0) {
+@@ -1697,9 +1793,9 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 		_exit(EXIT_FAILURE);
+ 	}
+ 
+-	if (options->attach_flags & LXC_ATTACH_TERMINAL)
++	if (options->attach_flags & LXC_ATTACH_TERMINAL) {
+ 		lxc_attach_terminal_close_slave(&terminal);
+-
++	}
+ 	/* Tell grandparent the pid of the pid of the newly created child. */
+ 	ret = lxc_write_nointr(ipc_sockets[1], &pid, sizeof(pid));
+ 	if (ret != sizeof(pid)) {
+diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
+index d5d4f44..5767560 100644
+--- a/src/lxc/attach_options.h
++++ b/src/lxc/attach_options.h
+@@ -121,6 +121,8 @@ typedef struct lxc_attach_options_t {
+ 	char *init_fifo[3]; /* isulad: default fifos for the start */
+ 	int64_t timeout;/* isulad: Seconds for waiting on a container to attach/exec before it is killed*/
+ 	const char *suffix;
++	bool disable_pty;
++	bool open_stdin;
+ } lxc_attach_options_t;
+ 
+ /*! Default attach options to use */
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index e099285..68a6116 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1789,6 +1789,7 @@ static int do_start(void *data)
+ 	 * as it execs.
+ 	 */
+ #ifdef HAVE_ISULAD
++	close_prot_errno_disarm(status_fd);
+ 	handler->ops->start(handler, handler->data, handler->daemonize ? handler->conf->errpipe[1] : -1);
+ #else
+ 	handler->ops->start(handler, handler->data);
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index c0a4d1a..57def93 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -750,21 +750,23 @@ int lxc_terminal_io_cb(int fd, uint32_t events, void *data,
+ 			return LXC_MAINLOOP_CONTINUE;
+ 		} else if (fd == terminal->pipes[1][0] || fd == terminal->pipes[2][0]) {
+ 			if (fd == terminal->pipes[1][0]) {
+-				w_log = isulad_lxc_terminal_write_log_file(terminal, "stdout", NULL, 0);
++				if (terminal->log_fd >= 0) {
++					w_log = isulad_lxc_terminal_write_log_file(terminal, "stdout", NULL, 0);
++				}
+ 				terminal->pipes[1][0] = -EBADF;
+ 			} else if (fd == terminal->pipes[2][0]) {
+-				w_log = isulad_lxc_terminal_write_log_file(terminal, "stderr", NULL, 0);
++				if (terminal->log_fd >= 0) {
++					w_log = isulad_lxc_terminal_write_log_file(terminal, "stderr", NULL, 0);
++				}
+ 				terminal->pipes[2][0] = -EBADF;
+ 			}
+-			if (w_log < 0)
+-				TRACE("Failed to write %d bytes to terminal log", r);
+ 			close(fd);
+-			return LXC_MAINLOOP_CONTINUE;
++			return LXC_MAINLOOP_CLOSE;
+ 		} else if (fd == terminal->pipes[0][1]) {
+ 			TRACE("closed stdin pipe of container stdin");
+ 			terminal->pipes[0][1] = -EBADF;
+ 			close(fd);
+-			return LXC_MAINLOOP_CONTINUE;
++			return LXC_MAINLOOP_CLOSE;
+ 		} else {
+ 			ERROR("Handler received unexpected file descriptor");
+ 		}
+diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
+index a855a8d..da7a7d2 100644
+--- a/src/lxc/tools/lxc_attach.c
++++ b/src/lxc/tools/lxc_attach.c
+@@ -82,6 +82,8 @@ static const struct option my_longopts[] = {
+ 	{"err-fifo", required_argument, 0, OPT_STDERR_FIFO},
+ 	{"suffix", required_argument, 0, OPT_ATTACH_SUFFIX},
+ 	{"timeout", required_argument, 0, OPT_ATTACH_TIMEOUT},
++	{"disable-pty", no_argument, 0, OPT_DISABLE_PTY},
++	{"open-stdin", no_argument, 0, OPT_OPEN_STDIN},
+ #endif
+ 	LXC_COMMON_OPTIONS
+ };
+@@ -312,9 +314,14 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 		}
+ 		args->attach_timeout = (unsigned int)atoll(arg);
+ 		break;
++	case OPT_DISABLE_PTY:
++		args->disable_pty = 1;
++		break;
++	case OPT_OPEN_STDIN:
++		args->open_stdin = 1;
++		break;
+ #endif
+ 	}
+-
+ 	return 0;
+ }
+ 
+@@ -614,6 +621,14 @@ int main(int argc, char *argv[])
+ 
+ 	attach_options.suffix = my_args.suffix;
+ 
++	if (my_args.disable_pty) {
++		attach_options.disable_pty = true;
++	}
++
++	if (my_args.open_stdin) {
++		attach_options.open_stdin = true;
++	}
++
+ 	/* isulad: add do attach background */
+ 	if (attach_options.attach_flags & LXC_ATTACH_TERMINAL)
+ 		wexit = do_attach_foreground(c, &command, &attach_options, &errmsg);
+-- 
+1.8.3.1
+
