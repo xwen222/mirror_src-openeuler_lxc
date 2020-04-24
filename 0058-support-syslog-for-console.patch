@@ -1,0 +1,251 @@
+From da93b4863324d200ffc69eb7eb87b686b47cc2ce Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 23 Apr 2020 19:46:22 +0800
+Subject: [PATCH] support syslog for console
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/lxc/confile.c  | 109 +++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/terminal.c |  44 +++++++++++++++++-
+ src/lxc/terminal.h |  10 +++++
+ 3 files changed, 162 insertions(+), 1 deletion(-)
+
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 771f6355..b1d101a9 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -155,6 +155,9 @@ lxc_config_define(umask);
+ lxc_config_define(rootfs_masked_paths);
+ lxc_config_define(rootfs_ro_paths);
+ lxc_config_define(systemd);
++lxc_config_define(console_log_driver);
++lxc_config_define(console_syslog_tag);
++lxc_config_define(console_syslog_facility);
+ #endif
+ 
+ /*
+@@ -276,6 +279,9 @@ static struct lxc_config_t config_jump_table[] = {
+ 	{ "lxc.isulad.rootfs.maskedpaths", set_config_rootfs_masked_paths,         get_config_rootfs_masked_paths,         clr_config_rootfs_masked_paths,       },
+ 	{ "lxc.isulad.rootfs.ropaths",     set_config_rootfs_ro_paths,             get_config_rootfs_ro_paths,             clr_config_rootfs_ro_paths,           },
+ 	{ "lxc.isulad.systemd",            set_config_systemd,                     get_config_systemd,                     clr_config_systemd,                   },
++	{ "lxc.console.logdriver",         set_config_console_log_driver,          get_config_console_log_driver,          clr_config_console_log_driver,        },
++	{ "lxc.console.syslog_tag",        set_config_console_syslog_tag,          get_config_console_syslog_tag,          clr_config_console_syslog_tag,        },
++	{ "lxc.console.syslog_facility",   set_config_console_syslog_facility,     get_config_console_syslog_facility,     clr_config_console_syslog_facility,   },
+ #endif
+ };
+ 
+@@ -6617,4 +6623,107 @@ static inline int clr_config_systemd(const char *key, struct lxc_conf *c,
+ 	return 0;
+ }
+ 
++static int set_config_console_log_driver(const char *key, const char *value,
++        struct lxc_conf *lxc_conf, void *data)
++{
++	return set_config_string_item(&lxc_conf->console.log_driver, value);
++}
++
++static int set_config_console_syslog_tag(const char *key, const char *value,
++        struct lxc_conf *lxc_conf, void *data)
++{
++	char buf[16] = { 0 };
++
++	if (value == NULL) {
++		return -1;
++	}
++	(void)strlcpy(buf, value, 16);
++	return set_config_string_item(&lxc_conf->console.log_syslog_tag, buf);
++}
++
++static int parse_facility(const char *facility)
++{
++#define FACILITIES_LEN 20
++	const char *facility_keys[FACILITIES_LEN] = {
++		"kern", "user", "mail", "daemon", "auth",
++		"syslog", "lpr", "news", "uucp", "cron", "authpriv", "ftp",
++		"local0", "local1", "local2", "local3", "local4", "local5", "local6", "local7"
++	};
++	const int facilities[FACILITIES_LEN] = {
++		LOG_KERN, LOG_USER, LOG_MAIL, LOG_DAEMON, LOG_AUTH, LOG_SYSLOG,
++		LOG_LPR, LOG_NEWS, LOG_UUCP, LOG_CRON, LOG_AUTHPRIV, LOG_FTP,
++		LOG_LOCAL0, LOG_LOCAL1, LOG_LOCAL2, LOG_LOCAL3, LOG_LOCAL4,
++		LOG_LOCAL5, LOG_LOCAL6, LOG_LOCAL7
++	};
++	int i = 0;
++
++	if (facility == NULL) {
++		return -1;
++	}
++
++	for (; i < FACILITIES_LEN; i++) {
++		if (strcmp(facility, facility_keys[i]) == 0) {
++			return facilities[i];
++		}
++	}
++
++	return -1;
++}
++
++static int set_config_console_syslog_facility(const char *key, const char *value,
++        struct lxc_conf *lxc_conf, void *data)
++{
++	int facility;
++
++	facility = parse_facility(value);
++	if (facility < 0) {
++		NOTICE("Invalid facility: %s", value);
++		facility = LOG_DAEMON;
++	}
++
++	lxc_conf->console.log_syslog_facility = facility;
++	return 0;
++}
++
++static int get_config_console_log_driver(const char *key, char *retv, int inlen,
++        struct lxc_conf *c, void *data)
++{
++	return lxc_get_conf_str(retv, inlen, c->console.log_driver);
++}
++
++static int get_config_console_syslog_tag(const char *key, char *retv, int inlen,
++        struct lxc_conf *c, void *data)
++{
++	return lxc_get_conf_str(retv, inlen, c->console.log_syslog_tag);
++}
++
++static int get_config_console_syslog_facility(const char *key, char *retv, int inlen,
++        struct lxc_conf *c, void *data)
++{
++	return lxc_get_conf_int(c, retv, inlen, c->console.log_syslog_facility);
++}
++
++static inline int clr_config_console_log_driver(const char *key,
++                struct lxc_conf *c, void *data)
++{
++	free(c->console.log_driver);
++	c->console.log_driver = NULL;
++	return 0;
++}
++
++static inline int clr_config_console_syslog_tag(const char *key,
++                struct lxc_conf *c, void *data)
++{
++	free(c->console.log_syslog_tag);
++	c->console.log_syslog_tag= NULL;
++	return 0;
++}
++
++static inline int clr_config_console_syslog_facility(const char *key,
++                struct lxc_conf *c, void *data)
++{
++	c->console.log_syslog_facility = LOG_DAEMON;
++	return 0;
++}
++
+ #endif
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index e696b4e4..9b831dc2 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -30,6 +30,7 @@
+ #include "utils.h"
+ #ifdef HAVE_ISULAD
+ #include "logger_json_file.h"
++#include "include/strlcpy.h"
+ #endif
+ 
+ #if HAVE_PTY_H
+@@ -535,7 +536,7 @@ static int isulad_lxc_terminal_rotate_write_data(struct lxc_terminal *terminal,
+ 	return bytes_read;
+ }
+ 
+-static ssize_t isulad_logger_write(struct lxc_terminal *terminal, const char *type, const char *buf,
++static ssize_t isulad_logger_json_write(struct lxc_terminal *terminal, const char *type, const char *buf,
+                                 int bytes_read)
+ {
+ 	logger_json_file *msg = NULL;
+@@ -579,6 +580,31 @@ cleanup:
+ 	return ret;
+ }
+ 
++static ssize_t isulad_logger_syslog_write(struct lxc_terminal *terminal, const char *buf)
++{
++        syslog(LOG_INFO, "%s", buf);
++        return 0;
++}
++
++static inline bool is_syslog(const char *driver)
++{
++        if (driver == NULL) {
++                return false;
++        }
++
++        return (strcmp("syslog", driver) == 0);
++}
++
++static inline ssize_t isulad_logger_write(struct lxc_terminal *terminal, const char *type, const char *buf,
++                                int bytes_read)
++{
++        if (is_syslog(terminal->log_driver)) {
++                return isulad_logger_syslog_write(terminal, buf);
++        }
++
++        return isulad_logger_json_write(terminal, type, buf, bytes_read);
++}
++
+ static int isulad_lxc_terminal_write_log_file(struct lxc_terminal *terminal, const char *type, char *buf,
+                                        int bytes_read)
+ {
+@@ -1385,6 +1411,10 @@ void lxc_terminal_delete(struct lxc_terminal *terminal)
+ 	terminal->log_fd = -1;
+ 
+ #ifdef HAVE_ISULAD
++        if (is_syslog(terminal->log_driver)) {
++                closelog();
++                free(terminal->log_driver);
++	}
+ 	/* isulad: close all pipes */
+ 	if (terminal->pipes[0][0] >= 0)
+ 		close(terminal->pipes[0][0]);
+@@ -1776,6 +1806,18 @@ int lxc_terminal_setup(struct lxc_conf *conf)
+ 	if (ret < 0)
+ 		return -1;
+ 
++#ifdef HAVE_ISULAD
++        if (is_syslog(terminal->log_driver)) {
++                if (terminal->log_syslog_tag == NULL) {
++                        terminal->log_syslog_tag = malloc(16 * sizeof(char));
++                        (void)strlcpy(terminal->log_syslog_tag, conf->name, 16);
++                }
++                if (terminal->log_syslog_facility <= 0) {
++                        terminal->log_syslog_facility = LOG_DAEMON;
++                }
++                openlog(terminal->log_syslog_tag, LOG_PID, terminal->log_syslog_facility);
++        }
++#endif
+ 	ret = lxc_terminal_create_log_file(terminal);
+ 	if (ret < 0)
+ 		goto err;
+diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
+index f49142dc..9de4cd05 100644
+--- a/src/lxc/terminal.h
++++ b/src/lxc/terminal.h
+@@ -79,6 +79,16 @@ struct lxc_terminal {
+ 
+ 		/* whether the log file will be rotated */
+ 		unsigned int log_rotate;
++#ifdef HAVE_ISULAD
++                /* driver of log, support file and syslog */
++                char *log_driver;
++
++                /* syslog tag for every log */
++                char *log_syslog_tag;
++
++                /* syslog facility */
++                int log_syslog_facility;
++#endif
+ 	};
+ 
+ 	struct /* lxc_terminal_ringbuf */ {
+-- 
+2.25.3
+
