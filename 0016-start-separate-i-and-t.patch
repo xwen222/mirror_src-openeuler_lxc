@@ -1,0 +1,369 @@
+From 204008167f00ddda3f5f2b0121bcf29b3d55c689 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 13 Apr 2020 21:17:15 +0800
+Subject: [PATCH 16/49] start: separate -i and -t
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/lxccontainer.c    |  44 +++++++++++++++++-
+ src/lxc/lxccontainer.h    |  27 +++++++++++
+ src/lxc/start.c           | 111 +++++++++++++++++++++++++++++++++++++++++++++-
+ src/lxc/start.h           |   4 ++
+ src/lxc/tools/arguments.h |   2 +
+ src/lxc/tools/lxc_start.c |  14 ++++++
+ 6 files changed, 198 insertions(+), 4 deletions(-)
+
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 64cde99..e27b63b 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -1163,12 +1163,18 @@ reboot:
+ 		goto on_error;
+ 	}
+ 
+-	if (useinit)
++	if (useinit) {
+ 		ret = lxc_execute(c->name, argv, 1, handler, c->config_path,
+ 				  c->daemonize, &c->error_num);
+-	else
++	}
++	else {
++#ifdef HAVE_ISULAD
++		handler->disable_pty = c->disable_pty;
++		handler->open_stdin = c->open_stdin;
++#endif
+ 		ret = lxc_start(argv, handler, c->config_path, c->daemonize,
+ 				&c->error_num);
++	}
+ 
+ 	if (conf->reboot == REBOOT_REQ) {
+ 		INFO("Container requested reboot");
+@@ -5381,6 +5387,40 @@ static bool do_lxcapi_set_container_info_file(struct lxc_container *c, const cha
+ }
+ 
+ WRAP_API_1(bool, lxcapi_set_container_info_file, const char *)
++
++static bool do_lxcapi_want_disable_pty(struct lxc_container *c, bool state)
++{
++	if (!c || !c->lxc_conf)
++		return false;
++
++	if (container_mem_lock(c))
++		return false;
++
++	c->disable_pty = state;
++
++	container_mem_unlock(c);
++
++	return true;
++}
++
++WRAP_API_1(bool, lxcapi_want_disable_pty, bool)
++
++static bool do_lxcapi_want_open_stdin(struct lxc_container *c, bool state)
++{
++	if (!c || !c->lxc_conf)
++		return false;
++
++	if (container_mem_lock(c))
++		return false;
++
++	c->open_stdin = state;
++
++	container_mem_unlock(c);
++
++	return true;
++}
++
++WRAP_API_1(bool, lxcapi_want_open_stdin, bool)
+ #endif
+ 
+ struct lxc_container *lxc_container_new(const char *name, const char *configpath)
+diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
+index fa9bd5e..de2ee46 100644
+--- a/src/lxc/lxccontainer.h
++++ b/src/lxc/lxccontainer.h
+@@ -113,6 +113,11 @@ struct lxc_container {
+ 	 * exit FIFO File to open used monitor the state of lxc monitor process.
+ 	 */
+ 	char *exit_fifo;
++	/*! Whether container wishes to create pty or pipes for console log */
++	bool disable_pty;
++
++	/*! Whether container wishes to keep stdin active */
++	bool open_stdin;
+ #endif
+ 
+ 	/*!
+@@ -908,6 +913,28 @@ struct lxc_container {
+ 	bool (*set_terminal_winch)(struct lxc_container *c, unsigned int height, unsigned int width);
+ 
+ 	bool (*set_exec_terminal_winch)(struct lxc_container *c, const char *suffix, unsigned int height, unsigned int width);
++
++	/*!
++	 * \brief Change whether the container wants to create pty or pipes
++	 * from the console log.
++	 *
++	 * \param c Container.
++	 * \param state Value for the disable pty bit (0 or 1).
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*want_disable_pty)(struct lxc_container *c, bool state);
++
++	/*!
++	 * \brief Change whether the container wants to keep stdin active
++	 * for parent process of container
++	 *
++	 * \param c Container.
++	 * \param state Value for the open_stdin bit (0 or 1).
++	 *
++	 * \return \c true on success, else \c false.
++	 */
++	bool (*want_open_stdin)(struct lxc_container *c, bool state);
+ #endif
+ };
+ 
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 17766bc..145b015 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -580,6 +580,16 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
+ 
+ 	TRACE("Mainloop is ready");
+ 
++#ifdef HAVE_ISULAD
++	// iSulad: close stdin pipe if we do not want open_stdin with container stdin
++	if (!handler->conf->console.open_stdin) {
++		if (handler->conf->console.pipes[0][1] > 0) {
++			close(handler->conf->console.pipes[0][1]);
++			handler->conf->console.pipes[0][1] = -1;
++		}
++	}
++#endif
++
+ 	ret = lxc_mainloop(&descr, -1);
+ 	close_prot_errno_disarm(descr.epfd);
+ 	if (ret < 0 || !handler->init_died)
+@@ -733,6 +743,10 @@ int lxc_init(const char *name, struct lxc_handler *handler)
+ 	int ret;
+ 	const char *loglevel;
+ 	struct lxc_conf *conf = handler->conf;
++#ifdef HAVE_ISULAD
++	conf->console.disable_pty = handler->disable_pty;
++	conf->console.open_stdin = handler->open_stdin;
++#endif
+ 
+ 	handler->monitor_pid = lxc_raw_getpid();
+ 	status_fd = open("/proc/self/status", O_RDONLY | O_CLOEXEC);
+@@ -1178,6 +1192,25 @@ static int do_start(void *data)
+ 	 * means that migration won't work, but at least we won't spew output
+ 	 * where it isn't wanted.
+ 	 */
++#ifdef HAVE_ISULAD
++	if (!handler->disable_pty && handler->daemonize && !handler->conf->autodev) {
++		char path[PATH_MAX];
++
++		ret = snprintf(path, sizeof(path), "%s/dev/null",
++			       handler->conf->rootfs.mount);
++		if (ret < 0 || ret >= sizeof(path))
++			goto out_warn_father;
++
++		ret = access(path, F_OK);
++		if (ret != 0) {
++			devnull_fd = open_devnull();
++
++			if (devnull_fd < 0)
++				goto out_warn_father;
++			WARN("Using /dev/null from the host for container init's standard file descriptors. Migration will not work");
++		}
++	}
++#else
+ 	if (handler->daemonize && !handler->conf->autodev) {
+ 		char path[PATH_MAX];
+ 
+@@ -1195,6 +1228,7 @@ static int do_start(void *data)
+ 			WARN("Using /dev/null from the host for container init's standard file descriptors. Migration will not work");
+ 		}
+ 	}
++#endif
+ 
+ 	/* Ask father to setup cgroups and wait for him to finish. */
+ 	ret = lxc_sync_barrier_parent(handler, LXC_SYNC_CGROUP);
+@@ -1266,12 +1300,70 @@ static int do_start(void *data)
+ 		DEBUG("Set PR_SET_NO_NEW_PRIVS to block execve() gainable privileges");
+ 	}
+ 
++#ifdef HAVE_ISULAD
++	/* isulad: dup2 pipe[0][0] to container stdin, pipe[1][1] to container stdout, pipe[2][1] to container stderr */
++	if (handler->disable_pty) {
++		if (handler->conf->console.pipes[0][1] >= 0) {
++			close(handler->conf->console.pipes[0][1]);
++			handler->conf->console.pipes[0][1] = -1;
++		}
++
++		if (handler->conf->console.pipes[0][0] >= 0) {
++			ret = dup2(handler->conf->console.pipes[0][0], STDIN_FILENO);
++			if (ret < 0)
++				goto out_warn_father;
++		}
++
++		if (handler->conf->console.pipes[1][0] >= 0) {
++			close(handler->conf->console.pipes[1][0]);
++			handler->conf->console.pipes[1][0] = -1;
++		}
++
++		if (handler->conf->console.pipes[1][1] >= 0) {
++			ret = dup2(handler->conf->console.pipes[1][1], STDOUT_FILENO);
++			if (ret < 0)
++				goto out_warn_father;
++		}
++		if (handler->conf->console.pipes[2][0] >= 0) {
++			close(handler->conf->console.pipes[2][0]);
++			handler->conf->console.pipes[2][0] = -1;
++		}
++
++		if (handler->conf->console.pipes[2][1] >= 0) {
++			ret = dup2(handler->conf->console.pipes[2][1], STDERR_FILENO);
++			if (ret < 0)
++				goto out_warn_father;
++		}
++	}
++#endif
++
+ 	/* Some init's such as busybox will set sane tty settings on stdin,
+ 	 * stdout, stderr which it thinks is the console. We already set them
+ 	 * the way we wanted on the real terminal, and we want init to do its
+ 	 * setup on its console ie. the pty allocated in lxc_terminal_setup() so
+ 	 * make sure that that pty is stdin,stdout,stderr.
+ 	 */
++	setsid();
++#ifdef HAVE_ISULAD
++	if (!handler->disable_pty && handler->conf->console.slave >= 0) {
++		/* isulad:make the given terminal as controlling terminal to avoid warning
++		* sh: cannot set terminal process group (-1): Inappropriate ioctl for device
++		* sh: no job control in this shell */
++		if (ioctl(handler->conf->console.slave, TIOCSCTTY, NULL) < 0) {
++			ERROR("Faild to make the given terminal the controlling terminal of the calling process");
++			goto out_warn_father;
++		}
++		if (handler->daemonize || !handler->conf->is_execute)
++			ret = set_stdfds(handler->conf->console.slave);
++		else
++			ret = lxc_terminal_set_stdfds(handler->conf->console.slave);
++		if (ret < 0) {
++			ERROR("Failed to redirect std{in,out,err} to pty file "
++			      "descriptor %d", handler->conf->console.slave);
++			goto out_warn_father;
++		}
++	}
++#else
+ 	 if (handler->conf->console.slave >= 0) {
+ 		 if (handler->daemonize || !handler->conf->is_execute)
+ 			 ret = set_stdfds(handler->conf->console.slave);
+@@ -1283,6 +1375,7 @@ static int do_start(void *data)
+ 			goto out_warn_father;
+ 		 }
+ 	 }
++#endif
+ 
+ 	/* If we mounted a temporary proc, then unmount it now. */
+ 	tmp_proc_unmount(handler->conf);
+@@ -1306,6 +1399,21 @@ static int do_start(void *data)
+ 
+ 	close_prot_errno_disarm(handler->sigfd);
+ 
++	#ifdef HAVE_ISULAD
++	if (!handler->disable_pty && handler->conf->console.slave < 0 && handler->daemonize) {
++		if (devnull_fd < 0) {
++			devnull_fd = open_devnull();
++			if (devnull_fd < 0)
++				goto out_warn_father;
++		}
++
++		ret = set_stdfds(devnull_fd);
++		if (ret < 0) {
++			ERROR("Failed to redirect std{in,out,err} to \"/dev/null\"");
++			goto out_warn_father;
++		}
++	}
++	#else
+ 	if (handler->conf->console.slave < 0 && handler->daemonize) {
+ 		if (devnull_fd < 0) {
+ 			devnull_fd = open_devnull();
+@@ -1319,11 +1427,10 @@ static int do_start(void *data)
+ 			goto out_warn_father;
+ 		}
+ 	}
++	#endif
+ 
+ 	close_prot_errno_disarm(devnull_fd);
+ 
+-	setsid();
+-
+ 	if (handler->conf->init_cwd) {
+ 		ret = chdir(handler->conf->init_cwd);
+ 		if (ret < 0) {
+diff --git a/src/lxc/start.h b/src/lxc/start.h
+index 1368d0e..5ea5fe2 100644
+--- a/src/lxc/start.h
++++ b/src/lxc/start.h
+@@ -125,6 +125,10 @@ struct lxc_handler {
+ 
+ #ifdef HAVE_ISULAD
+ 	int exit_code;/* isulad: record the exit code of container */
++	/* Indicates whether should we using pipes or pty dup to std{in,out,err} for console log. */
++	bool disable_pty;
++	/* Indicates whether should we keep stdin active. */
++	bool open_stdin;
+ #endif
+ 
+ };
+diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
+index e0866d6..a6d9967 100644
+--- a/src/lxc/tools/arguments.h
++++ b/src/lxc/tools/arguments.h
+@@ -45,6 +45,8 @@ struct lxc_arguments {
+ 	char *terminal_fifos[3]; /* isulad add, fifos used to redirct stdin/out/err */
+ 	const char *exit_monitor_fifo; /* isulad: fifo used to monitor state of monitor process */
+ 	const char *suffix; /* isulad add, suffix used for connect with parent of execed process*/
++	int disable_pty;
++	int open_stdin;
+ #endif
+ 
+ 	/* for lxc-console */
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 76802df6..321c847 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -143,6 +143,12 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 	case OPT_EXIT_FIFO:
+ 		args->exit_monitor_fifo = arg;
+ 		break;
++	case OPT_DISABLE_PTY:
++		args->disable_pty = 1;
++		break;
++	case OPT_OPEN_STDIN:
++		args->open_stdin = 1;
++		break;
+ #endif
+ 
+ 	}
+@@ -334,6 +340,14 @@ int main(int argc, char *argv[])
+ 	if (my_args.exit_monitor_fifo != NULL) {
+ 		c->exit_fifo = safe_strdup(my_args.exit_monitor_fifo);
+ 	}
++
++	if (my_args.disable_pty) {
++		c->want_disable_pty(c, true);
++	}
++
++	if (my_args.open_stdin) {
++		c->want_open_stdin(c, true);
++	}
+ #endif
+ 
+ 	if (my_args.console)
+-- 
+1.8.3.1
+

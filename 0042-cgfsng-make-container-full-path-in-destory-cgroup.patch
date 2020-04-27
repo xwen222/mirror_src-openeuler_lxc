@@ -1,0 +1,29 @@
+From a5cc738c0f322b35a759f83d8d631e657f8bd58b Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 16 Apr 2020 16:30:34 +0800
+Subject: [PATCH 42/49] cgfsng: make container full path in destory cgroup
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index e2a8983..1e1df3b 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -970,8 +970,9 @@ static int isulad_cgroup_tree_remove(struct hierarchy **hierarchies,
+ 		struct hierarchy *h = hierarchies[i];
+ 		int ret;
+ 
+-		if (!h->container_full_path)
+-			continue;
++		if (!h->container_full_path) {
++			h->container_full_path = must_make_path(h->mountpoint, h->container_base_path, container_cgroup, NULL);
++		}
+ 
+ 		ret = lxc_rm_rf(h->container_full_path);
+ 		if (ret < 0) {
+-- 
+1.8.3.1
+

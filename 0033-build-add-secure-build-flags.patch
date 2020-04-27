@@ -1,0 +1,423 @@
+From 2b69f168a6847885233e88be02a1143a4c55b59f Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Wed, 15 Apr 2020 18:58:24 +0800
+Subject: [PATCH 33/49] build: add secure build flags
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ configure.ac               |  14 +++++-
+ src/lxc/Makefile.am        |   8 +++-
+ src/lxc/cgroups/cgfsng.c   | 117 ++++++++++++++++++++++++---------------------
+ src/lxc/confile.c          |   1 -
+ src/lxc/terminal.c         |   6 ++-
+ src/lxc/tools/lxc_attach.c |   2 -
+ src/lxc/utils.c            |   7 +++
+ 7 files changed, 93 insertions(+), 62 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 56d0cb7..438d292 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -43,6 +43,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror -Wno-portability subdir-objects])
+ AC_CANONICAL_HOST
+ AM_PROG_CC_C_O
+ AC_USE_SYSTEM_EXTENSIONS
++CFLAGS=`echo "${CFLAGS#\-g}"`
+ 
+ # Test if we have a new enough compiler.
+ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+@@ -190,6 +191,11 @@ AC_ARG_ENABLE([werror],
+ 	[AS_HELP_STRING([--disable-werror], [do not treat warnings as errors])],
+ 	[enable_werror=$enableval], [enable_werror=yes])
+ 
++AC_ARG_ENABLE([debug],
++	[AC_HELP_STRING([--enable-debug],
++	[set -g into cflags [default=no]])],
++	[], [enable_debug=no])
++
+ # Allow disabling rpath
+ AC_ARG_ENABLE([rpath],
+ 	[AS_HELP_STRING([--enable-rpath], [set rpath in executables [default=no]])],
+@@ -732,7 +738,6 @@ AX_CHECK_COMPILE_FLAG([-fno-strict-aliasing], [CFLAGS="$CFLAGS -fno-strict-alias
+ AX_CHECK_COMPILE_FLAG([-fstack-clash-protection], [CFLAGS="$CFLAGS -fstack-clash-protection"],,[-Werror])
+ AX_CHECK_LINK_FLAG([-fstack-protector-strong], [CFLAGS="$CFLAGS -fstack-protector-strong"],,[-Werror])
+ AX_CHECK_LINK_FLAG([--param=ssp-buffer-size=4], [CFLAGS="$CFLAGS --param=ssp-buffer-size=4"],,[-Werror])
+-AX_CHECK_COMPILE_FLAG([-g], [CFLAGS="$CFLAGS -g"],,[-Werror])
+ AX_CHECK_COMPILE_FLAG([--mcet -fcf-protection], [CFLAGS="$CFLAGS --mcet -fcf-protection"],,[-Werror])
+ AX_CHECK_COMPILE_FLAG([-Werror=implicit-function-declaration], [CFLAGS="$CFLAGS -Werror=implicit-function-declaration"],,[-Werror])
+ AX_CHECK_COMPILE_FLAG([-Wlogical-op], [CFLAGS="$CFLAGS -Wlogical-op"],,[-Werror])
+@@ -759,12 +764,17 @@ AX_CHECK_COMPILE_FLAG([-fexceptions], [CFLAGS="$CFLAGS -fexceptions"],,[-Werror]
+ 
+ AX_CHECK_LINK_FLAG([-z relro], [LDFLAGS="$LDFLAGS -z relro"],,[])
+ AX_CHECK_LINK_FLAG([-z now], [LDFLAGS="$LDFLAGS -z now"],,[])
++AX_CHECK_LINK_FLAG([-z noexecstack], [LDFLAGS="$LDFLAGS -z noexecstack"],,[])
+ 
+-CFLAGS="$CFLAGS -Wvla -std=gnu11"
++CFLAGS="$CFLAGS -Wvla -std=gnu11 -D_FORTIFY_SOURCE=2 -Wall -fPIC -fPIE -pie"
+ if test "x$enable_werror" = "xyes"; then
+ 	CFLAGS="$CFLAGS -Werror"
+ fi
+ 
++if test "x$enable_debug" = "xyes"; then
++    CFLAGS="$CFLAGS -g"
++fi
++
+ AC_ARG_ENABLE([thread-safety],
+ 	[AS_HELP_STRING([--enable-thread-safety], [enforce thread-safety otherwise fail the build [default=yes]])],
+ 	[enable_thread_safety=$enableval], [enable_thread_safety=yes])
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index c288c51..0e1ba8d 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -276,6 +276,10 @@ liblxc_la_CFLAGS += -fsanitize=address \
+ 		    -fno-omit-frame-pointer
+ endif
+ 
++if HAVE_ISULAD
++liblxc_la_CFLAGS += -D_FORTIFY_SOURCE=2 -Wall
++endif
++
+ if ENABLE_UBSAN
+ liblxc_la_CFLAGS += -fsanitize=undefined
+ endif
+@@ -286,7 +290,9 @@ liblxc_la_LDFLAGS = -pthread \
+ 		    -version-info @LXC_ABI_MAJOR@
+ 
+ if HAVE_ISULAD
+-liblxc_la_LDFLAGS += @YAJL_LIBS@
++liblxc_la_LDFLAGS += @YAJL_LIBS@ -Wl,-z,relro \
++		    -Wl,-z,now \
++		    -Wl,-z,noexecstack
+ endif
+ 
+ liblxc_la_LIBADD = $(CAP_LIBS) \
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index b6aef12..1047c08 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -214,6 +214,7 @@ static char *read_file(const char *fnam)
+ 	return move_ptr(buf);
+ }
+ 
++#ifndef HAVE_ISULAD
+ /* Taken over modified from the kernel sources. */
+ #define NBITS 32 /* bits in uint32_t */
+ #define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
+@@ -476,12 +477,14 @@ static bool copy_parent_file(const char *parent_cgroup,
+ 				       value, child_cgroup, file);
+ 	return true;
+ }
++#endif
+ 
+ static inline bool is_unified_hierarchy(const struct hierarchy *h)
+ {
+ 	return h->version == CGROUP2_SUPER_MAGIC;
+ }
+ 
++#ifndef HAVE_ISULAD
+ /*
+  * Initialize the cpuset hierarchy in first directory of @cgroup_leaf and set
+  * cgroup.clone_children so that children inherit settings. Since the
+@@ -561,6 +564,7 @@ static int cg_legacy_handle_cpuset_hierarchy(struct hierarchy *h,
+ 
+ 	return fret;
+ }
++#endif
+ 
+ /* Given two null-terminated lists of strings, return true if any string is in
+  * both.
+@@ -946,29 +950,6 @@ static void lxc_cgfsng_print_basecg_debuginfo(char *basecginfo, char **klist,
+ 		TRACE("named subsystem %d: %s", k, *it);
+ }
+ 
+-static int cgroup_tree_remove(struct hierarchy **hierarchies,
+-			const char *container_cgroup)
+-{
+-	if (!container_cgroup || !hierarchies)
+-		return 0;
+-
+-	for (int i = 0; hierarchies[i]; i++) {
+-		struct hierarchy *h = hierarchies[i];
+-		int ret;
+-
+-		if (!h->container_full_path)
+-			continue;
+-
+-		ret = lxc_rm_rf(h->container_full_path);
+-		if (ret < 0)
+-			WARN("Failed to destroy \"%s\"", h->container_full_path);
+-
+-		free_disarm(h->container_full_path);
+-	}
+-
+-	return 0;
+-}
+-
+ struct generic_userns_exec_data {
+ 	struct hierarchy **hierarchies;
+ 	const char *container_cgroup;
+@@ -977,29 +958,6 @@ struct generic_userns_exec_data {
+ 	char *path;
+ };
+ 
+-static int cgroup_tree_remove_wrapper(void *data)
+-{
+-	struct generic_userns_exec_data *arg = data;
+-	uid_t nsuid = (arg->conf->root_nsuid_map != NULL) ? 0 : arg->conf->init_uid;
+-	gid_t nsgid = (arg->conf->root_nsgid_map != NULL) ? 0 : arg->conf->init_gid;
+-	int ret;
+-
+-	if (!lxc_setgroups(0, NULL) && errno != EPERM)
+-		return log_error_errno(-1, errno, "Failed to setgroups(0, NULL)");
+-
+-	ret = setresgid(nsgid, nsgid, nsgid);
+-	if (ret < 0)
+-		return log_error_errno(-1, errno, "Failed to setresgid(%d, %d, %d)",
+-				       (int)nsgid, (int)nsgid, (int)nsgid);
+-
+-	ret = setresuid(nsuid, nsuid, nsuid);
+-	if (ret < 0)
+-		return log_error_errno(-1, errno, "Failed to setresuid(%d, %d, %d)",
+-				       (int)nsuid, (int)nsuid, (int)nsuid);
+-
+-	return cgroup_tree_remove(arg->hierarchies, arg->container_cgroup);
+-}
+-
+ #ifdef HAVE_ISULAD
+ 
+ static int isulad_cgroup_tree_remove(struct hierarchy **hierarchies,
+@@ -1100,6 +1058,52 @@ __cgfsng_ops static bool isulad_cgfsng_payload_destroy(struct cgroup_ops *ops,
+ 	return true;
+ }
+ #else
++static int cgroup_tree_remove(struct hierarchy **hierarchies,
++			const char *container_cgroup)
++{
++	if (!container_cgroup || !hierarchies)
++		return 0;
++
++	for (int i = 0; hierarchies[i]; i++) {
++		struct hierarchy *h = hierarchies[i];
++		int ret;
++
++		if (!h->container_full_path)
++			continue;
++
++		ret = lxc_rm_rf(h->container_full_path);
++		if (ret < 0)
++			WARN("Failed to destroy \"%s\"", h->container_full_path);
++
++		free_disarm(h->container_full_path);
++	}
++
++	return 0;
++}
++
++static int cgroup_tree_remove_wrapper(void *data)
++{
++	struct generic_userns_exec_data *arg = data;
++	uid_t nsuid = (arg->conf->root_nsuid_map != NULL) ? 0 : arg->conf->init_uid;
++	gid_t nsgid = (arg->conf->root_nsgid_map != NULL) ? 0 : arg->conf->init_gid;
++	int ret;
++
++	if (!lxc_setgroups(0, NULL) && errno != EPERM)
++		return log_error_errno(-1, errno, "Failed to setgroups(0, NULL)");
++
++	ret = setresgid(nsgid, nsgid, nsgid);
++	if (ret < 0)
++		return log_error_errno(-1, errno, "Failed to setresgid(%d, %d, %d)",
++				       (int)nsgid, (int)nsgid, (int)nsgid);
++
++	ret = setresuid(nsuid, nsuid, nsuid);
++	if (ret < 0)
++		return log_error_errno(-1, errno, "Failed to setresuid(%d, %d, %d)",
++				       (int)nsuid, (int)nsuid, (int)nsuid);
++
++	return cgroup_tree_remove(arg->hierarchies, arg->container_cgroup);
++}
++
+ __cgfsng_ops static void cgfsng_payload_destroy(struct cgroup_ops *ops,
+ 						struct lxc_handler *handler)
+ {
+@@ -1227,6 +1231,14 @@ try_lxc_rm_rf:
+ }
+ #endif
+ 
++#ifdef HAVE_ISULAD
++__cgfsng_ops static inline bool cgfsng_monitor_create(struct cgroup_ops *ops,
++						      struct lxc_handler *handler)
++{
++	return true;
++}
++#else
++
+ static int mkdir_eexist_on_last(const char *dir, mode_t mode)
+ {
+ 	const char *tmp = dir;
+@@ -1311,13 +1323,6 @@ static void cgroup_tree_leaf_remove(struct hierarchy *h, bool payload)
+ 		SYSWARN("Failed to rmdir(\"%s\") cgroup", full_path);
+ }
+ 
+-#ifdef HAVE_ISULAD
+-__cgfsng_ops static inline bool cgfsng_monitor_create(struct cgroup_ops *ops,
+-						      struct lxc_handler *handler)
+-{
+-	return true;
+-}
+-#else
+ __cgfsng_ops static inline bool cgfsng_monitor_create(struct cgroup_ops *ops,
+ 						      struct lxc_handler *handler)
+ {
+@@ -3038,6 +3043,7 @@ static int device_cgroup_parse_access(struct device_item *device, const char *va
+ 	return 0;
+ }
+ 
++#ifndef HAVE_ISULAD
+ static int device_cgroup_rule_parse(struct device_item *device, const char *key,
+ 				    const char *val)
+ {
+@@ -3124,6 +3130,7 @@ static int device_cgroup_rule_parse(struct device_item *device, const char *key,
+ 
+ 	return device_cgroup_parse_access(device, ++val);
+ }
++#endif
+ 
+ #ifdef HAVE_ISULAD
+ __cgfsng_ops static int cgfsng_set(struct cgroup_ops *ops,
+@@ -3307,6 +3314,7 @@ static int convert_devpath(const char *invalue, char *dest)
+ 	return 0;
+ }
+ 
++#ifndef HAVE_ISULAD
+ /* Called from setup_limits - here we have the container's cgroup_data because
+  * we created the cgroups.
+  */
+@@ -3339,6 +3347,7 @@ static int cg_legacy_set_data(struct cgroup_ops *ops, const char *filename,
+ 
+ 	return lxc_write_openat(h->container_full_path, filename, value, strlen(value));
+ }
++#endif
+ 
+ #ifdef HAVE_ISULAD
+ /* Called from setup_limits - here we have the container's cgroup_data because
+@@ -3923,7 +3932,6 @@ static int cg_hybrid_init(struct cgroup_ops *ops, bool relative, bool unprivileg
+ 		__do_free char *base_cgroup = NULL, *mountpoint = NULL;
+ 		__do_free_string_list char **controller_list = NULL;
+ 		int type;
+-		bool writeable;
+ 		struct hierarchy *new;
+ 
+ 		type = get_cgroup_version(line);
+@@ -3989,6 +3997,7 @@ static int cg_hybrid_init(struct cgroup_ops *ops, bool relative, bool unprivileg
+ 			base_cgroup[1] = '\0';
+ 		}
+ #else
++		bool writeable;
+ 		if (type == CGROUP2_SUPER_MAGIC)
+ 			writeable = test_writeable_v2(mountpoint, base_cgroup);
+ 		else
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index 55cba6d..f00afe9 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -6228,7 +6228,6 @@ static int get_config_init_args(const char *key, char *retv, int inlen,
+ 				  struct lxc_conf *c, void *data)
+ {
+ 	int i, len, fulllen = 0;
+-	struct lxc_list *it;
+ 
+ 	if (!retv)
+ 		inlen = 0;
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 14686fc..c0a4d1a 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -287,6 +287,7 @@ static int lxc_terminal_rotate_log_file(struct lxc_terminal *terminal)
+ 	return lxc_terminal_create_log_file(terminal);
+ }
+ 
++#ifndef HAVE_ISULAD
+ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
+ 				       int bytes_read)
+ {
+@@ -392,6 +393,7 @@ static int lxc_terminal_write_log_file(struct lxc_terminal *terminal, char *buf,
+ 	bytes_read -= ret;
+ 	return bytes_read;
+ }
++#endif
+ 
+ #ifdef HAVE_ISULAD
+ /* get time buffer */
+@@ -1240,8 +1242,8 @@ void lxc_terminal_free(struct lxc_conf *conf, int fd)
+ 
+ static int lxc_terminal_peer_default(struct lxc_terminal *terminal)
+ {
+-	struct lxc_terminal_state *ts;
+-	const char *path;
++	struct lxc_terminal_state *ts = NULL;
++	const char *path = NULL;
+ 	int ret = 0;
+ 
+ 	if (terminal->path)
+diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
+index b068c9a..48e18bb 100644
+--- a/src/lxc/tools/lxc_attach.c
++++ b/src/lxc/tools/lxc_attach.c
+@@ -507,11 +507,9 @@ out:
+ 
+ int main(int argc, char *argv[])
+ {
+-	int ret = -1;
+ 	int wexit = 0;
+ 	struct lxc_log log;
+ 	char *errmsg = NULL;
+-	pid_t pid;
+ 	lxc_attach_options_t attach_options = LXC_ATTACH_OPTIONS_DEFAULT;
+ 	lxc_attach_command_t command = (lxc_attach_command_t){.program = NULL};
+ 
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index 39413ee..ba69995 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -1427,9 +1427,11 @@ static int lxc_get_unused_loop_dev(char *name_loop)
+ {
+ 	int loop_nr, ret;
+ 	int fd_ctl = -1, fd_tmp = -1;
++#if HAVE_ISULAD
+ 	// isulad: retry and try mknod
+ 	int max_retry = 200;
+ 	bool try_mknod = true;
++#endif
+ 
+ 	fd_ctl = open("/dev/loop-control", O_RDWR | O_CLOEXEC);
+ 	if (fd_ctl < 0) {
+@@ -1446,7 +1448,10 @@ static int lxc_get_unused_loop_dev(char *name_loop)
+ 	ret = snprintf(name_loop, LO_NAME_SIZE, "/dev/loop%d", loop_nr);
+ 	if (ret < 0 || ret >= LO_NAME_SIZE)
+ 		goto on_error;
++
++#if HAVE_ISULAD
+ retry:
++#endif
+ 	fd_tmp = open(name_loop, O_RDWR | O_CLOEXEC);
+ 	if (fd_tmp < 0) {
+ #if HAVE_ISULAD
+@@ -1693,6 +1698,7 @@ uint64_t lxc_find_next_power2(uint64_t n)
+ 	return n;
+ }
+ 
++#ifndef HAVE_ISULAD
+ static int process_dead(/* takes */ int status_fd)
+ {
+ 	__do_close int dupfd = -EBADF;
+@@ -1730,6 +1736,7 @@ static int process_dead(/* takes */ int status_fd)
+ 
+ 	return ret;
+ }
++#endif
+ 
+ int lxc_set_death_signal(int signal, pid_t parent, int parent_status_fd)
+ {
+-- 
+1.8.3.1
+

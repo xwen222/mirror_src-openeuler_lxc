@@ -1,0 +1,50 @@
+From 49f7dc89e5ae690a0b81570a81321b1593aeb994 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Sat, 11 Apr 2020 15:43:38 +0800
+Subject: [PATCH 01/49] iSulad: add HAVE_ISULAD macro
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ configure.ac        | 11 +++++++++++
+ src/lxc/Makefile.am |  3 +++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 90a4bd4..5f386d9 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -791,6 +791,17 @@ else
+ 	AC_MSG_RESULT([no])
+ fi
+ 
++AC_MSG_CHECKING([Whether adapt to iSulad])
++AC_ARG_ENABLE([isulad],
++	[AC_HELP_STRING([--enable-isulad], [enable adapt to iSulad [default=yes]])],
++	[adapt_isulad=$enableval], [adapt_isulad=yes])
++AM_CONDITIONAL([HAVE_ISULAD], [test "x$adapt_isulad" = "xyes"])
++if test "x$adapt_isulad" = "xyes"; then
++	AC_DEFINE([HAVE_ISULAD], 1, [adapt to iSulad])
++	AC_MSG_RESULT([yes])
++else
++	AC_MSG_RESULT([no])
++fi
+ # Files requiring some variable expansion
+ AC_CONFIG_FILES([
+ 	Makefile
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index c374c2d..e7fc844 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -212,6 +212,9 @@ AM_CFLAGS = -DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
+ 	    -I $(top_srcdir)/src/lxc/storage \
+ 	    -I $(top_srcdir)/src/lxc/cgroups
+ 
++if HAVE_ISULAD
++AM_CFLAGS += -DHAVE_ISULAD
++endif
+ if ENABLE_APPARMOR
+ AM_CFLAGS += -DHAVE_APPARMOR
+ endif
+-- 
+1.8.3.1
+

@@ -1,0 +1,103 @@
+From 288b6934f79456f056a2043216bbfdde4342b694 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Fri, 26 Apr 2019 07:13:53 +0800
+Subject: [PATCH 47/49] support namespaced kernel params can be changed in
+ system container
+
+Signed-off-by: yangchenliang <yangchenliang@huawei.com>
+---
+ src/lxc/conf.c | 71 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 71 insertions(+)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 235965f..15d8e42 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -1449,6 +1449,68 @@ error:
+ 	return false;
+ }
+ 
++#ifdef HAVE_ISULAD
++static bool remount_readwrite(const char *path)
++{
++	int ret, i;
++
++	if (!path)
++		return true;
++
++	for (i = 0; i < 5; i++) {
++		ret = mount("", path, "", MS_REMOUNT, "");
++		if (ret < 0 && errno != ENOENT) {
++			if (errno == EINVAL) {
++				// Probably not a mountpoint, use bind-mount
++				ret = mount(path, path, "", MS_BIND, "");
++				if (ret < 0)
++					goto on_error;
++				ret = mount(path, path, "", MS_BIND | MS_REMOUNT | MS_REC | \
++					    MS_NOEXEC | MS_NOSUID | MS_NODEV, "");
++				if (ret < 0)
++					goto on_error;
++			} else if (errno == EBUSY) {
++				DEBUG("Try to mount \"%s\" to readonly after 100ms.", path);
++				usleep(100 * 1000);
++				continue;
++			} else {
++				goto on_error;
++			}
++		}
++		return true;
++	}
++
++on_error:
++	SYSERROR("Unable to mount \"%s\" to readwrite", path);
++	return false;
++}
++
++static int remount_proc_sys_mount_entries(struct lxc_list *mount_list, bool lsm_aa_allow_nesting)
++{
++	char buf[4096];
++	FILE *file;
++	struct mntent mntent;
++
++	file = make_anonymous_mount_file(mount_list, lsm_aa_allow_nesting);
++	if (!file)
++		return -1;
++
++	while (getmntent_r(file, &mntent, buf, sizeof(buf))) {
++		if (strstr(mntent.mnt_dir, "proc/sys") == NULL) {
++			continue;
++		}
++
++		if (!remount_readwrite((const char*)mntent.mnt_dir)) {
++			fclose(file);
++			return -1;
++		}
++	}
++
++	fclose(file);
++	return 0;
++}
++#endif
++
+ // remount_readonly will bind over the top of an existing path and ensure that it is read-only.
+ static bool remount_readonly(const char *path)
+ {
+@@ -4773,6 +4835,15 @@ int lxc_setup(struct lxc_handler *handler)
+ 		}
+ 	}
+ 
++	//isulad: system container, remount /proc/sys/xxx by mount_list
++	if (lxc_conf->systemd != NULL && strcmp(lxc_conf->systemd, "true") == 0) {
++		if (!lxc_list_empty(&lxc_conf->mount_list)) {
++			if (remount_proc_sys_mount_entries(&lxc_conf->mount_list, lxc_conf->lsm_aa_allow_nesting)) {
++				return log_error(-1, "failed to remount /proc/sys");
++			}
++		}
++	}
++
+ 	// isulad: create link /etc/mtab for /proc/mounts
+ 	if (create_mtab_link() != 0) {
+ 		return log_error(-1, "failed to create link /etc/mtab for target /proc/mounts");
+-- 
+1.8.3.1
+

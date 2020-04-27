@@ -1,0 +1,313 @@
+From cd19f650d43fdae95e7e72bebe207f4ddc9deb85 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Mon, 13 Apr 2020 19:18:26 +0800
+Subject: [PATCH 22/49] support terminal log
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/lxc/commands.c        | 14 ++++++------
+ src/lxc/conf.c            |  6 ++++++
+ src/lxc/confile.c         |  3 +++
+ src/lxc/log.c             | 54 +++++++++++++++++++++++------------------------
+ src/lxc/lxccontainer.c    |  2 ++
+ src/lxc/start.c           | 48 ++++++++++++++++++++---------------------
+ src/lxc/terminal.c        |  1 +
+ src/lxc/tools/lxc_start.c |  6 ++++++
+ 8 files changed, 76 insertions(+), 58 deletions(-)
+
+diff --git a/src/lxc/commands.c b/src/lxc/commands.c
+index 184a219..b21c12b 100644
+--- a/src/lxc/commands.c
++++ b/src/lxc/commands.c
+@@ -80,9 +80,9 @@ static const char *lxc_cmd_str(lxc_cmd_t cmd)
+ 		[LXC_CMD_SERVE_STATE_CLIENTS]		= "serve_state_clients",
+ 		[LXC_CMD_SECCOMP_NOTIFY_ADD_LISTENER]	= "seccomp_notify_add_listener",
+ 		[LXC_CMD_ADD_BPF_DEVICE_CGROUP]		= "add_bpf_device_cgroup",
+-		[LXC_CMD_FREEZE]					= "freeze",
+-		[LXC_CMD_UNFREEZE]					= "unfreeze",
+-		[LXC_CMD_GET_CGROUP2_FD]			= "get_cgroup2_fd",
++		[LXC_CMD_FREEZE]			= "freeze",
++		[LXC_CMD_UNFREEZE]			= "unfreeze",
++		[LXC_CMD_GET_CGROUP2_FD]		= "get_cgroup2_fd",
+ 		[LXC_CMD_GET_INIT_PIDFD]        	= "get_init_pidfd",
+ #ifdef HAVE_ISULAD
+ 		[LXC_CMD_SET_TERMINAL_FIFOS]  		= "set_terminal_fifos",
+@@ -1532,10 +1532,10 @@ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
+ 		[LXC_CMD_CONSOLE_LOG]                 	= lxc_cmd_console_log_callback,
+ 		[LXC_CMD_SERVE_STATE_CLIENTS]         	= lxc_cmd_serve_state_clients_callback,
+ 		[LXC_CMD_SECCOMP_NOTIFY_ADD_LISTENER] 	= lxc_cmd_seccomp_notify_add_listener_callback,
+-		[LXC_CMD_ADD_BPF_DEVICE_CGROUP]			= lxc_cmd_add_bpf_device_cgroup_callback,
+-		[LXC_CMD_FREEZE]						= lxc_cmd_freeze_callback,
+-		[LXC_CMD_UNFREEZE]						= lxc_cmd_unfreeze_callback,
+-		[LXC_CMD_GET_CGROUP2_FD]				= lxc_cmd_get_cgroup2_fd_callback,
++		[LXC_CMD_ADD_BPF_DEVICE_CGROUP]		= lxc_cmd_add_bpf_device_cgroup_callback,
++		[LXC_CMD_FREEZE]			= lxc_cmd_freeze_callback,
++		[LXC_CMD_UNFREEZE]			= lxc_cmd_unfreeze_callback,
++		[LXC_CMD_GET_CGROUP2_FD]		= lxc_cmd_get_cgroup2_fd_callback,
+ 		[LXC_CMD_GET_INIT_PIDFD]                = lxc_cmd_get_init_pidfd_callback,
+ #ifdef HAVE_ISULAD
+ 		[LXC_CMD_SET_TERMINAL_FIFOS]  			= lxc_cmd_set_terminal_fifos_callback,
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 2e93227..4088363 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -1767,6 +1767,9 @@ static int lxc_setup_ttydir_console(const struct lxc_rootfs *rootfs,
+ 	if (ret < 0 && errno != EEXIST)
+ 		return log_error_errno(-errno, errno, "Failed to create console");
+ 
++#ifdef HAVE_ISULAD
++	if (console->slave > 0) {
++#endif
+ 	ret = fchmod(console->slave, S_IXUSR | S_IXGRP);
+ 	if (ret < 0)
+ 		return log_error_errno(-errno, errno, "Failed to set mode \"0%o\" to \"%s\"", S_IXUSR | S_IXGRP, console->name);
+@@ -1776,6 +1779,9 @@ static int lxc_setup_ttydir_console(const struct lxc_rootfs *rootfs,
+ 	if (ret < 0)
+ 		return log_error_errno(-1, errno, "Failed to mount \"%s\" on \"%s\"", console->name, lxcpath);
+ 	DEBUG("Mounted \"%s\" onto \"%s\"", console->name, lxcpath);
++#ifdef HAVE_ISULAD
++	}
++#endif
+ 
+ 	/* bind mount '/dev/<ttydir>/console'  to '/dev/console'  */
+ 	ret = safe_mount(lxcpath, path, "none", MS_BIND, 0, rootfs_path);
+diff --git a/src/lxc/confile.c b/src/lxc/confile.c
+index a28c5da..0fcebd4 100644
+--- a/src/lxc/confile.c
++++ b/src/lxc/confile.c
+@@ -2301,11 +2301,14 @@ static int set_config_console_rotate(const char *key, const char *value,
+ 	if (lxc_safe_uint(value, &lxc_conf->console.log_rotate) < 0)
+ 		return -1;
+ 
++#ifndef HAVE_ISULAD
++	/* isulad: support rotate muti-files */
+ 	if (lxc_conf->console.log_rotate > 1) {
+ 		ERROR("The \"lxc.console.rotate\" config key can only be set "
+ 		      "to 0 or 1");
+ 		return -1;
+ 	}
++#endif
+ 
+ 	return 0;
+ }
+diff --git a/src/lxc/log.c b/src/lxc/log.c
+index 9794582..79caa2c 100644
+--- a/src/lxc/log.c
++++ b/src/lxc/log.c
+@@ -60,30 +60,30 @@ static inline const char *isulad_get_fifo_path(const char *file)
+ {
+ #define ISULAD_FIFO_PREFIX "fifo:"
+ 
+-        if (strncmp(file, ISULAD_FIFO_PREFIX, strlen(ISULAD_FIFO_PREFIX)) == 0) {
+-                return (file + strlen(ISULAD_FIFO_PREFIX));
+-        }
+-        return NULL;
++	if (strncmp(file, ISULAD_FIFO_PREFIX, strlen(ISULAD_FIFO_PREFIX)) == 0) {
++		return (file + strlen(ISULAD_FIFO_PREFIX));
++	}
++	return NULL;
+ }
+ 
+ static int isulad_open_fifo(const char *file_path)
+ {
+ #define LOG_FIFO_SIZE (1024 * 1024)
+-        int fd;
++	int fd;
+ 
+-        fd = lxc_unpriv(open(file_path, O_RDWR | O_NONBLOCK | O_CLOEXEC, 0640));
+-        if (fd == -1) {
+-                fprintf(stderr, "Open fifo %s failed: %s\n", file_path, strerror(errno));
+-                return -1;
+-        }
++	fd = lxc_unpriv(open(file_path, O_RDWR | O_NONBLOCK | O_CLOEXEC, 0640));
++	if (fd == -1) {
++		fprintf(stderr, "Open fifo %s failed: %s\n", file_path, strerror(errno));
++		return -1;
++	}
+ 
+-        if (fcntl(fd, F_SETPIPE_SZ, LOG_FIFO_SIZE) == -1) {
+-                printf("Set fifo buffer size failed: %s", strerror(errno));
+-                close(fd);
+-                return -1;
+-        }
++	if (fcntl(fd, F_SETPIPE_SZ, LOG_FIFO_SIZE) == -1) {
++		printf("Set fifo buffer size failed: %s", strerror(errno));
++		close(fd);
++		return -1;
++	}
+ 
+-        return fd;
++	return fd;
+ }
+ #endif
+ 
+@@ -354,10 +354,10 @@ static int log_append_logfile(const struct lxc_log_appender *appender,
+ 
+ 	log_container_name = lxc_log_get_container_name();
+ #ifdef HAVE_ISULAD
+-        /* use isulad log format */
+-        if (log_container_name != NULL && strlen(log_container_name) > 15) {
+-                log_container_name = log_container_name + (strlen(log_container_name) - 15);
+-        }
++	/* use isulad log format */
++	if (log_container_name != NULL && strlen(log_container_name) > 15) {
++		log_container_name = log_container_name + (strlen(log_container_name) - 15);
++	}
+ #endif
+ 
+ 	if (fd_to_use < 0)
+@@ -633,10 +633,10 @@ static int __lxc_log_set_file(const char *fname, int create_dirs)
+ 	}
+ 
+ #ifdef HAVE_ISULAD
+-        fname = isulad_get_fifo_path(fname);
+-        if (fname == NULL) {
+-                return ret_errno(EINVAL);
+-        }
++	fname = isulad_get_fifo_path(fname);
++	if (fname == NULL) {
++		return ret_errno(EINVAL);
++	}
+ #endif
+ 
+ #if USE_CONFIGPATH_LOGS
+@@ -649,7 +649,7 @@ static int __lxc_log_set_file(const char *fname, int create_dirs)
+ 		return log_error_errno(-errno, errno, "Failed to create dir for log file \"%s\"", fname);
+ 
+ #if HAVE_ISULAD
+-        lxc_log_fd = isulad_open_fifo(fname);
++	lxc_log_fd = isulad_open_fifo(fname);
+ #else
+ 	lxc_log_fd = log_open(fname);
+ #endif
+@@ -749,9 +749,9 @@ int lxc_log_init(struct lxc_log *log)
+ 	if (lxc_log_fd >= 0) {
+ 		lxc_log_category_lxc.appender = &log_appender_logfile;
+ #ifdef HAVE_ISULAD
+-                if (!lxc_quiet_specified && !log->quiet)
++		if (!lxc_quiet_specified && !log->quiet)
+ #endif
+-                lxc_log_category_lxc.appender->next = &log_appender_stderr;
++		lxc_log_category_lxc.appender->next = &log_appender_stderr;
+ 	}
+ 
+ 	return ret;
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 75c1bbc..821cfa1 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -5641,6 +5641,8 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
+ 	c->add_terminal_fifos = lxcapi_add_terminal_fifo;
+ 	c->set_terminal_winch = lxcapi_set_terminal_winch;
+ 	c->set_exec_terminal_winch = lxcapi_set_exec_terminal_winch;
++	c->want_disable_pty = lxcapi_want_disable_pty;
++	c->want_open_stdin = lxcapi_want_open_stdin;
+ #endif
+ 	return c;
+ 
+diff --git a/src/lxc/start.c b/src/lxc/start.c
+index 0942c31..f6a96b4 100644
+--- a/src/lxc/start.c
++++ b/src/lxc/start.c
+@@ -1387,24 +1387,9 @@ static int do_start(void *data)
+ 	 */
+ #ifdef HAVE_ISULAD
+ 	if (!handler->disable_pty && handler->daemonize && !handler->conf->autodev) {
+-		char path[PATH_MAX];
+-
+-		ret = snprintf(path, sizeof(path), "%s/dev/null",
+-			       handler->conf->rootfs.mount);
+-		if (ret < 0 || ret >= sizeof(path))
+-			goto out_warn_father;
+-
+-		ret = access(path, F_OK);
+-		if (ret != 0) {
+-			devnull_fd = open_devnull();
+-
+-			if (devnull_fd < 0)
+-				goto out_warn_father;
+-			WARN("Using /dev/null from the host for container init's standard file descriptors. Migration will not work");
+-		}
+-	}
+ #else
+ 	if (handler->daemonize && !handler->conf->autodev) {
++#endif
+ 		char path[PATH_MAX];
+ 
+ 		ret = snprintf(path, sizeof(path), "%s/dev/null",
+@@ -1421,7 +1406,6 @@ static int do_start(void *data)
+ 			WARN("Using /dev/null from the host for container init's standard file descriptors. Migration will not work");
+ 		}
+ 	}
+-#endif
+ 
+ 	/* Ask father to setup cgroups and wait for him to finish. */
+ 	ret = lxc_sync_barrier_parent(handler, LXC_SYNC_CGROUP);
+@@ -2059,13 +2043,29 @@ static int lxc_spawn(struct lxc_handler *handler)
+ 	TRACE("Cloned child process %d", handler->pid);
+ 
+ #ifdef HAVE_ISULAD
+-    /* isulad: save pid/ppid info into file*/
+-    if (handler->conf->container_info_file) {
+-        if (lxc_save_container_info(handler->conf->container_info_file, handler->pid)) {
+-            ERROR("Failed to save cloned container pid");
+-            goto out_delete_net;
+-        }
+-    }
++	/* isulad: close pipe after clone */
++	if (handler->conf->console.pipes[0][0] >= 0) {
++		close(handler->conf->console.pipes[0][0]);
++		handler->conf->console.pipes[0][0] = -1;
++	}
++
++	if (handler->conf->console.pipes[1][1] >= 0) {
++		close(handler->conf->console.pipes[1][1]);
++		handler->conf->console.pipes[1][1] = -1;
++	}
++
++	if (handler->conf->console.pipes[2][1] >= 0) {
++		close(handler->conf->console.pipes[2][1]);
++		handler->conf->console.pipes[2][1] = -1;
++	}
++
++	/* isulad: save pid/ppid info into file*/
++	if (handler->conf->container_info_file) {
++		if (lxc_save_container_info(handler->conf->container_info_file, handler->pid)) {
++			ERROR("Failed to save cloned container pid");
++			goto out_delete_net;
++		}
++	}
+ #endif
+ 
+ 	/* Verify that we can actually make use of pidfds. */
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 39a6718..14686fc 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -2090,3 +2090,4 @@ int lxc_terminal_map_ids(struct lxc_conf *c, struct lxc_terminal *terminal)
+ 
+ 	return 0;
+ }
++
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 321c847..72a4494 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -53,8 +53,14 @@ static const struct option my_longopts[] = {
+ 	{"share-uts", required_argument, 0, OPT_SHARE_UTS},
+ 	{"share-pid", required_argument, 0, OPT_SHARE_PID},
+ #ifdef HAVE_ISULAD
++	{"in-fifo", required_argument, 0, OPT_INPUT_FIFO},
++	{"out-fifo", required_argument, 0, OPT_OUTPUT_FIFO},
++	{"err-fifo", required_argument, 0, OPT_STDERR_FIFO},
+ 	{"container-pidfile", required_argument, 0, OPT_CONTAINER_INFO},
+ 	{"exit-fifo", required_argument, 0, OPT_EXIT_FIFO},
++	{"start-timeout", required_argument, 0, OPT_START_TIMEOUT},
++	{"disable-pty", no_argument, 0, OPT_DISABLE_PTY},
++	{"open-stdin", no_argument, 0, OPT_OPEN_STDIN},
+ #endif
+ 	LXC_COMMON_OPTIONS
+ };
+-- 
+1.8.3.1
+

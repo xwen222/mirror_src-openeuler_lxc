@@ -1,0 +1,963 @@
+From f690df5983011dd3b61f0e139c3e939f3fecf37a Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Tue, 14 Apr 2020 16:04:15 +0800
+Subject: [PATCH 19/49] resize: implement resize function in exec/start
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/Makefile.am     |  10 +-
+ src/lxc/af_unix.c       |  33 +++-
+ src/lxc/af_unix.h       |   5 +-
+ src/lxc/attach.c        |  51 +++++-
+ src/lxc/commands.c      |  50 ++++++
+ src/lxc/commands.h      |   2 +
+ src/lxc/exec_commands.c | 416 ++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lxc/exec_commands.h |  73 +++++++++
+ src/lxc/lxccontainer.c  |  50 ++++++
+ src/lxc/terminal.c      |  27 ++++
+ src/lxc/terminal.h      |   1 +
+ 11 files changed, 710 insertions(+), 8 deletions(-)
+ create mode 100644 src/lxc/exec_commands.c
+ create mode 100644 src/lxc/exec_commands.h
+
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index 23935e5..c288c51 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -52,14 +52,15 @@ noinst_HEADERS = api_extensions.h \
+ 		 utils.h \
+ 		 uuid.h
+ 
+-#if HAVE_ISULAD
++if HAVE_ISULAD
+ noinst_HEADERS += isulad_utils.h path.h \
+ 				  json/json_common.h json/defs.h \
+ 				  json/oci_runtime_hooks.h \
+ 				  json/logger_json_file.h \
+ 				  json/oci_runtime_spec.h \
+-				  json/read-file.h
+-#endif
++				  json/read-file.h \
++				  exec_commands.h
++endif
+ 
+ if IS_BIONIC
+ noinst_HEADERS += ../include/fexecve.h \
+@@ -172,7 +173,8 @@ liblxc_la_SOURCES += isulad_utils.c isulad_utils.h \
+ 			json/oci_runtime_hooks.c json/oci_runtime_hooks.h \
+ 			json/logger_json_file.c json/logger_json_file.h \
+ 			json/oci_runtime_spec.c json/oci_runtime_spec.h \
+-			json/read-file.c json/read-file.h
++			json/read-file.c json/read-file.h \
++			exec_commands.c exec_commands.h
+ endif
+ 
+ if IS_BIONIC
+diff --git a/src/lxc/af_unix.c b/src/lxc/af_unix.c
+index e172088..9f268be 100644
+--- a/src/lxc/af_unix.c
++++ b/src/lxc/af_unix.c
+@@ -168,7 +168,7 @@ int lxc_unix_send_fds(int fd, int *sendfds, int num_sendfds, void *data,
+ }
+ 
+ static int lxc_abstract_unix_recv_fds_iov(int fd, int *recvfds, int num_recvfds,
+-					  struct iovec *iov, size_t iovlen)
++					  struct iovec *iov, size_t iovlen, unsigned int timeout)
+ {
+ 	__do_free char *cmsgbuf = NULL;
+ 	int ret;
+@@ -188,6 +188,22 @@ static int lxc_abstract_unix_recv_fds_iov(int fd, int *recvfds, int num_recvfds,
+ 	msg.msg_iov = iov;
+ 	msg.msg_iovlen = iovlen;
+ 
++#ifdef HAVE_ISULAD
++	struct timeval out;
++	if (timeout > 0) {
++		memset(&out, 0, sizeof(out));
++		out.tv_sec = timeout / 1000000;
++		out.tv_usec = timeout % 1000000;
++		ret = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
++		                 (const void *)&out, sizeof(out));
++		if (ret < 0) {
++			ERROR("Failed to set %u timeout on containter "
++			      "state socket", timeout);
++			return ret;
++		}
++	}
++#endif
++
+ 	do {
+ 		ret = recvmsg(fd, &msg, 0);
+ 	} while (ret < 0 && errno == EINTR);
+@@ -220,8 +236,21 @@ int lxc_abstract_unix_recv_fds(int fd, int *recvfds, int num_recvfds,
+ 		.iov_base = data ? data : buf,
+ 		.iov_len = data ? size : sizeof(buf),
+ 	};
+-	return lxc_abstract_unix_recv_fds_iov(fd, recvfds, num_recvfds, &iov, 1);
++	return lxc_abstract_unix_recv_fds_iov(fd, recvfds, num_recvfds, &iov, 1, 0);
++}
++
++#ifdef HAVE_ISULAD
++int lxc_abstract_unix_recv_fds_timeout(int fd, int *recvfds, int num_recvfds,
++                                       void *data, size_t size, unsigned int timeout)
++{
++	char buf[1] = {0};
++	struct iovec iov = {
++		.iov_base = data ? data : buf,
++		.iov_len = data ? size : sizeof(buf),
++	};
++	return lxc_abstract_unix_recv_fds_iov(fd, recvfds, num_recvfds, &iov, 1, timeout);
+ }
++#endif
+ 
+ int lxc_abstract_unix_send_credential(int fd, void *data, size_t size)
+ {
+diff --git a/src/lxc/af_unix.h b/src/lxc/af_unix.h
+index 2531b0b..6943a61 100644
+--- a/src/lxc/af_unix.h
++++ b/src/lxc/af_unix.h
+@@ -27,5 +27,8 @@ extern int lxc_unix_sockaddr(struct sockaddr_un *ret, const char *path);
+ extern int lxc_unix_connect(struct sockaddr_un *addr);
+ extern int lxc_unix_connect_type(struct sockaddr_un *addr, int type);
+ extern int lxc_socket_set_timeout(int fd, int rcv_timeout, int snd_timeout);
+-
++#ifdef HAVE_ISULAD
++int lxc_abstract_unix_recv_fds_timeout(int fd, int *recvfds, int num_recvfds,
++                                       void *data, size_t size, unsigned int timeout);
++#endif
+ #endif /* __LXC_AF_UNIX_H */
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index e66ca1c..33946bb 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -45,6 +45,10 @@
+ #include "terminal.h"
+ #include "utils.h"
+ 
++#ifdef HAVE_ISULAD
++#include "exec_commands.h"
++#endif
++
+ #if HAVE_SYS_PERSONALITY_H
+ #include <sys/personality.h>
+ #endif
+@@ -998,6 +1002,13 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 	struct lxc_conf *conf;
+ 	char *name, *lxcpath;
+ 	struct attach_clone_payload payload = {0};
++#ifdef HAVE_ISULAD
++	struct lxc_exec_command_handler exec_command;
++	const char *suffix = options->suffix;
++
++	exec_command.maincmd_fd = -1;
++	exec_command.terminal = &terminal;
++#endif
+ 
+ 	ret = access("/proc/self/ns", X_OK);
+ 	if (ret)
+@@ -1129,6 +1140,12 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 		}
+ 
+ 		terminal.log_fd = options->log_fd;
++#ifdef HAVE_ISULAD
++		if (suffix != NULL) {
++			exec_command.maincmd_fd = lxc_exec_cmd_init(name, lxcpath, suffix);
++			exec_command.terminal = &terminal;
++		}
++#endif
+ 	} else {
+ 		lxc_terminal_init(&terminal);
+ 	}
+@@ -1169,6 +1186,15 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 	ret = socketpair(PF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC, 0, ipc_sockets);
+ 	if (ret < 0) {
+ 		SYSERROR("Could not set up required IPC mechanism for attaching");
++#ifdef HAVE_ISULAD
++		if (options->attach_flags & LXC_ATTACH_TERMINAL) {
++			lxc_terminal_delete(&terminal);
++			lxc_terminal_conf_free(&terminal);
++			if (exec_command.maincmd_fd != -1) {
++				close(exec_command.maincmd_fd);
++			}
++		}
++#endif
+ 		free(cwd);
+ 		lxc_proc_put_context_info(init_ctx);
+ 		return -1;
+@@ -1184,6 +1210,17 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 	pid = fork();
+ 	if (pid < 0) {
+ 		SYSERROR("Failed to create first subprocess");
++#ifdef HAVE_ISULAD
++		if (options->attach_flags & LXC_ATTACH_TERMINAL) {
++			lxc_terminal_delete(&terminal);
++			lxc_terminal_conf_free(&terminal);
++			if (exec_command.maincmd_fd != -1) {
++				close(exec_command.maincmd_fd);
++			}
++		}
++		close(ipc_sockets[0]);
++		close(ipc_sockets[1]);
++#endif
+ 		free(cwd);
+ 		lxc_proc_put_context_info(init_ctx);
+ 		return -1;
+@@ -1239,7 +1276,9 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 			ret = lxc_attach_terminal_mainloop_init(&terminal, &descr);
+ 			if (ret < 0)
+ 				goto on_error;
+-
++#ifdef HAVE_ISULAD
++			(void)lxc_exec_cmd_mainloop_add(&descr, &exec_command);
++#endif
+ 			TRACE("Initialized terminal mainloop");
+ 		}
+ 
+@@ -1352,6 +1391,11 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 		if (options->attach_flags & LXC_ATTACH_TERMINAL) {
+ 			lxc_terminal_delete(&terminal);
+ 			lxc_terminal_conf_free(&terminal);
++#ifdef HAVE_ISULAD
++			if (exec_command.maincmd_fd != -1) {
++				close(exec_command.maincmd_fd);
++			}
++#endif
+ 		}
+ 
+ 		lxc_proc_put_context_info(init_ctx);
+@@ -1365,6 +1409,11 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 		lxc_attach_terminal_close_master(&terminal);
+ 		lxc_attach_terminal_close_peer(&terminal);
+ 		lxc_attach_terminal_close_log(&terminal);
++#ifdef HAVE_ISULAD
++		if (exec_command.maincmd_fd != -1) {
++			close(exec_command.maincmd_fd);
++		}
++#endif
+ 	}
+ 
+ 	/* Wait for the parent to have setup cgroups. */
+diff --git a/src/lxc/commands.c b/src/lxc/commands.c
+index 0ffc5c7..184a219 100644
+--- a/src/lxc/commands.c
++++ b/src/lxc/commands.c
+@@ -86,6 +86,7 @@ static const char *lxc_cmd_str(lxc_cmd_t cmd)
+ 		[LXC_CMD_GET_INIT_PIDFD]        	= "get_init_pidfd",
+ #ifdef HAVE_ISULAD
+ 		[LXC_CMD_SET_TERMINAL_FIFOS]  		= "set_terminal_fifos",
++		[LXC_CMD_SET_TERMINAL_WINCH]  		= "set_terminal_winch",
+ #endif
+ 	};
+ 
+@@ -1459,6 +1460,54 @@ static int lxc_cmd_set_terminal_fifos_callback(int fd, struct lxc_cmd_req *req,
+ 
+ 	return lxc_cmd_rsp_send(fd, &rsp);
+ }
++
++struct lxc_cmd_set_terminal_winch_request {
++	unsigned int height;
++	unsigned int width;
++};
++
++int lxc_cmd_set_terminal_winch(const char *name, const char *lxcpath, unsigned int height, unsigned int width)
++{
++	int ret = 0, stopped = 0;
++	struct lxc_cmd_set_terminal_winch_request data = { 0 };
++
++	data.height = height;
++	data.width = width;
++
++	struct lxc_cmd_rr cmd = {
++		.req = {
++			.cmd = LXC_CMD_SET_TERMINAL_WINCH,
++			.datalen = sizeof(struct lxc_cmd_set_terminal_winch_request),
++			.data = &data,
++		},
++	};
++
++	ret = lxc_cmd(name, &cmd, &stopped, lxcpath, NULL);
++	if (ret < 0) {
++		ERROR("Failed to send command to container");
++		return -1;
++	}
++
++	if (cmd.rsp.ret != 0) {
++		ERROR("Command response error:%d", cmd.rsp.ret);
++		return -1;
++	}
++	return 0;
++}
++
++static int lxc_cmd_set_terminal_winch_callback(int fd, struct lxc_cmd_req *req,
++					struct lxc_handler *handler, struct lxc_epoll_descr *descr)
++{
++	struct lxc_cmd_rsp rsp;
++	struct lxc_cmd_set_terminal_winch_request *data = (struct lxc_cmd_set_terminal_winch_request *)(req->data);
++	memset(&rsp, 0, sizeof(rsp));
++
++	rsp.ret = lxc_set_terminal_winsz(&handler->conf->console, data->height, data->width);;
++
++	return lxc_cmd_rsp_send(fd, &rsp);
++
++}
++
+ #endif
+ 
+ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
+@@ -1490,6 +1539,7 @@ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
+ 		[LXC_CMD_GET_INIT_PIDFD]                = lxc_cmd_get_init_pidfd_callback,
+ #ifdef HAVE_ISULAD
+ 		[LXC_CMD_SET_TERMINAL_FIFOS]  			= lxc_cmd_set_terminal_fifos_callback,
++		[LXC_CMD_SET_TERMINAL_WINCH]  			= lxc_cmd_set_terminal_winch_callback,
+ #endif
+ 	};
+ 
+diff --git a/src/lxc/commands.h b/src/lxc/commands.h
+index 95815e6..aa8289d 100644
+--- a/src/lxc/commands.h
++++ b/src/lxc/commands.h
+@@ -40,6 +40,7 @@ typedef enum {
+ 	LXC_CMD_GET_INIT_PIDFD,
+ #ifdef HAVE_ISULAD
+ 	LXC_CMD_SET_TERMINAL_FIFOS,
++	LXC_CMD_SET_TERMINAL_WINCH,
+ #endif
+ 	LXC_CMD_MAX,
+ } lxc_cmd_t;
+@@ -136,6 +137,7 @@ extern int lxc_cmd_get_cgroup2_fd(const char *name, const char *lxcpath);
+ #ifdef HAVE_ISULAD
+ extern int lxc_cmd_set_terminal_fifos(const char *name, const char *lxcpath,
+ 				const char *in_fifo, const char *out_fifo, const char *err_fifo);
++extern int lxc_cmd_set_terminal_winch(const char *name, const char *lxcpath, unsigned int height, unsigned int width);
+ #endif
+ 
+ #endif /* __commands_h */
+diff --git a/src/lxc/exec_commands.c b/src/lxc/exec_commands.c
+new file mode 100644
+index 0000000..00129cb
+--- /dev/null
++++ b/src/lxc/exec_commands.c
+@@ -0,0 +1,416 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
++ * Author: lifeng
++ * Create: 2019-12-08
++ * Description: provide container definition
++ * lxc: linux Container library
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++  ******************************************************************************/
++
++#ifndef _GNU_SOURCE
++#define _GNU_SOURCE 1
++#endif
++#include <caps.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <malloc.h>
++#include <poll.h>
++#include <signal.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/param.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++#include <unistd.h>
++
++#include "af_unix.h"
++#include "cgroup.h"
++#include "exec_commands.h"
++#include "commands_utils.h"
++#include "conf.h"
++#include "config.h"
++#include "confile.h"
++#include "log.h"
++#include "lxc.h"
++#include "lxclock.h"
++#include "mainloop.h"
++#include "monitor.h"
++#include "terminal.h"
++#include "utils.h"
++
++lxc_log_define(commands_exec, lxc);
++
++static const char *lxc_exec_cmd_str(lxc_exec_cmd_t cmd)
++{
++	static const char *const cmdname[LXC_EXEC_CMD_MAX] = {
++		[LXC_EXEC_CMD_SET_TERMINAL_WINCH]  = "set_exec_terminal_winch",
++	};
++
++	if (cmd >= LXC_EXEC_CMD_MAX)
++		return "Invalid request";
++
++	return cmdname[cmd];
++}
++
++static int lxc_exec_cmd_rsp_recv(int sock, struct lxc_exec_cmd_rr *cmd)
++{
++	int ret, rspfd;
++	struct lxc_exec_cmd_rsp *rsp = &cmd->rsp;
++
++	ret = lxc_abstract_unix_recv_fds_timeout(sock, &rspfd, 1, rsp, sizeof(*rsp), 1000 * 1000);
++	if (ret < 0) {
++		SYSERROR("Failed to receive response for command \"%s\"",
++		        lxc_exec_cmd_str(cmd->req.cmd));
++
++		if (errno == ECONNRESET || errno == EAGAIN || errno == EWOULDBLOCK) {
++			errno = ECONNRESET; /*isulad set errno ECONNRESET when timeout */
++			return -1;
++		}
++
++		return -1;
++	}
++	TRACE("Command \"%s\" received response", lxc_exec_cmd_str(cmd->req.cmd));
++
++	if (rsp->datalen == 0) {
++		DEBUG("Response data length for command \"%s\" is 0",
++		      lxc_exec_cmd_str(cmd->req.cmd));
++		return ret;
++	}
++
++	if (rsp->datalen > LXC_CMD_DATA_MAX) {
++		ERROR("Response data for command \"%s\" is too long: %d bytes > %d",
++		      lxc_exec_cmd_str(cmd->req.cmd), rsp->datalen, LXC_CMD_DATA_MAX);
++		return -1;
++	}
++
++	rsp->data = malloc(rsp->datalen);
++	if (!rsp->data) {
++		errno = ENOMEM;
++		ERROR("Failed to allocate response buffer for command \"%s\"",
++		      lxc_exec_cmd_str(cmd->req.cmd));
++		return -1;
++	}
++
++	ret = lxc_recv_nointr(sock, rsp->data, rsp->datalen, 0);
++	if (ret != rsp->datalen) {
++		SYSERROR("Failed to receive response data for command \"%s\"",
++		         lxc_exec_cmd_str(cmd->req.cmd));
++		return -1;
++	}
++
++	return ret;
++}
++
++static int lxc_exec_cmd_rsp_send(int fd, struct lxc_exec_cmd_rsp *rsp)
++{
++	ssize_t ret;
++
++	errno = EMSGSIZE;
++	ret = lxc_send_nointr(fd, rsp, sizeof(*rsp), MSG_NOSIGNAL);
++	if (ret < 0 || (size_t)ret != sizeof(*rsp)) {
++		SYSERROR("Failed to send command response %zd", ret);
++		return -1;
++	}
++
++	if (!rsp->data || rsp->datalen <= 0)
++		return 0;
++
++	errno = EMSGSIZE;
++	ret = lxc_send_nointr(fd, rsp->data, rsp->datalen, MSG_NOSIGNAL);
++	if (ret < 0 || ret != (ssize_t)rsp->datalen) {
++		SYSWARN("Failed to send command response data %zd", ret);
++		return -1;
++	}
++
++	return 0;
++}
++
++static int lxc_exec_cmd_send(const char *name, struct lxc_exec_cmd_rr *cmd,
++			const char *lxcpath, const char *hashed_sock_name, const char *suffix)
++{
++	int client_fd, saved_errno;
++	ssize_t ret = -1;
++
++	client_fd = lxc_cmd_connect(name, lxcpath, hashed_sock_name, suffix);
++	if (client_fd < 0)
++		return -1;
++
++	ret = lxc_abstract_unix_send_credential(client_fd, &cmd->req,
++						sizeof(cmd->req));
++	if (ret < 0 || (size_t)ret != sizeof(cmd->req))
++		goto on_error;
++
++	if (cmd->req.datalen <= 0)
++		return client_fd;
++
++	errno = EMSGSIZE;
++	ret = lxc_send_nointr(client_fd, (void *)cmd->req.data,
++			      cmd->req.datalen, MSG_NOSIGNAL);
++	if (ret < 0 || ret != (ssize_t)cmd->req.datalen)
++		goto on_error;
++
++	return client_fd;
++
++on_error:
++	saved_errno = errno;
++	close(client_fd);
++	errno = saved_errno;
++
++	return -1;
++}
++
++static int lxc_exec_cmd(const char *name, struct lxc_exec_cmd_rr *cmd, const char *lxcpath, const char *hashed_sock_name, const char *suffix)
++{
++	int client_fd = -1;
++	int saved_errno;
++	int ret = -1;
++
++	client_fd = lxc_exec_cmd_send(name, cmd, lxcpath, hashed_sock_name, suffix);
++	if (client_fd < 0) {
++		SYSTRACE("Command \"%s\" failed to connect command socket",
++		         lxc_exec_cmd_str(cmd->req.cmd));
++		return -1;
++	}
++
++	ret = lxc_exec_cmd_rsp_recv(client_fd, cmd);
++
++	saved_errno = errno;
++	close(client_fd);
++	errno = saved_errno;
++	return ret;
++}
++
++int lxc_exec_cmd_set_terminal_winch(const char *name, const char *lxcpath, const char *suffix, unsigned int height, unsigned int width)
++{
++	int ret = 0;
++	struct lxc_exec_cmd_set_terminal_winch_request data = { 0 };
++
++	data.height = height;
++	data.width = width;
++
++	struct lxc_exec_cmd_rr cmd = {
++		.req = {
++			.cmd = LXC_EXEC_CMD_SET_TERMINAL_WINCH,
++			.datalen = sizeof(struct lxc_exec_cmd_set_terminal_winch_request),
++			.data = &data,
++		},
++	};
++
++	ret = lxc_exec_cmd(name, &cmd, lxcpath, NULL, suffix);
++	if (ret < 0) {
++		ERROR("Failed to send command to container");
++		return -1;
++	}
++
++	if (cmd.rsp.ret != 0) {
++		ERROR("Command response error:%d", cmd.rsp.ret);
++		return -1;
++	}
++	return 0;
++}
++
++static int lxc_exec_cmd_set_terminal_winch_callback(int fd, struct lxc_exec_cmd_req *req,
++					struct lxc_exec_command_handler *handler)
++{
++	struct lxc_exec_cmd_rsp rsp;
++	struct lxc_exec_cmd_set_terminal_winch_request *data = (struct lxc_exec_cmd_set_terminal_winch_request *)(req->data);
++	memset(&rsp, 0, sizeof(rsp));
++
++	rsp.ret = lxc_set_terminal_winsz(handler->terminal, data->height, data->width);;
++
++	return lxc_exec_cmd_rsp_send(fd, &rsp);
++
++}
++
++static int lxc_exec_cmd_process(int fd, struct lxc_exec_cmd_req *req,
++			   struct lxc_exec_command_handler *handler)
++{
++	typedef int (*callback)(int, struct lxc_exec_cmd_req *, struct lxc_exec_command_handler *);
++
++	callback cb[LXC_EXEC_CMD_MAX] = {
++		[LXC_EXEC_CMD_SET_TERMINAL_WINCH]  = lxc_exec_cmd_set_terminal_winch_callback,
++	};
++
++	if (req->cmd >= LXC_EXEC_CMD_MAX) {
++		ERROR("Undefined command id %d", req->cmd);
++		return -1;
++	}
++	return cb[req->cmd](fd, req, handler);
++}
++
++static void lxc_exec_cmd_fd_cleanup(int fd, struct lxc_epoll_descr *descr)
++{
++	lxc_mainloop_del_handler(descr, fd);
++	close(fd);
++	return;
++}
++
++static int lxc_exec_cmd_handler(int fd, uint32_t events, void *data,
++			   struct lxc_epoll_descr *descr)
++{
++	int ret;
++	struct lxc_exec_cmd_req req;
++	void *reqdata = NULL;
++	struct lxc_exec_command_handler *handler = data;
++
++	ret = lxc_abstract_unix_rcv_credential(fd, &req, sizeof(req));
++	if (ret < 0) {
++		SYSERROR("Failed to receive data on command socket for command "
++		         "\"%s\"", lxc_exec_cmd_str(req.cmd));
++
++		if (errno == EACCES) {
++			/* We don't care for the peer, just send and close. */
++			struct lxc_exec_cmd_rsp rsp = {.ret = ret};
++
++			lxc_exec_cmd_rsp_send(fd, &rsp);
++		}
++
++		goto out_close;
++	}
++
++	if (ret == 0)
++		goto out_close;
++
++	if (ret != sizeof(req)) {
++		WARN("Failed to receive full command request. Ignoring request "
++		     "for \"%s\"", lxc_exec_cmd_str(req.cmd));
++		ret = -1;
++		goto out_close;
++	}
++
++	if (req.datalen > LXC_CMD_DATA_MAX) {
++		ERROR("Received command data length %d is too large for "
++		      "command \"%s\"", req.datalen, lxc_exec_cmd_str(req.cmd));
++		errno = EFBIG;
++		ret = -EFBIG;
++		goto out_close;
++	}
++
++	if (req.datalen > 0) {
++		reqdata = alloca(req.datalen);
++		if (!reqdata) {
++			ERROR("Failed to allocate memory for \"%s\" command",
++			      lxc_exec_cmd_str(req.cmd));
++			errno = ENOMEM;
++			ret = -ENOMEM;
++			goto out_close;
++		}
++
++		ret = lxc_recv_nointr(fd, reqdata, req.datalen, 0);
++		if (ret != req.datalen) {
++			WARN("Failed to receive full command request. Ignoring "
++			     "request for \"%s\"", lxc_exec_cmd_str(req.cmd));
++			ret = LXC_MAINLOOP_ERROR;
++			goto out_close;
++		}
++
++		req.data = reqdata;
++	}
++
++	ret = lxc_exec_cmd_process(fd, &req, handler);
++	if (ret) {
++		/* This is not an error, but only a request to close fd. */
++		ret = LXC_MAINLOOP_CONTINUE;
++		goto out_close;
++	}
++
++out:
++	return ret;
++
++out_close:
++	lxc_exec_cmd_fd_cleanup(fd, descr);
++	goto out;
++}
++
++static int lxc_exec_cmd_accept(int fd, uint32_t events, void *data,
++			  struct lxc_epoll_descr *descr)
++{
++	int connection = -1;
++	int opt = 1, ret = -1;
++
++	connection = accept(fd, NULL, 0);
++	if (connection < 0) {
++		SYSERROR("Failed to accept connection to run command");
++		return LXC_MAINLOOP_ERROR;
++	}
++
++	ret = fcntl(connection, F_SETFD, FD_CLOEXEC);
++	if (ret < 0) {
++		SYSERROR("Failed to set close-on-exec on incoming command connection");
++		goto out_close;
++	}
++
++	ret = setsockopt(connection, SOL_SOCKET, SO_PASSCRED, &opt, sizeof(opt));
++	if (ret < 0) {
++		SYSERROR("Failed to enable necessary credentials on command socket");
++		goto out_close;
++	}
++
++	ret = lxc_mainloop_add_handler(descr, connection, lxc_exec_cmd_handler, data);
++	if (ret) {
++		ERROR("Failed to add command handler");
++		goto out_close;
++	}
++
++out:
++	return ret;
++
++out_close:
++	close(connection);
++	goto out;
++}
++
++int lxc_exec_cmd_init(const char *name, const char *lxcpath, const char *suffix)
++{
++	int fd, ret;
++	char path[LXC_AUDS_ADDR_LEN] = {0};
++
++	ret = lxc_make_abstract_socket_name(path, sizeof(path), name, lxcpath, NULL, suffix);
++	if (ret < 0)
++		return -1;
++	TRACE("Creating abstract unix socket \"%s\"", &path[1]);
++
++	fd = lxc_abstract_unix_open(path, SOCK_STREAM, 0);
++	if (fd < 0) {
++		SYSERROR("Failed to create command socket %s", &path[1]);
++		if (errno == EADDRINUSE)
++			ERROR("Container \"%s\" appears to be already running", name);
++
++		return -1;
++	}
++
++	ret = fcntl(fd, F_SETFD, FD_CLOEXEC);
++	if (ret < 0) {
++		SYSERROR("Failed to set FD_CLOEXEC on command socket file descriptor");
++		close(fd);
++		return -1;
++	}
++
++	return fd;
++}
++
++int lxc_exec_cmd_mainloop_add(struct lxc_epoll_descr *descr, struct lxc_exec_command_handler *handler)
++{
++	int ret;
++	int fd = handler->maincmd_fd;
++
++	ret = lxc_mainloop_add_handler(descr, fd, lxc_exec_cmd_accept, handler);
++	if (ret < 0) {
++		ERROR("Failed to add handler for command socket");
++		close(fd);
++	}
++
++	return ret;
++}
+diff --git a/src/lxc/exec_commands.h b/src/lxc/exec_commands.h
+new file mode 100644
+index 0000000..2581ee9
+--- /dev/null
++++ b/src/lxc/exec_commands.h
+@@ -0,0 +1,73 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2019. All rights reserved.
++ * Author: lifeng
++ * Create: 2019-12-08
++ * Description: provide container definition
++ * lxc: linux Container library
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++  ******************************************************************************/
++
++#ifndef __LXC_EXEC_COMMANDS_H
++#define __LXC_EXEC_COMMANDS_H
++
++#include <stdio.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#include "lxccontainer.h"
++#include "macro.h"
++#include "state.h"
++#include "terminal.h"
++
++struct lxc_exec_command_handler {
++	int maincmd_fd;
++	struct lxc_terminal *terminal;
++};
++
++typedef enum {
++	LXC_EXEC_CMD_SET_TERMINAL_WINCH,
++	LXC_EXEC_CMD_MAX,
++} lxc_exec_cmd_t;
++
++struct lxc_exec_cmd_req {
++	lxc_exec_cmd_t cmd;
++	int datalen;
++	const void *data;
++};
++
++struct lxc_exec_cmd_rsp {
++	int ret; /* 0 on success, -errno on failure */
++	int datalen;
++	void *data;
++};
++
++struct lxc_exec_cmd_rr {
++	struct lxc_exec_cmd_req req;
++	struct lxc_exec_cmd_rsp rsp;
++};
++
++struct lxc_exec_cmd_set_terminal_winch_request {
++	unsigned int height;
++	unsigned int width;
++};
++
++struct lxc_epoll_descr;
++struct lxc_handler;
++
++extern int lxc_exec_cmd_init(const char *name, const char *lxcpath, const char *suffix);
++extern int lxc_exec_cmd_mainloop_add(struct lxc_epoll_descr *descr, struct lxc_exec_command_handler *handler);
++extern int lxc_exec_cmd_set_terminal_winch(const char *name, const char *lxcpath, const char *suffix, unsigned int height, unsigned int width);
++
++#endif /* __exec_commands_h */
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index d0e6e2b..75c1bbc 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -62,6 +62,10 @@
+ #include "utils.h"
+ #include "version.h"
+ 
++#ifdef HAVE_ISULAD
++#include "exec_commands.h"
++#endif
++
+ #if HAVE_OPENSSL
+ #include <openssl/evp.h>
+ #endif
+@@ -5444,6 +5448,50 @@ static bool do_lxcapi_add_terminal_fifo(struct lxc_container *c, const char *in_
+ }
+ 
+ WRAP_API_3(bool, lxcapi_add_terminal_fifo, const char *, const char *, const char *)
++
++static bool do_lxcapi_set_terminal_winch(struct lxc_container *c, unsigned int height, unsigned int width)
++{
++	bool ret = true;
++
++	if (!c || !c->lxc_conf)
++		return false;
++	if (container_mem_lock(c)) {
++		ERROR("Error getting mem lock");
++		return false;
++	}
++
++	if (lxc_cmd_set_terminal_winch(c->name, c->config_path, height, width)) {
++		ERROR("Error set terminal winch");
++		ret = false;
++	}
++
++	container_mem_unlock(c);
++	return ret;
++}
++
++WRAP_API_2(bool, lxcapi_set_terminal_winch, unsigned int, unsigned int)
++
++static bool do_lxcapi_set_exec_terminal_winch(struct lxc_container *c, const char *suffix, unsigned int height, unsigned int width)
++{
++	bool ret = true;
++
++	if (!c || !c->lxc_conf)
++		return false;
++	if (container_mem_lock(c)) {
++		ERROR("Error getting mem lock");
++		return false;
++	}
++
++	if (lxc_exec_cmd_set_terminal_winch(c->name, c->config_path, suffix, height, width)) {
++		ERROR("Error set terminal winch");
++		ret = false;
++	}
++
++	container_mem_unlock(c);
++	return ret;
++}
++
++WRAP_API_3(bool, lxcapi_set_exec_terminal_winch, const char *, unsigned int, unsigned int)
+ #endif
+ 
+ struct lxc_container *lxc_container_new(const char *name, const char *configpath)
+@@ -5591,6 +5639,8 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
+ 	c->set_container_info_file = lxcapi_set_container_info_file;
+ 	c->set_terminal_init_fifos = lxcapi_set_terminal_default_fifos;
+ 	c->add_terminal_fifos = lxcapi_add_terminal_fifo;
++	c->set_terminal_winch = lxcapi_set_terminal_winch;
++	c->set_exec_terminal_winch = lxcapi_set_exec_terminal_winch;
+ #endif
+ 	return c;
+ 
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 1f46d49..39a6718 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -187,6 +187,33 @@ static int lxc_terminal_truncate_log_file(struct lxc_terminal *terminal)
+ }
+ 
+ #ifdef HAVE_ISULAD
++
++int lxc_set_terminal_winsz(struct lxc_terminal *terminal, unsigned int height, unsigned int width)
++{
++	int ret = 0;
++	struct winsize wsz;
++
++	if (terminal->master < 0) {
++		return 0;
++	}
++
++	ret = ioctl(terminal->master, TIOCGWINSZ, &wsz);
++	if (ret < 0) {
++		WARN("Failed to get window size");
++		return -1;
++	}
++	wsz.ws_col = width;
++	wsz.ws_row = height;
++
++	ret = ioctl(terminal->master, TIOCSWINSZ, &wsz);
++	if (ret < 0)
++		WARN("Failed to set window size");
++	else
++		DEBUG("Set window size to %d columns and %d rows", wsz.ws_col,
++		      wsz.ws_row);
++	return ret;
++}
++
+ /*
+  * isulad: support mult-logfiles
+  * */
+diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
+index b4160b3..f49142d 100644
+--- a/src/lxc/terminal.h
++++ b/src/lxc/terminal.h
+@@ -276,6 +276,7 @@ extern int lxc_terminal_map_ids(struct lxc_conf *c,
+ 
+ #ifdef HAVE_ISULAD
+ int lxc_terminal_add_fifos(struct lxc_conf *conf, const char *fifonames);
++int lxc_set_terminal_winsz(struct lxc_terminal *terminal, unsigned int height, unsigned int width);
+ #endif
+ 
+ #endif /* __LXC_TERMINAL_H */
+-- 
+1.8.3.1
+
