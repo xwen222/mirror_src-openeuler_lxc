@@ -1,0 +1,52 @@
+From 4dfcafd037464a64047b70ffea3b91a70514ae92 Mon Sep 17 00:00:00 2001
+From: liuhao <liuhao27@huawei.com>
+Date: Fri, 10 May 2019 11:05:42 +0800
+Subject: [PATCH 48/49] don't use the unified hierarchy for the systemd cgroup
+
+Signed-off-by: zhangsong <zhangsong34@huawei.com>
+---
+ src/lxc/cgroups/cgfsng.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
+index 4abaa86..4a0961f 100644
+--- a/src/lxc/cgroups/cgfsng.c
++++ b/src/lxc/cgroups/cgfsng.c
+@@ -2097,6 +2097,7 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
+ 	int i, ret;
+ 	char *tmpfspath = NULL;
+ 	char *systemdpath = NULL;
++	char *unifiedpath = NULL;
+ 	bool has_cgns = false, retval = false, wants_force_mount = false;
+ 	char **merged = NULL;
+ 
+@@ -2245,6 +2246,16 @@ __cgfsng_ops static bool cgfsng_mount(struct cgroup_ops *ops,
+ 
+         // isulad: remount /sys/fs/cgroup/systemd to readwrite for system container
+         if (handler->conf->systemd != NULL && strcmp(handler->conf->systemd, "true") == 0) {
++                // isulad: don't use the unified hierarchy for the systemd cgroup
++                unifiedpath = must_make_path(root, "/sys/fs/cgroup/unified", NULL);
++                if (dir_exists(unifiedpath)) {
++                        ret = umount2(unifiedpath, MNT_DETACH);
++                        if (ret < 0) {
++                                SYSERROR("Failed to umount /sys/fs/cgroup/unified.");
++                                goto on_error;
++                        }
++                }
++
+                 systemdpath = must_make_path(root, "/sys/fs/cgroup/systemd", NULL);
+                 ret = mount(systemdpath, systemdpath, "bind",
+                             MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_RELATIME|MS_BIND|MS_REMOUNT, NULL);
+@@ -2261,6 +2272,9 @@ on_error:
+         if (systemdpath != NULL) {
+                 free(systemdpath);
+         }
++        if (unifiedpath != NULL) {
++                free(unifiedpath);
++        }
+ 	lxc_free_array((void **)merged, free);
+ 	return retval;
+ }
+-- 
+1.8.3.1
+

@@ -1,0 +1,142 @@
+From 74612254660138c0fe96290a6f1ae3c8e46295b8 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Mon, 13 Apr 2020 16:44:17 +0800
+Subject: [PATCH 12/49] Adapt to isulad log
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/lxc/log.c             | 58 ++++++++++++++++++++++++++++++++++++++++++++++-
+ src/lxc/tools/lxc_start.c |  2 ++
+ 2 files changed, 59 insertions(+), 1 deletion(-)
+
+diff --git a/src/lxc/log.c b/src/lxc/log.c
+index 30d6773..9794582 100644
+--- a/src/lxc/log.c
++++ b/src/lxc/log.c
+@@ -55,6 +55,38 @@ static char *log_vmname = NULL;
+ 
+ lxc_log_define(log, lxc);
+ 
++#ifdef HAVE_ISULAD
++static inline const char *isulad_get_fifo_path(const char *file)
++{
++#define ISULAD_FIFO_PREFIX "fifo:"
++
++        if (strncmp(file, ISULAD_FIFO_PREFIX, strlen(ISULAD_FIFO_PREFIX)) == 0) {
++                return (file + strlen(ISULAD_FIFO_PREFIX));
++        }
++        return NULL;
++}
++
++static int isulad_open_fifo(const char *file_path)
++{
++#define LOG_FIFO_SIZE (1024 * 1024)
++        int fd;
++
++        fd = lxc_unpriv(open(file_path, O_RDWR | O_NONBLOCK | O_CLOEXEC, 0640));
++        if (fd == -1) {
++                fprintf(stderr, "Open fifo %s failed: %s\n", file_path, strerror(errno));
++                return -1;
++        }
++
++        if (fcntl(fd, F_SETPIPE_SZ, LOG_FIFO_SIZE) == -1) {
++                printf("Set fifo buffer size failed: %s", strerror(errno));
++                close(fd);
++                return -1;
++        }
++
++        return fd;
++}
++#endif
++
+ static int lxc_log_priority_to_syslog(int priority)
+ {
+ 	switch (priority) {
+@@ -321,6 +353,12 @@ static int log_append_logfile(const struct lxc_log_appender *appender,
+ #endif
+ 
+ 	log_container_name = lxc_log_get_container_name();
++#ifdef HAVE_ISULAD
++        /* use isulad log format */
++        if (log_container_name != NULL && strlen(log_container_name) > 15) {
++                log_container_name = log_container_name + (strlen(log_container_name) - 15);
++        }
++#endif
+ 
+ 	if (fd_to_use < 0)
+ 		fd_to_use = lxc_log_fd;
+@@ -333,9 +371,13 @@ static int log_append_logfile(const struct lxc_log_appender *appender,
+ 		return ret;
+ 
+ 	n = snprintf(buffer, sizeof(buffer),
++#if HAVE_ISULAD
++		     "%15s %s %-8s %s - %s:%s:%d -",
++#else
+ 		     "%s%s%s %s %-8s %s - %s:%s:%d - ",
+ 		     log_prefix,
+ 		     log_container_name ? " " : "",
++#endif
+ 		     log_container_name ? log_container_name : "",
+ 		     date_time,
+ 		     lxc_log_priority_to_string(event->priority),
+@@ -590,6 +632,13 @@ static int __lxc_log_set_file(const char *fname, int create_dirs)
+ 		return ret_errno(EINVAL);
+ 	}
+ 
++#ifdef HAVE_ISULAD
++        fname = isulad_get_fifo_path(fname);
++        if (fname == NULL) {
++                return ret_errno(EINVAL);
++        }
++#endif
++
+ #if USE_CONFIGPATH_LOGS
+ 	/* We don't build_dir for the default if the default is i.e.
+ 	 * /var/lib/lxc/$container/$container.log.
+@@ -599,7 +648,11 @@ static int __lxc_log_set_file(const char *fname, int create_dirs)
+ 	if (build_dir(fname))
+ 		return log_error_errno(-errno, errno, "Failed to create dir for log file \"%s\"", fname);
+ 
++#if HAVE_ISULAD
++        lxc_log_fd = isulad_open_fifo(fname);
++#else
+ 	lxc_log_fd = log_open(fname);
++#endif
+ 	if (lxc_log_fd < 0)
+ 		return lxc_log_fd;
+ 
+@@ -695,7 +748,10 @@ int lxc_log_init(struct lxc_log *log)
+ 
+ 	if (lxc_log_fd >= 0) {
+ 		lxc_log_category_lxc.appender = &log_appender_logfile;
+-		lxc_log_category_lxc.appender->next = &log_appender_stderr;
++#ifdef HAVE_ISULAD
++                if (!lxc_quiet_specified && !log->quiet)
++#endif
++                lxc_log_category_lxc.appender->next = &log_appender_stderr;
+ 	}
+ 
+ 	return ret;
+diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
+index 8041f02..11ff15b 100644
+--- a/src/lxc/tools/lxc_start.c
++++ b/src/lxc/tools/lxc_start.c
+@@ -139,6 +139,7 @@ static int my_parser(struct lxc_arguments *args, int c, char *arg)
+ 		break;
+ 	case OPT_STDERR_FIFO:
+ 		args->terminal_fifos[2] = arg;
++                break;
+ 	case OPT_EXIT_FIFO:
+ 		args->exit_monitor_fifo = arg;
+ 		break;
+@@ -327,6 +328,7 @@ int main(int argc, char *argv[])
+ 
+ 	if (my_args.terminal_fifos[0] || my_args.terminal_fifos[1] || my_args.terminal_fifos[2]) {
+ 		c->set_terminal_init_fifos(c, my_args.terminal_fifos[0], my_args.terminal_fifos[1], my_args.terminal_fifos[2]);
++        }
+ 
+ 	/* isulad: fifo used to monitor state of monitor process */
+ 	if (my_args.exit_monitor_fifo != NULL) {
+-- 
+1.8.3.1
+

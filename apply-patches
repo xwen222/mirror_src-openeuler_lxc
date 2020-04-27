@@ -16,9 +16,9 @@
 
 set -ex
 
-pkg=lxc-3.0.3
+pkg=lxc-4.0.1
 cwd=$PWD
-src=$cwd/lxc-3.0.3
+src=$cwd/lxc-4.0.1
 
 tar -xzvf $pkg.tar.gz
 
