@@ -1,4 +1,4 @@
-%global _release 2020042302
+%global _release 2020042801
 %global debug_package %{nil}
 
 Name:           lxc
@@ -65,6 +65,8 @@ Patch9053:      0054-start-do-not-check-pid-die-when-lxc_poll-exit.patch
 Patch9054:      0055-terminal-not-close-pipe-when-lxc_poll-exit.patch
 Patch9055:      0056-attach-add-sigfd-to-monitor-the-exit-of-pid.patch
 Patch9056:      0057-attach-add-read-data-from-attach-sigfd.patch
+Patch9057:      0058-support-syslog-for-console.patch
+Patch9058:      0059-set-state-to-stopped.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
