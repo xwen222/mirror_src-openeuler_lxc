@@ -1,0 +1,41 @@
+From ac457309669377f9094936978ee695d6503fafc4 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Thu, 30 Apr 2020 19:20:18 +0800
+Subject: [PATCH] mount: fix symlink error, use parsed path
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index e8568d8..ad32725 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -2592,6 +2592,9 @@ static inline int mount_entry_on_generic(struct mntent *mntent,
+ 	dev = hasmntopt(mntent, "dev") != NULL;
+ 	relative = hasmntopt(mntent, "relative") != NULL;
+ 
++	if (rootfs && rootfs->path)
++		rootfs_path = rootfs->mount;
++
+ #ifdef HAVE_ISULAD
+ 	// isulad: ensure that the destination of the bind mount is resolved of symlinks at mount time because
+ 	// any previous mounts can invalidate the next mount's destination.
+@@ -2616,12 +2619,9 @@ static inline int mount_entry_on_generic(struct mntent *mntent,
+ 			return -1;
+ 		}
+ 	}
+-#else
+-	if (rootfs && rootfs->path)
+-		rootfs_path = rootfs->mount;
+ #endif
+ 
+-	ret = mount_entry_create_dir_file(mntent, path, rootfs, lxc_name,
++	ret = mount_entry_create_dir_file(mntent, dest, rootfs, lxc_name,
+ 					  lxc_path);
+ 	if (ret < 0) {
+ #ifdef HAVE_ISULAD
+-- 
+1.8.3.1
+
