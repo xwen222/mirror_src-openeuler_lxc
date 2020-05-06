@@ -1,4 +1,4 @@
-%global _release 2020043001
+%global _release 2020043002
 %global debug_package %{nil}
 
 Name:           lxc
@@ -68,6 +68,7 @@ Patch9056:      0057-attach-add-read-data-from-attach-sigfd.patch
 Patch9057:      0058-support-syslog-for-console.patch
 Patch9058:      0059-set-state-to-stopped.patch
 Patch9059:      0060-attach-append-error-msg-when-call-attach-failed.patch
+Patch9060:      0061-mount-fix-symlink-error-use-parsed-path.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
