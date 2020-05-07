@@ -1,0 +1,113 @@
+From a7370435ac0591b5e2e4059b1aadd546bc92dae4 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Wed, 6 May 2020 23:22:22 -0400
+Subject: [PATCH] change log level of seccomp setup
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/lxc/seccomp.c | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
+index b7c4de36..4b9d23c5 100644
+--- a/src/lxc/seccomp.c
++++ b/src/lxc/seccomp.c
+@@ -562,7 +562,11 @@ bool do_resolve_add_rule(uint32_t arch, char *line, scmp_filter_ctx ctx,
+ 
+ 	memset(&arg_cmp, 0, sizeof(arg_cmp));
+ 	for (i = 0; i < rule->args_num; i++) {
++#ifdef HAVE_ISULAD
++		DEBUG("arg_cmp[%d]: SCMP_CMP(%u, %llu, %llu, %llu)", i,
++#else
+ 		INFO("arg_cmp[%d]: SCMP_CMP(%u, %llu, %llu, %llu)", i,
++#endif
+ 		     rule->args_value[i].index,
+ 		     (long long unsigned int)rule->args_value[i].op,
+ 		     (long long unsigned int)rule->args_value[i].mask,
+@@ -809,7 +813,11 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
+ 
+ 		remove_trailing_newlines(line);
+ 
++#ifdef HAVE_ISULAD
++		DEBUG("Processing \"%s\"", line);
++#else
+ 		INFO("Processing \"%s\"", line);
++#endif
+ 		if (line[0] == '[') {
+ 			/* Read the architecture for next set of rules. */
+ 			if (strcmp(line, "[x86]") == 0 ||
+@@ -987,7 +995,11 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
+ 						 conf->seccomp.seccomp_ctx, &rule))
+ 				goto bad_rule;
+ 
++#ifdef HAVE_ISULAD
++			DEBUG("Added native rule for arch %d for %s action %d(%s)",
++#else
+ 			INFO("Added native rule for arch %d for %s action %d(%s)",
++#endif
+ 			     SCMP_ARCH_NATIVE, line, rule.action,
+ 			     get_action_name(rule.action));
+ 		} else if (cur_rule_arch != lxc_seccomp_arch_all) {
+@@ -1000,7 +1012,11 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
+ 						 ctx.contexts[arch_index], &rule))
+ 				goto bad_rule;
+ 
++#ifdef HAVE_ISULAD
++			DEBUG("Added compat rule for arch %d for %s action %d(%s)",
++#else
+ 			INFO("Added compat rule for arch %d for %s action %d(%s)",
++#endif
+ 			     ctx.architectures[arch_index], line, rule.action,
+ 			     get_action_name(rule.action));
+ 			ctx.needs_merge[arch_index] = true;
+@@ -1010,7 +1026,11 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
+ 						 conf->seccomp.seccomp_ctx, &rule))
+ 				goto bad_rule;
+ 
++#ifdef HAVE_ISULAD
++			DEBUG("Added native rule for arch %d for %s action %d(%s)",
++#else
+ 			INFO("Added native rule for arch %d for %s action %d(%s)",
++#endif
+ 			     SCMP_ARCH_NATIVE, line, rule.action,
+ 			     get_action_name(rule.action));
+ 
+@@ -1019,7 +1039,11 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
+ 							 ctx.contexts[0], &rule))
+ 					goto bad_rule;
+ 
++#ifdef HAVE_ISULAD
++				DEBUG("Added compat rule for arch %d for %s action %d(%s)",
++#else
+ 				INFO("Added compat rule for arch %d for %s action %d(%s)",
++#endif
+ 				     ctx.architectures[0], line, rule.action,
+ 				     get_action_name(rule.action));
+ 				ctx.needs_merge[0] = true;
+@@ -1030,7 +1054,11 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
+ 							 ctx.contexts[1], &rule))
+ 					goto bad_rule;
+ 
++#ifdef HAVE_ISULAD
++				DEBUG("Added compat rule for arch %d for %s action %d(%s)",
++#else
+ 				INFO("Added compat rule for arch %d for %s action %d(%s)",
++#endif
+ 				     ctx.architectures[1], line, rule.action,
+ 				     get_action_name(rule.action));
+ 				ctx.needs_merge[1] = true;
+@@ -1041,7 +1069,11 @@ static int parse_config_v2(FILE *f, char *line, size_t *line_bufsz, struct lxc_c
+ 							ctx.contexts[2], &rule))
+ 					goto bad_rule;
+ 
++#ifdef HAVE_ISULAD
++				DEBUG("Added native rule for arch %d for %s action %d(%s)",
++#else
+ 				INFO("Added native rule for arch %d for %s action %d(%s)",
++#endif
+ 				     ctx.architectures[2], line, rule.action,
+ 				     get_action_name(rule.action));
+ 				ctx.needs_merge[2] = true;
+-- 
+2.26.2
+
