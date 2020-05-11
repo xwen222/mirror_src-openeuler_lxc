@@ -1,0 +1,26 @@
+From c08e50a792a088715e6752e5f93f8dff65f7cf27 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 11 May 2020 14:00:17 +0800
+Subject: [PATCH] termainal: fix console log memory leak
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/terminal.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 9b831dc..3d2960b 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -2114,6 +2114,8 @@ void lxc_terminal_conf_free(struct lxc_terminal *terminal)
+ 	free(terminal->init_fifo[1]);
+ 	free(terminal->init_fifo[2]);
+ 	lxc_terminal_delete_fifo(-1, &terminal->fifos);
++	free(terminal->log_driver);
++	free(terminal->log_syslog_tag);
+ #endif
+ }
+ 
+-- 
+1.8.3.1
+
