@@ -1,0 +1,27 @@
+From 5cff3f195151267b65c88c1412aa9553fa1e0510 Mon Sep 17 00:00:00 2001
+From: LiFeng <lifeng68@huawei.com>
+Date: Mon, 11 May 2020 12:14:30 +0800
+Subject: [PATCH] hook: fix memeory leak
+
+Signed-off-by: LiFeng <lifeng68@huawei.com>
+---
+ src/lxc/conf.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index ad32725..f46255a 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -5447,6 +5447,9 @@ void lxc_conf_free(struct lxc_conf *conf)
+ 	lxc_clear_rootfs_ro_paths(conf);
+ 	free(conf->errmsg);
+ 	lxc_close_error_pipe(conf->errpipe);
++	if (conf->ocihooks) {
++		free_oci_runtime_spec_hooks(conf->ocihooks);
++	}
+ #endif
+ 	free(conf);
+ }
+-- 
+1.8.3.1
+
