@@ -1,4 +1,4 @@
-%global _release 2020051101
+%global _release 2020051401
 %global debug_package %{nil}
 
 Name:           lxc
@@ -72,6 +72,7 @@ Patch9060:      0061-mount-fix-symlink-error-use-parsed-path.patch
 Patch9061:      0062-change-log-level-of-seccomp-setup.patch
 Patch9062:      0063-hook-fix-memeory-leak.patch
 Patch9063:      0064-termainal-fix-console-log-memory-leak.patch
+Patch9064:      0065-lxc-disable-terminal-stdout-stderr-pipe-O_NONBLOCK.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
