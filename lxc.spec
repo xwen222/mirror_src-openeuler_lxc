@@ -1,4 +1,4 @@
-%global _release 2020052701
+%global _release 2020062401
 %global debug_package %{nil}
 
 Name:           lxc
@@ -76,6 +76,7 @@ Patch9064:      0065-lxc-disable-terminal-stdout-stderr-pipe-O_NONBLOCK.patch
 Patch9065:      0066-lxc-fix-tests-build-error.patch
 Patch9066:      0067-set-normal-ret-value-when-populate-exist-device-successfully.patch
 Patch9067:      0068-lxc-config-default-cgroup-pattern-to-lxc-n.patch
+Patch9068:      0069-rootfs-support-use-host-rootfs-as-container-rootfs.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)

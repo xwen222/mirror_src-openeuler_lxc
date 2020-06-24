@@ -1,0 +1,41 @@
+From 25a47f44f377e20b2939679f7df79c333627c97a Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Wed, 24 Jun 2020 17:07:50 +0800
+Subject: [PATCH] rootfs: support use host rootfs / as container rootfs
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ src/lxc/conf.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 6890da12..0744c19b 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -1367,7 +1367,7 @@ static int lxc_mount_rootfs(struct lxc_conf *conf)
+ {
+ 	int ret;
+ 	struct lxc_storage *bdev;
+-	const struct lxc_rootfs *rootfs = &conf->rootfs;
++	struct lxc_rootfs *rootfs = &conf->rootfs;
+ 
+ #ifdef HAVE_ISULAD
+ 	unsigned long flags, mntflags, pflags;
+@@ -1378,6 +1378,14 @@ static int lxc_mount_rootfs(struct lxc_conf *conf)
+ 		ret = mount("", "/", NULL, MS_SLAVE | MS_REC, 0);
+ 		if (ret < 0)
+ 			return log_error_errno(-1, errno, "Failed to remount \"/\" MS_REC | MS_SLAVE");
++#ifdef HAVE_ISULAD
++		if (!access(rootfs->mount, F_OK)) {
++			rootfs->path = safe_strdup("/");
++			if (mount("/", rootfs->mount, NULL, MS_BIND, 0)) {
++				return log_error_errno(-1, errno, "Failed to mount \"/\" to %s", rootfs->mount);
++			}
++		}
++#endif
+ 
+ 		return 0;
+ 	}
+-- 
+2.25.1
+
