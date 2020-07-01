@@ -6,7 +6,7 @@ Version:        4.0.1
 Release:        %{_release}
 Summary:        Linux Containers userspace tools
 License:        LGPLv2+
-URL:            http://linuxcontainers.org
+URL:            https://github.com/lxc/lxc
 Source0:        lxc-4.0.1.tar.gz
 Patch9000:      0001-iSulad-add-HAVE_ISULAD-macro.patch
 Patch9001:      0002-confile-add-lxc.isulad.init.args-config-interface.patch
