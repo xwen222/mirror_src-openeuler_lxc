@@ -1,0 +1,72 @@
+From e0387970de1ba7517dcfe88f32297775d90126f5 Mon Sep 17 00:00:00 2001
+From: lifeng68 <lifeng68@huawei.com>
+Date: Fri, 10 Jul 2020 11:51:20 +0800
+Subject: [PATCH 2/2] freeze: do not communicate to lxc parent when unpause
+
+Signed-off-by: lifeng68 <lifeng68@huawei.com>
+---
+ src/lxc/lxccontainer.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 6281a8a72..eef98df67 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -516,6 +516,20 @@ static bool do_lxcapi_is_running(struct lxc_container *c)
+ 
+ WRAP_API(bool, lxcapi_is_running)
+ 
++#ifdef HAVE_ISULAD
++static bool do_lxcapi_freeze(struct lxc_container *c)
++{
++	if (!c || !c->lxc_conf) {
++		return false;
++	}
++
++	if (lxc_freeze(c->lxc_conf, c->name, c->config_path) < 0) {
++		return false;
++	}
++
++	return true;
++}
++#else
+ static bool do_lxcapi_freeze(struct lxc_container *c)
+ {
+ 	lxc_state_t s;
+@@ -529,9 +543,25 @@ static bool do_lxcapi_freeze(struct lxc_container *c)
+ 
+ 	return true;
+ }
++#endif
++
+ 
+ WRAP_API(bool, lxcapi_freeze)
+ 
++#ifdef HAVE_ISULAD
++static bool do_lxcapi_unfreeze(struct lxc_container *c)
++{
++	if (!c || !c->lxc_conf) {
++		return false;
++	}
++
++	if (lxc_unfreeze(c->lxc_conf, c->name, c->config_path) < 0) {
++		return false;
++	}
++
++	return true;
++}
++#else
+ static bool do_lxcapi_unfreeze(struct lxc_container *c)
+ {
+ 	lxc_state_t s;
+@@ -545,6 +575,7 @@ static bool do_lxcapi_unfreeze(struct lxc_container *c)
+ 
+ 	return true;
+ }
++#endif
+ 
+ WRAP_API(bool, lxcapi_unfreeze)
+ 
+-- 
+2.25.1
+
