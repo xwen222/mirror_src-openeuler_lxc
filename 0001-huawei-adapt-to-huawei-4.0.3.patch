@@ -1,7 +1,7 @@
 From 8a62b519510080bb361cdd058d0e7a5edd955a95 Mon Sep 17 00:00:00 2001
 From: lifeng68 <lifeng68@huawei.com>
 Date: Wed, 15 Jul 2020 09:32:32 +0800
-Subject: [PATCH] huawei: adapt to huawei 4.0.3
+Subject: [PATCH 1/4] huawei: adapt to huawei 4.0.3
 
 Signed-off-by: lifeng68 <lifeng68@huawei.com>
 ---
@@ -147,7 +147,7 @@ Signed-off-by: lifeng68 <lifeng68@huawei.com>
  delete mode 100755 src/tests/lxc-test-usernsexec
 
 diff --git a/CODING_STYLE.md b/CODING_STYLE.md
-index bf8b304a5..6e2ad8562 100644
+index bf8b304a..6e2ad856 100644
 --- a/CODING_STYLE.md
 +++ b/CODING_STYLE.md
 @@ -733,11 +733,11 @@ __do_closedir __attribute__((__cleanup__(__auto_closedir__)))
@@ -190,7 +190,7 @@ index bf8b304a5..6e2ad8562 100644
  }
  ```
 diff --git a/config/apparmor/abstractions/start-container.in b/config/apparmor/abstractions/start-container.in
-index 9998f1121..f2b48235d 100644
+index 9998f112..f2b48235 100644
 --- a/config/apparmor/abstractions/start-container.in
 +++ b/config/apparmor/abstractions/start-container.in
 @@ -21,8 +21,6 @@
@@ -203,7 +203,7 @@ index 9998f1121..f2b48235d 100644
    mount fstype=overlayfs,
    mount fstype=aufs,
 diff --git a/config/init/common/lxc-net.in b/config/init/common/lxc-net.in
-index a7dfa6f19..df9f1181d 100644
+index a7dfa6f1..df9f1181 100644
 --- a/config/init/common/lxc-net.in
 +++ b/config/init/common/lxc-net.in
 @@ -46,7 +46,7 @@ _ifdown() {
@@ -216,7 +216,7 @@ index a7dfa6f19..df9f1181d 100644
      ip link set dev ${LXC_BRIDGE} up
  }
 diff --git a/config/templates/common.conf.in b/config/templates/common.conf.in
-index 286c5e4a3..c4b3bdcce 100644
+index 286c5e4a..c4b3bdcc 100644
 --- a/config/templates/common.conf.in
 +++ b/config/templates/common.conf.in
 @@ -15,8 +15,6 @@ lxc.cap.drop = mac_admin mac_override sys_time sys_module sys_rawio
@@ -265,7 +265,7 @@ index 286c5e4a3..c4b3bdcce 100644
  lxc.mount.auto = cgroup:mixed proc:mixed sys:mixed
  lxc.mount.entry = /sys/fs/fuse/connections sys/fs/fuse/connections none bind,optional 0 0
 diff --git a/config/templates/userns.conf.in b/config/templates/userns.conf.in
-index 69d992680..19013da5b 100644
+index 69d99268..19013da5 100644
 --- a/config/templates/userns.conf.in
 +++ b/config/templates/userns.conf.in
 @@ -1,15 +1,7 @@
@@ -285,7 +285,7 @@ index 69d992680..19013da5b 100644
  lxc.cap.drop =
  lxc.cap.keep =
 diff --git a/config/yum/lxc-patch.py b/config/yum/lxc-patch.py
-index fd48298d6..d639e8425 100644
+index fd48298d..d639e842 100644
 --- a/config/yum/lxc-patch.py
 +++ b/config/yum/lxc-patch.py
 @@ -24,6 +24,7 @@
@@ -297,7 +297,7 @@ index fd48298d6..d639e8425 100644
  requires_api_version = '2.0'
  plugin_type = (TYPE_INTERACTIVE,)
 diff --git a/configure.ac b/configure.ac
-index 059d57d38..9eb6dcb2b 100644
+index 059d57d3..9eb6dcb2 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -43,6 +43,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror -Wno-portability subdir-objects])
@@ -437,7 +437,7 @@ index 059d57d38..9eb6dcb2b 100644
  Paths:
   - Logs in configpath: $enable_configpath_log
 diff --git a/doc/ja/lxc.container.conf.sgml.in b/doc/ja/lxc.container.conf.sgml.in
-index 38b623243..fc692b409 100644
+index 38b62324..fc692b40 100644
 --- a/doc/ja/lxc.container.conf.sgml.in
 +++ b/doc/ja/lxc.container.conf.sgml.in
 @@ -713,25 +713,25 @@ by KATOH Yasufumi <karma at jazz.email.ne.jp>
@@ -493,7 +493,7 @@ index 38b623243..fc692b409 100644
                <option>create=dir</option> と <option>create=file</option> は、マウントポイントをマウントする際にディレクトリもしくはファイルを作成します。
                <option>relative</option> を指定すると、マウントされたコンテナルートからの相対パスとして取得されます。
 diff --git a/doc/lxc.container.conf.sgml.in b/doc/lxc.container.conf.sgml.in
-index 3ed71c214..ae04e3af3 100644
+index 3ed71c21..ae04e3af 100644
 --- a/doc/lxc.container.conf.sgml.in
 +++ b/doc/lxc.container.conf.sgml.in
 @@ -530,25 +530,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
@@ -540,7 +540,7 @@ index 3ed71c214..ae04e3af3 100644
                <option>optional</option> don't fail if mount does not work.
                <option>create=dir</option> or <option>create=file</option>
 diff --git a/hooks/Makefile.am b/hooks/Makefile.am
-index 5ae73d72c..ddfd4bc32 100644
+index 5ae73d72..ddfd4bc3 100644
 --- a/hooks/Makefile.am
 +++ b/hooks/Makefile.am
 @@ -10,6 +10,8 @@ hooks_SCRIPTS = \
@@ -560,7 +560,7 @@ index 5ae73d72c..ddfd4bc32 100644
  
  EXTRA_DIST=$(hooks_SCRIPTS)
 diff --git a/src/include/fexecve.c b/src/include/fexecve.c
-index 40d2b5b46..123f27309 100644
+index 40d2b5b4..123f2730 100644
 --- a/src/include/fexecve.c
 +++ b/src/include/fexecve.c
 @@ -29,7 +29,7 @@
@@ -586,7 +586,7 @@ index 40d2b5b46..123f27309 100644
  	ret = snprintf(procfd, sizeof(procfd), "/proc/self/fd/%d", fd);
  	if (ret < 0 || (size_t)ret >= sizeof(procfd)) {
 diff --git a/src/include/openpty.c b/src/include/openpty.c
-index 7804d4c98..01579c517 100644
+index 7804d4c9..01579c51 100644
 --- a/src/include/openpty.c
 +++ b/src/include/openpty.c
 @@ -34,43 +34,43 @@
@@ -648,7 +648,7 @@ index 7804d4c98..01579c517 100644
     return -1;
  }
 diff --git a/src/include/openpty.h b/src/include/openpty.h
-index cb452e52a..6e7bf8d2d 100644
+index cb452e52..6e7bf8d2 100644
 --- a/src/include/openpty.h
 +++ b/src/include/openpty.h
 @@ -27,12 +27,10 @@
@@ -669,7 +669,7 @@ index cb452e52a..6e7bf8d2d 100644
  		    const struct winsize *__winp);
  
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index d1e23647e..0e1ba8da9 100644
+index d1e23647..0e1ba8da 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -27,7 +27,7 @@ noinst_HEADERS = api_extensions.h \
@@ -796,7 +796,7 @@ index d1e23647e..0e1ba8da9 100644
  		       file_utils.c file_utils.h \
  		       string_utils.c string_utils.h \
 diff --git a/src/lxc/af_unix.c b/src/lxc/af_unix.c
-index 5cf54917f..9f268be60 100644
+index 5cf54917..9f268be6 100644
 --- a/src/lxc/af_unix.c
 +++ b/src/lxc/af_unix.c
 @@ -18,7 +18,7 @@
@@ -867,7 +867,7 @@ index 5cf54917f..9f268be60 100644
  int lxc_abstract_unix_send_credential(int fd, void *data, size_t size)
  {
 diff --git a/src/lxc/af_unix.h b/src/lxc/af_unix.h
-index 5a1482c35..6943a61ee 100644
+index 5a1482c3..6943a61e 100644
 --- a/src/lxc/af_unix.h
 +++ b/src/lxc/af_unix.h
 @@ -7,38 +7,28 @@
@@ -922,7 +922,7 @@ index 5a1482c35..6943a61ee 100644
 +#endif
  #endif /* __LXC_AF_UNIX_H */
 diff --git a/src/lxc/api_extensions.h b/src/lxc/api_extensions.h
-index 3afdc35b9..9ff071edf 100644
+index 3afdc35b..9ff071ed 100644
 --- a/src/lxc/api_extensions.h
 +++ b/src/lxc/api_extensions.h
 @@ -38,7 +38,6 @@ static char *api_extensions[] = {
@@ -934,7 +934,7 @@ index 3afdc35b9..9ff071edf 100644
  
  static size_t nr_api_extensions = sizeof(api_extensions) / sizeof(*api_extensions);
 diff --git a/src/lxc/attach.c b/src/lxc/attach.c
-index 38e16f2d1..068cc5f8e 100644
+index 38e16f2d..068cc5f8 100644
 --- a/src/lxc/attach.c
 +++ b/src/lxc/attach.c
 @@ -40,7 +40,7 @@
@@ -1792,7 +1792,7 @@ index 38e16f2d1..068cc5f8e 100644
  	__do_free char *buf = NULL;
  	uid_t uid;
 diff --git a/src/lxc/attach.h b/src/lxc/attach.h
-index ef5a6c19c..831634424 100644
+index ef5a6c19..83163442 100644
 --- a/src/lxc/attach.h
 +++ b/src/lxc/attach.h
 @@ -20,9 +20,15 @@ struct lxc_proc_context_info {
@@ -1812,7 +1812,7 @@ index ef5a6c19c..831634424 100644
  extern int lxc_attach_remount_sys_proc(void);
  
 diff --git a/src/lxc/attach_options.h b/src/lxc/attach_options.h
-index 63e62d4ff..5767560fe 100644
+index 63e62d4f..5767560f 100644
 --- a/src/lxc/attach_options.h
 +++ b/src/lxc/attach_options.h
 @@ -26,7 +26,7 @@ enum {
@@ -1882,7 +1882,7 @@ index 63e62d4ff..5767560fe 100644
  #ifdef  __cplusplus
  }
 diff --git a/src/lxc/cgroups/cgfsng.c b/src/lxc/cgroups/cgfsng.c
-index 603940683..4a0961f13 100644
+index 60394068..4a0961f1 100644
 --- a/src/lxc/cgroups/cgfsng.c
 +++ b/src/lxc/cgroups/cgfsng.c
 @@ -27,7 +27,6 @@
@@ -3788,7 +3788,7 @@ index 603940683..4a0961f13 100644
  	return move_ptr(cgfsng_ops);
  }
 diff --git a/src/lxc/cgroups/cgroup.c b/src/lxc/cgroups/cgroup.c
-index 7c94fd83b..ad46d5c99 100644
+index 7c94fd83..ad46d5c9 100644
 --- a/src/lxc/cgroups/cgroup.c
 +++ b/src/lxc/cgroups/cgroup.c
 @@ -31,7 +31,7 @@ struct cgroup_ops *cgroup_init(struct lxc_conf *conf)
@@ -3801,7 +3801,7 @@ index 7c94fd83b..ad46d5c99 100644
  		return log_error_errno(NULL, errno,
  				       "Failed to initialize cgroup data");
 diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
-index c5bf7941a..a9048c44a 100644
+index c5bf7941..a9048c44 100644
 --- a/src/lxc/cgroups/cgroup.h
 +++ b/src/lxc/cgroups/cgroup.h
 @@ -54,11 +54,7 @@ typedef enum {
@@ -3881,7 +3881,7 @@ index c5bf7941a..a9048c44a 100644
  
  extern struct cgroup_ops *cgroup_init(struct lxc_conf *conf);
 diff --git a/src/lxc/cgroups/cgroup2_devices.c b/src/lxc/cgroups/cgroup2_devices.c
-index 04ba7b332..4efb28fbd 100644
+index 04ba7b33..4efb28fb 100644
 --- a/src/lxc/cgroups/cgroup2_devices.c
 +++ b/src/lxc/cgroups/cgroup2_devices.c
 @@ -167,7 +167,7 @@ struct bpf_program *bpf_program_new(uint32_t prog_type)
@@ -4018,7 +4018,7 @@ index 04ba7b332..4efb28fbd 100644
  
  	ret = bpf_program_add_instructions(prog, dummy, ARRAY_SIZE(dummy));
 diff --git a/src/lxc/cmd/lxc-update-config.in b/src/lxc/cmd/lxc-update-config.in
-index 0a03f06d0..95187d405 100644
+index 0a03f06d..95187d40 100644
 --- a/src/lxc/cmd/lxc-update-config.in
 +++ b/src/lxc/cmd/lxc-update-config.in
 @@ -74,7 +74,7 @@ sed -i \
@@ -4031,7 +4031,7 @@ index 0a03f06d0..95187d405 100644
  -e 's/\([[:blank:]*]\|#*\)\(lxc\.init_uid\)\([[:blank:]*]\|=\)/\1lxc\.init\.uid\3/g' \
  -e 's/\([[:blank:]*]\|#*\)\(lxc\.init_gid\)\([[:blank:]*]\|=\)/\1lxc\.init\.gid\3/g' \
 diff --git a/src/lxc/cmd/lxc_init.c b/src/lxc/cmd/lxc_init.c
-index a03631f1a..a52793343 100644
+index a03631f1..a5279334 100644
 --- a/src/lxc/cmd/lxc_init.c
 +++ b/src/lxc/cmd/lxc_init.c
 @@ -28,7 +28,7 @@
@@ -4044,7 +4044,7 @@ index a03631f1a..a52793343 100644
  
  /* option keys for long only options */
 diff --git a/src/lxc/cmd/lxc_monitord.c b/src/lxc/cmd/lxc_monitord.c
-index bcb289ca6..3ec7a756d 100644
+index bcb289ca..3ec7a756 100644
 --- a/src/lxc/cmd/lxc_monitord.c
 +++ b/src/lxc/cmd/lxc_monitord.c
 @@ -28,7 +28,7 @@
@@ -4057,7 +4057,7 @@ index bcb289ca6..3ec7a756d 100644
  
  #define CLIENTFDS_CHUNK 64
 diff --git a/src/lxc/cmd/lxc_user_nic.c b/src/lxc/cmd/lxc_user_nic.c
-index 4160565f3..fd3455903 100644
+index 4160565f..fd345590 100644
 --- a/src/lxc/cmd/lxc_user_nic.c
 +++ b/src/lxc/cmd/lxc_user_nic.c
 @@ -36,7 +36,7 @@
@@ -4209,7 +4209,7 @@ index 4160565f3..fd3455903 100644
  	return count;
  }
 diff --git a/src/lxc/cmd/lxc_usernsexec.c b/src/lxc/cmd/lxc_usernsexec.c
-index aee7448ce..6441fb3c8 100644
+index aee7448c..6441fb3c 100644
 --- a/src/lxc/cmd/lxc_usernsexec.c
 +++ b/src/lxc/cmd/lxc_usernsexec.c
 @@ -61,7 +61,7 @@ static void opentty(const char *tty, int which)
@@ -4248,7 +4248,7 @@ index aee7448ce..6441fb3c8 100644
  		}
  	}
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index b6ae101fc..37354e87c 100644
+index b6ae101f..37354e87 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -75,8 +75,8 @@ static const char *lxc_cmd_str(lxc_cmd_t cmd)
@@ -4700,7 +4700,7 @@ index b6ae101fc..37354e87c 100644
  	return cb[req->cmd](fd, req, handler, descr);
  }
 diff --git a/src/lxc/commands.h b/src/lxc/commands.h
-index 3624a1497..aa8289d7a 100644
+index 3624a149..aa8289d7 100644
 --- a/src/lxc/commands.h
 +++ b/src/lxc/commands.h
 @@ -38,8 +38,10 @@ typedef enum {
@@ -4742,7 +4742,7 @@ index 3624a1497..aa8289d7a 100644
  
  #endif /* __commands_h */
 diff --git a/src/lxc/commands_utils.c b/src/lxc/commands_utils.c
-index 2af722ca1..2f2670d74 100644
+index 2af722ca..2f2670d7 100644
 --- a/src/lxc/commands_utils.c
 +++ b/src/lxc/commands_utils.c
 @@ -62,14 +62,11 @@ int lxc_cmd_sock_get_state(const char *name, const char *lxcpath,
@@ -4762,7 +4762,7 @@ index 2af722ca1..2f2670d74 100644
  }
  
 diff --git a/src/lxc/compiler.h b/src/lxc/compiler.h
-index 114fb81ba..92cd9fd14 100644
+index 114fb81b..92cd9fd1 100644
 --- a/src/lxc/compiler.h
 +++ b/src/lxc/compiler.h
 @@ -57,22 +57,4 @@
@@ -4789,7 +4789,7 @@ index 114fb81ba..92cd9fd14 100644
 -
  #endif /* __LXC_COMPILER_H */
 diff --git a/src/lxc/conf.c b/src/lxc/conf.c
-index 00789961c..0744c19b3 100644
+index 00789961..0744c19b 100644
 --- a/src/lxc/conf.c
 +++ b/src/lxc/conf.c
 @@ -33,6 +33,11 @@
@@ -7907,7 +7907,7 @@ index 00789961c..0744c19b3 100644
 +}
 +#endif
 diff --git a/src/lxc/conf.h b/src/lxc/conf.h
-index b72afbaa5..4b6409e3e 100644
+index b72afbaa..4b6409e3 100644
 --- a/src/lxc/conf.h
 +++ b/src/lxc/conf.h
 @@ -23,6 +23,10 @@
@@ -8097,7 +8097,7 @@ index b72afbaa5..4b6409e3e 100644
 +#endif
  #endif /* __LXC_CONF_H */
 diff --git a/src/lxc/confile.c b/src/lxc/confile.c
-index 4c27e7d4b..b1d101a9d 100644
+index 4c27e7d4..b1d101a9 100644
 --- a/src/lxc/confile.c
 +++ b/src/lxc/confile.c
 @@ -147,6 +147,18 @@ lxc_config_define(tty_dir);
@@ -8867,7 +8867,7 @@ index 4c27e7d4b..b1d101a9d 100644
 +
 +#endif
 diff --git a/src/lxc/confile.h b/src/lxc/confile.h
-index a457c9a17..624d9a0c2 100644
+index a457c9a1..624d9a0c 100644
 --- a/src/lxc/confile.h
 +++ b/src/lxc/confile.h
 @@ -9,8 +9,6 @@
@@ -8908,7 +8908,7 @@ index a457c9a17..624d9a0c2 100644
  extern int lxc_config_read(const char *file, struct lxc_conf *conf,
  			   bool from_include);
 diff --git a/src/lxc/confile_utils.c b/src/lxc/confile_utils.c
-index 05dadf9ec..ff4ae7688 100644
+index 05dadf9e..ff4ae768 100644
 --- a/src/lxc/confile_utils.c
 +++ b/src/lxc/confile_utils.c
 @@ -506,18 +506,6 @@ int lxc_veth_mode_to_flag(int *mode, const char *value)
@@ -8931,7 +8931,7 @@ index 05dadf9ec..ff4ae7688 100644
  	char *name;
  	int mode;
 diff --git a/src/lxc/confile_utils.h b/src/lxc/confile_utils.h
-index 7c59deae5..62990e98c 100644
+index 7c59deae..62990e98 100644
 --- a/src/lxc/confile_utils.h
 +++ b/src/lxc/confile_utils.h
 @@ -5,7 +5,6 @@
@@ -8970,7 +8970,7 @@ index 7c59deae5..62990e98c 100644
  extern bool lxc_config_net_is_hwaddr(const char *line);
  extern bool new_hwaddr(char *hwaddr);
 diff --git a/src/lxc/criu.c b/src/lxc/criu.c
-index 19f2a173f..14a8aae7d 100644
+index 19f2a173..14a8aae7 100644
 --- a/src/lxc/criu.c
 +++ b/src/lxc/criu.c
 @@ -303,7 +303,7 @@ static void exec_criu(struct cgroup_ops *cgroup_ops, struct lxc_conf *conf,
@@ -9067,7 +9067,7 @@ index 19f2a173f..14a8aae7d 100644
  }
 diff --git a/src/lxc/exec_commands.c b/src/lxc/exec_commands.c
 new file mode 100644
-index 000000000..00129cb0e
+index 00000000..00129cb0
 --- /dev/null
 +++ b/src/lxc/exec_commands.c
 @@ -0,0 +1,416 @@
@@ -9489,7 +9489,7 @@ index 000000000..00129cb0e
 +}
 diff --git a/src/lxc/exec_commands.h b/src/lxc/exec_commands.h
 new file mode 100644
-index 000000000..2581ee903
+index 00000000..2581ee90
 --- /dev/null
 +++ b/src/lxc/exec_commands.h
 @@ -0,0 +1,73 @@
@@ -9567,7 +9567,7 @@ index 000000000..2581ee903
 +
 +#endif /* __exec_commands_h */
 diff --git a/src/lxc/execute.c b/src/lxc/execute.c
-index 7175ef2cf..16c0fed05 100644
+index 7175ef2c..16c0fed0 100644
 --- a/src/lxc/execute.c
 +++ b/src/lxc/execute.c
 @@ -14,12 +14,16 @@
@@ -9632,7 +9632,7 @@ index 7175ef2cf..16c0fed05 100644
 +#endif
  }
 diff --git a/src/lxc/file_utils.h b/src/lxc/file_utils.h
-index f9c8abe03..6d5dbf68d 100644
+index f9c8abe0..6d5dbf68 100644
 --- a/src/lxc/file_utils.h
 +++ b/src/lxc/file_utils.h
 @@ -12,52 +12,27 @@
@@ -9701,7 +9701,7 @@ index f9c8abe03..6d5dbf68d 100644
  			       int flags);
  
 diff --git a/src/lxc/initutils.c b/src/lxc/initutils.c
-index 5549c2e8f..76f00488a 100644
+index 5549c2e8..76f00488 100644
 --- a/src/lxc/initutils.c
 +++ b/src/lxc/initutils.c
 @@ -54,11 +54,15 @@ const char *lxc_global_config_value(const char *option_name)
@@ -9722,7 +9722,7 @@ index 5549c2e8f..76f00488a 100644
  	/* user_config_path is freed as soon as it is used */
 diff --git a/src/lxc/isulad_utils.c b/src/lxc/isulad_utils.c
 new file mode 100644
-index 000000000..b2824045c
+index 00000000..b2824045
 --- /dev/null
 +++ b/src/lxc/isulad_utils.c
 @@ -0,0 +1,99 @@
@@ -9827,7 +9827,7 @@ index 000000000..b2824045c
 +}
 diff --git a/src/lxc/isulad_utils.h b/src/lxc/isulad_utils.h
 new file mode 100644
-index 000000000..7a6ab00e2
+index 00000000..7a6ab00e
 --- /dev/null
 +++ b/src/lxc/isulad_utils.h
 @@ -0,0 +1,20 @@
@@ -9853,7 +9853,7 @@ index 000000000..7a6ab00e2
 +#endif
 diff --git a/src/lxc/json/defs.c b/src/lxc/json/defs.c
 new file mode 100644
-index 000000000..4bf569a4e
+index 00000000..4bf569a4
 --- /dev/null
 +++ b/src/lxc/json/defs.c
 @@ -0,0 +1,205 @@
@@ -10064,7 +10064,7 @@ index 000000000..4bf569a4e
 +}
 diff --git a/src/lxc/json/defs.h b/src/lxc/json/defs.h
 new file mode 100644
-index 000000000..0bbd8ac89
+index 00000000..0bbd8ac8
 --- /dev/null
 +++ b/src/lxc/json/defs.h
 @@ -0,0 +1,37 @@
@@ -10107,7 +10107,7 @@ index 000000000..0bbd8ac89
 +#endif
 diff --git a/src/lxc/json/json_common.c b/src/lxc/json/json_common.c
 new file mode 100755
-index 000000000..ec20c5982
+index 00000000..ec20c598
 --- /dev/null
 +++ b/src/lxc/json/json_common.c
 @@ -0,0 +1,1153 @@
@@ -11266,7 +11266,7 @@ index 000000000..ec20c5982
 +}
 diff --git a/src/lxc/json/json_common.h b/src/lxc/json/json_common.h
 new file mode 100755
-index 000000000..60aa5fd93
+index 00000000..60aa5fd9
 --- /dev/null
 +++ b/src/lxc/json/json_common.h
 @@ -0,0 +1,185 @@
@@ -11458,7 +11458,7 @@ index 000000000..60aa5fd93
 \ No newline at end of file
 diff --git a/src/lxc/json/logger_json_file.c b/src/lxc/json/logger_json_file.c
 new file mode 100644
-index 000000000..6abeef458
+index 00000000..6abeef45
 --- /dev/null
 +++ b/src/lxc/json/logger_json_file.c
 @@ -0,0 +1,246 @@
@@ -11710,7 +11710,7 @@ index 000000000..6abeef458
 +}
 diff --git a/src/lxc/json/logger_json_file.h b/src/lxc/json/logger_json_file.h
 new file mode 100644
-index 000000000..ad5af7b49
+index 00000000..ad5af7b4
 --- /dev/null
 +++ b/src/lxc/json/logger_json_file.h
 @@ -0,0 +1,45 @@
@@ -11761,7 +11761,7 @@ index 000000000..ad5af7b49
 +#endif
 diff --git a/src/lxc/json/oci_runtime_hooks.c b/src/lxc/json/oci_runtime_hooks.c
 new file mode 100644
-index 000000000..41ddb672d
+index 00000000..41ddb672
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_hooks.c
 @@ -0,0 +1,52 @@
@@ -11819,7 +11819,7 @@ index 000000000..41ddb672d
 +}
 diff --git a/src/lxc/json/oci_runtime_hooks.h b/src/lxc/json/oci_runtime_hooks.h
 new file mode 100644
-index 000000000..bf570c9e0
+index 00000000..bf570c9e
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_hooks.h
 @@ -0,0 +1,15 @@
@@ -11840,7 +11840,7 @@ index 000000000..bf570c9e0
 +#endif
 diff --git a/src/lxc/json/oci_runtime_spec.c b/src/lxc/json/oci_runtime_spec.c
 new file mode 100644
-index 000000000..fd342deb9
+index 00000000..fd342deb
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_spec.c
 @@ -0,0 +1,195 @@
@@ -12041,7 +12041,7 @@ index 000000000..fd342deb9
 +}
 diff --git a/src/lxc/json/oci_runtime_spec.h b/src/lxc/json/oci_runtime_spec.h
 new file mode 100644
-index 000000000..ef3f1619a
+index 00000000..ef3f1619
 --- /dev/null
 +++ b/src/lxc/json/oci_runtime_spec.h
 @@ -0,0 +1,37 @@
@@ -12084,7 +12084,7 @@ index 000000000..ef3f1619a
 +#endif
 diff --git a/src/lxc/json/read-file.c b/src/lxc/json/read-file.c
 new file mode 100644
-index 000000000..70e73e51a
+index 00000000..70e73e51
 --- /dev/null
 +++ b/src/lxc/json/read-file.c
 @@ -0,0 +1,95 @@
@@ -12185,7 +12185,7 @@ index 000000000..70e73e51a
 +}
 diff --git a/src/lxc/json/read-file.h b/src/lxc/json/read-file.h
 new file mode 100644
-index 000000000..5d6e0eb62
+index 00000000..5d6e0eb6
 --- /dev/null
 +++ b/src/lxc/json/read-file.h
 @@ -0,0 +1,11 @@
@@ -12201,7 +12201,7 @@ index 000000000..5d6e0eb62
 +
 +#endif
 diff --git a/src/lxc/log.c b/src/lxc/log.c
-index 59644aa7a..79caa2cce 100644
+index 59644aa7..79caa2cc 100644
 --- a/src/lxc/log.c
 +++ b/src/lxc/log.c
 @@ -44,7 +44,7 @@
@@ -12354,7 +12354,7 @@ index 59644aa7a..79caa2cce 100644
  
  /*
 diff --git a/src/lxc/log.h b/src/lxc/log.h
-index 3f91d9bc5..d28065624 100644
+index 3f91d9bc..d2806562 100644
 --- a/src/lxc/log.h
 +++ b/src/lxc/log.h
 @@ -3,9 +3,6 @@
@@ -12458,7 +12458,7 @@ index 3f91d9bc5..d28065624 100644
  extern int lxc_log_get_level(void);
  extern bool lxc_log_has_valid_level(void);
 diff --git a/src/lxc/lsm/apparmor.c b/src/lxc/lsm/apparmor.c
-index 02f824f97..f251e5e7e 100644
+index 02f824f9..f251e5e7 100644
 --- a/src/lxc/lsm/apparmor.c
 +++ b/src/lxc/lsm/apparmor.c
 @@ -19,7 +19,7 @@
@@ -12509,7 +12509,7 @@ index 02f824f97..f251e5e7e 100644
  		return false;
  	}
 diff --git a/src/lxc/lxc.h b/src/lxc/lxc.h
-index 630eff0b4..ec2feaa5b 100644
+index 630eff0b..ec2feaa5 100644
 --- a/src/lxc/lxc.h
 +++ b/src/lxc/lxc.h
 @@ -32,9 +32,14 @@ struct lxc_handler;
@@ -12559,7 +12559,7 @@ index 630eff0b4..ec2feaa5b 100644
   * Returns 1 on success, 0 on failure.
   */
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index aac621482..eef98df67 100644
+index aac62148..eef98df6 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -49,7 +49,7 @@
@@ -13601,7 +13601,7 @@ index aac621482..eef98df67 100644
  		if (!add_to_array(&ct_name, p, ct_name_cnt)) {
  			if (is_hashed)
 diff --git a/src/lxc/lxccontainer.h b/src/lxc/lxccontainer.h
-index b4ec1d6d5..2951ac7b4 100644
+index b4ec1d6d..2951ac7b 100644
 --- a/src/lxc/lxccontainer.h
 +++ b/src/lxc/lxccontainer.h
 @@ -90,7 +90,7 @@ struct lxc_container {
@@ -13776,7 +13776,7 @@ index b4ec1d6d5..2951ac7b4 100644
   * \brief Add a reference to the specified container.
   *
 diff --git a/src/lxc/lxclock.c b/src/lxc/lxclock.c
-index 318e5bf5a..bb0dca0c9 100644
+index 318e5bf5..bb0dca0c 100644
 --- a/src/lxc/lxclock.c
 +++ b/src/lxc/lxclock.c
 @@ -370,3 +370,30 @@ void container_disk_unlock(struct lxc_container *c)
@@ -13811,7 +13811,7 @@ index 318e5bf5a..bb0dca0c9 100644
 +}
 +#endif
 diff --git a/src/lxc/lxclock.h b/src/lxc/lxclock.h
-index 9f9bc3bf6..6a71d7c5e 100644
+index 9f9bc3bf..6a71d7c5 100644
 --- a/src/lxc/lxclock.h
 +++ b/src/lxc/lxclock.h
 @@ -154,4 +154,8 @@ extern int container_disk_lock(struct lxc_container *c);
@@ -13824,7 +13824,7 @@ index 9f9bc3bf6..6a71d7c5e 100644
 +
  #endif
 diff --git a/src/lxc/macro.h b/src/lxc/macro.h
-index 7b2ad79ed..3df19d6d3 100644
+index 7b2ad79e..3df19d6d 100644
 --- a/src/lxc/macro.h
 +++ b/src/lxc/macro.h
 @@ -57,20 +57,6 @@
@@ -13859,7 +13859,7 @@ index 7b2ad79ed..3df19d6d3 100644
  #define LXC_INVALID_GID ((gid_t)-1)
  
 diff --git a/src/lxc/mainloop.c b/src/lxc/mainloop.c
-index d5ae2a67a..6d4c5935a 100644
+index d5ae2a67..6d4c5935 100644
 --- a/src/lxc/mainloop.c
 +++ b/src/lxc/mainloop.c
 @@ -59,10 +59,8 @@ int lxc_mainloop(struct lxc_epoll_descr *descr, int timeout_ms)
@@ -13899,7 +13899,7 @@ index d5ae2a67a..6d4c5935a 100644
  {
  	struct mainloop_handler *handler;
 diff --git a/src/lxc/mainloop.h b/src/lxc/mainloop.h
-index e6ab9a6d9..8afac60d3 100644
+index e6ab9a6d..8afac60d 100644
 --- a/src/lxc/mainloop.h
 +++ b/src/lxc/mainloop.h
 @@ -22,10 +22,6 @@ typedef int (*lxc_mainloop_callback_t)(int fd, uint32_t event, void *data,
@@ -13914,7 +13914,7 @@ index e6ab9a6d9..8afac60d3 100644
  				    lxc_mainloop_callback_t callback,
  				    void *data);
 diff --git a/src/lxc/memory_utils.h b/src/lxc/memory_utils.h
-index d3b68a1e9..29878fb67 100644
+index d3b68a1e..29878fb6 100644
 --- a/src/lxc/memory_utils.h
 +++ b/src/lxc/memory_utils.h
 @@ -41,10 +41,10 @@ define_cleanup_function(FILE *, fclose);
@@ -13933,7 +13933,7 @@ index d3b68a1e9..29878fb67 100644
  
  static inline void free_disarm_function(void *ptr)
 diff --git a/src/lxc/namespace.c b/src/lxc/namespace.c
-index f2e017563..38d2ae5d7 100644
+index f2e01756..38d2ae5d 100644
 --- a/src/lxc/namespace.c
 +++ b/src/lxc/namespace.c
 @@ -21,6 +21,33 @@
@@ -13971,7 +13971,7 @@ index f2e017563..38d2ae5d7 100644
   * that we always attach to it first when iterating over the struct and using
   * setns() to switch namespaces. This especially affects lxc_attach(): Suppose
 diff --git a/src/lxc/namespace.h b/src/lxc/namespace.h
-index 84976f60f..a8fda783c 100644
+index 84976f60..a8fda783 100644
 --- a/src/lxc/namespace.h
 +++ b/src/lxc/namespace.h
 @@ -7,6 +7,63 @@
@@ -14079,7 +14079,7 @@ index 84976f60f..a8fda783c 100644
  extern int lxc_namespace_2_ns_idx(const char *namespace);
  extern int lxc_namespace_2_std_identifiers(char *namespaces);
 diff --git a/src/lxc/network.c b/src/lxc/network.c
-index bca044059..19adb2329 100644
+index bca04405..19adb232 100644
 --- a/src/lxc/network.c
 +++ b/src/lxc/network.c
 @@ -36,7 +36,7 @@
@@ -14375,7 +14375,7 @@ index bca044059..19adb2329 100644
  		err = lxc_netdev_up("lo");
  		if (err)
 diff --git a/src/lxc/network.h b/src/lxc/network.h
-index ba35c1253..696380c90 100644
+index ba35c125..696380c9 100644
 --- a/src/lxc/network.h
 +++ b/src/lxc/network.h
 @@ -205,8 +205,8 @@ extern int lxc_netdev_set_mtu(const char *name, int mtu);
@@ -14391,7 +14391,7 @@ index ba35c1253..696380c90 100644
  /* Set ip address. */
 diff --git a/src/lxc/path.c b/src/lxc/path.c
 new file mode 100644
-index 000000000..65b8aadbf
+index 00000000..65b8aadb
 --- /dev/null
 +++ b/src/lxc/path.c
 @@ -0,0 +1,655 @@
@@ -15052,7 +15052,7 @@ index 000000000..65b8aadbf
 +}
 diff --git a/src/lxc/path.h b/src/lxc/path.h
 new file mode 100644
-index 000000000..2c60fb9be
+index 00000000..2c60fb9b
 --- /dev/null
 +++ b/src/lxc/path.h
 @@ -0,0 +1,65 @@
@@ -15123,7 +15123,7 @@ index 000000000..2c60fb9be
 +#endif
 diff --git a/src/lxc/process_utils.h b/src/lxc/process_utils.h
 deleted file mode 100644
-index 4ea898a63..000000000
+index 4ea898a6..00000000
 --- a/src/lxc/process_utils.h
 +++ /dev/null
 @@ -1,290 +0,0 @@
@@ -15421,7 +15421,7 @@ diff --git a/src/lxc/process_utils.c b/src/lxc/raw_syscalls.c
 similarity index 68%
 rename from src/lxc/process_utils.c
 rename to src/lxc/raw_syscalls.c
-index 7494def46..3c6bd2506 100644
+index 7494def4..3c6bd250 100644
 --- a/src/lxc/process_utils.c
 +++ b/src/lxc/raw_syscalls.c
 @@ -13,12 +13,15 @@
@@ -15526,7 +15526,7 @@ index 7494def46..3c6bd2506 100644
 -}
 diff --git a/src/lxc/raw_syscalls.h b/src/lxc/raw_syscalls.h
 new file mode 100644
-index 000000000..1219f28f4
+index 00000000..1219f28f
 --- /dev/null
 +++ b/src/lxc/raw_syscalls.h
 @@ -0,0 +1,94 @@
@@ -15625,7 +15625,7 @@ index 000000000..1219f28f4
 +
 +#endif /* __LXC_RAW_SYSCALL_H */
 diff --git a/src/lxc/rexec.c b/src/lxc/rexec.c
-index cf198c021..c9c84b8c1 100644
+index cf198c02..c9c84b8c 100644
 --- a/src/lxc/rexec.c
 +++ b/src/lxc/rexec.c
 @@ -13,7 +13,7 @@
@@ -15682,7 +15682,7 @@ index cf198c021..c9c84b8c1 100644
  		return -1;
  	}
 diff --git a/src/lxc/seccomp.c b/src/lxc/seccomp.c
-index 7820db8b2..4b9d23c55 100644
+index 7820db8b..4b9d23c5 100644
 --- a/src/lxc/seccomp.c
 +++ b/src/lxc/seccomp.c
 @@ -295,7 +295,11 @@ on_error:
@@ -16360,7 +16360,7 @@ index 7820db8b2..4b9d23c55 100644
  	if (ret) {
  		SYSERROR("Failed to read seccomp notification");
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index fd969c433..51d13254b 100644
+index fd969c43..51d13254 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -47,7 +47,7 @@
@@ -17830,7 +17830,7 @@ index fd969c433..51d13254b 100644
 +
 +#endif
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index ece4aac47..ebeeb72ea 100644
+index ece4aac4..ebeeb72e 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -10,7 +10,6 @@
@@ -17918,7 +17918,7 @@ index ece4aac47..ebeeb72ea 100644
  #endif
 diff --git a/src/lxc/storage/block.c b/src/lxc/storage/block.c
 new file mode 100644
-index 000000000..eb75e7065
+index 00000000..eb75e706
 --- /dev/null
 +++ b/src/lxc/storage/block.c
 @@ -0,0 +1,86 @@
@@ -18010,7 +18010,7 @@ index 000000000..eb75e7065
 +}
 diff --git a/src/lxc/storage/block.h b/src/lxc/storage/block.h
 new file mode 100644
-index 000000000..2fa7565fb
+index 00000000..2fa7565f
 --- /dev/null
 +++ b/src/lxc/storage/block.h
 @@ -0,0 +1,41 @@
@@ -18056,7 +18056,7 @@ index 000000000..2fa7565fb
 +
 +#endif /* __LXC_BLK_H */
 diff --git a/src/lxc/storage/btrfs.c b/src/lxc/storage/btrfs.c
-index 92a4a6def..069a9dd84 100644
+index 92a4a6de..069a9dd8 100644
 --- a/src/lxc/storage/btrfs.c
 +++ b/src/lxc/storage/btrfs.c
 @@ -197,16 +197,27 @@ int btrfs_mount(struct lxc_storage *bdev)
@@ -18088,7 +18088,7 @@ index 92a4a6def..069a9dd84 100644
  	src = lxc_storage_get_path(bdev->src, "btrfs");
  
 diff --git a/src/lxc/storage/dir.c b/src/lxc/storage/dir.c
-index 18a10a42f..485572a0b 100644
+index 18a10a42..485572a0 100644
 --- a/src/lxc/storage/dir.c
 +++ b/src/lxc/storage/dir.c
 @@ -94,6 +94,9 @@ int dir_create(struct lxc_storage *bdev, const char *dest, const char *n,
@@ -18160,7 +18160,7 @@ index 18a10a42f..485572a0b 100644
  int dir_umount(struct lxc_storage *bdev)
  {
 diff --git a/src/lxc/storage/loop.c b/src/lxc/storage/loop.c
-index eebc1b67c..345be503b 100644
+index eebc1b67..345be503 100644
 --- a/src/lxc/storage/loop.c
 +++ b/src/lxc/storage/loop.c
 @@ -21,6 +21,7 @@
@@ -18241,7 +18241,7 @@ index eebc1b67c..345be503b 100644
  
  int loop_umount(struct lxc_storage *bdev)
 diff --git a/src/lxc/storage/overlay.c b/src/lxc/storage/overlay.c
-index 770785cfd..75a81de15 100644
+index 770785cf..75a81de1 100644
 --- a/src/lxc/storage/overlay.c
 +++ b/src/lxc/storage/overlay.c
 @@ -349,6 +349,9 @@ int ovl_mount(struct lxc_storage *bdev)
@@ -18268,7 +18268,7 @@ index 770785cfd..75a81de15 100644
  		ERROR("Failed to parse mount options");
  		free(mntdata);
 diff --git a/src/lxc/storage/rsync.c b/src/lxc/storage/rsync.c
-index 2e4df2537..97678dea2 100644
+index 2e4df253..97678dea 100644
 --- a/src/lxc/storage/rsync.c
 +++ b/src/lxc/storage/rsync.c
 @@ -78,8 +78,12 @@ int lxc_rsync(struct rsync_data *data)
@@ -18287,7 +18287,7 @@ index 2e4df2537..97678dea2 100644
  	ret = orig->ops->mount(orig);
  	if (ret < 0) {
 diff --git a/src/lxc/storage/storage.c b/src/lxc/storage/storage.c
-index 3f1b713f6..5291b244b 100644
+index 3f1b713f..5291b244 100644
 --- a/src/lxc/storage/storage.c
 +++ b/src/lxc/storage/storage.c
 @@ -41,6 +41,7 @@
@@ -18350,7 +18350,7 @@ index 3f1b713f6..5291b244b 100644
  	if (destroy_rv == 0)
  		ret = true;
 diff --git a/src/lxc/storage/storage_utils.c b/src/lxc/storage/storage_utils.c
-index f96bd520b..6fec638ea 100644
+index f96bd520..6fec638e 100644
 --- a/src/lxc/storage/storage_utils.c
 +++ b/src/lxc/storage/storage_utils.c
 @@ -165,8 +165,11 @@ int detect_fs(struct lxc_storage *bdev, char *type, int len)
@@ -18464,7 +18464,7 @@ index f96bd520b..6fec638ea 100644
  	}
  
 diff --git a/src/lxc/storage/zfs.c b/src/lxc/storage/zfs.c
-index ee9e32d0a..025cf956f 100644
+index ee9e32d0..025cf956 100644
 --- a/src/lxc/storage/zfs.c
 +++ b/src/lxc/storage/zfs.c
 @@ -159,23 +159,33 @@ bool zfs_detect(const char *path)
@@ -18524,7 +18524,7 @@ index ee9e32d0a..025cf956f 100644
  		SYSERROR("Failed to mount \"%s\" on \"%s\"", src, bdev->dest);
  		return -1;
 diff --git a/src/lxc/string_utils.c b/src/lxc/string_utils.c
-index dcb1160e4..9118add02 100644
+index dcb1160e..9118add0 100644
 --- a/src/lxc/string_utils.c
 +++ b/src/lxc/string_utils.c
 @@ -501,6 +501,7 @@ int lxc_grow_array(void ***array, size_t *capacity, size_t new_size, size_t capa
@@ -18536,7 +18536,7 @@ index dcb1160e4..9118add02 100644
  		*capacity = 0;
  	}
 diff --git a/src/lxc/sync.h b/src/lxc/sync.h
-index ff7a1eb18..56c1dfcfd 100644
+index ff7a1eb1..56c1dfcf 100644
 --- a/src/lxc/sync.h
 +++ b/src/lxc/sync.h
 @@ -11,6 +11,10 @@ enum {
@@ -18551,7 +18551,7 @@ index ff7a1eb18..56c1dfcfd 100644
  	LXC_SYNC_READY_START,
  	LXC_SYNC_RESTART,
 diff --git a/src/lxc/syscall_numbers.h b/src/lxc/syscall_numbers.h
-index bfd0e57ab..42609d43f 100644
+index bfd0e57a..42609d43 100644
 --- a/src/lxc/syscall_numbers.h
 +++ b/src/lxc/syscall_numbers.h
 @@ -35,12 +35,10 @@
@@ -18806,7 +18806,7 @@ index bfd0e57ab..42609d43f 100644
 -
  #endif /* __LXC_SYSCALL_NUMBERS_H */
 diff --git a/src/lxc/syscall_wrappers.h b/src/lxc/syscall_wrappers.h
-index 041daf357..1cef21585 100644
+index 041daf35..1cef2158 100644
 --- a/src/lxc/syscall_wrappers.h
 +++ b/src/lxc/syscall_wrappers.h
 @@ -137,28 +137,4 @@ static int faccessat(int __fd, const char *__file, int __type, int __flag)
@@ -18839,7 +18839,7 @@ index 041daf357..1cef21585 100644
 -
  #endif /* __LXC_SYSCALL_WRAPPER_H */
 diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
-index e58db5c46..7441de791 100644
+index e58db5c4..7441de79 100644
 --- a/src/lxc/terminal.c
 +++ b/src/lxc/terminal.c
 @@ -28,6 +28,10 @@
@@ -20327,7 +20327,7 @@ index e58db5c46..7441de791 100644
  }
 +
 diff --git a/src/lxc/terminal.h b/src/lxc/terminal.h
-index 4d21f33d9..9de4cd055 100644
+index 4d21f33d..9de4cd05 100644
 --- a/src/lxc/terminal.h
 +++ b/src/lxc/terminal.h
 @@ -15,14 +15,14 @@ struct lxc_conf;
@@ -20476,7 +20476,7 @@ index 4d21f33d9..9de4cd055 100644
 +
  #endif /* __LXC_TERMINAL_H */
 diff --git a/src/lxc/tools/arguments.h b/src/lxc/tools/arguments.h
-index cb0ba744d..41ea1097a 100644
+index cb0ba744..41ea1097 100644
 --- a/src/lxc/tools/arguments.h
 +++ b/src/lxc/tools/arguments.h
 @@ -40,6 +40,16 @@ struct lxc_arguments {
@@ -20517,7 +20517,7 @@ index cb0ba744d..41ea1097a 100644
  			       char *const argv[]);
  
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index a8f493aa7..dbddc2a51 100644
+index a8f493aa..dbddc2a5 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -72,8 +72,19 @@ static const struct option my_longopts[] = {
@@ -20971,7 +20971,7 @@ index a8f493aa7..dbddc2a51 100644
  }
 +#endif
 diff --git a/src/lxc/tools/lxc_ls.c b/src/lxc/tools/lxc_ls.c
-index 0abcd7a63..e601f9d70 100644
+index 0abcd7a6..e601f9d7 100644
 --- a/src/lxc/tools/lxc_ls.c
 +++ b/src/lxc/tools/lxc_ls.c
 @@ -106,7 +106,11 @@ struct wrapargs {
@@ -21021,7 +21021,7 @@ index 0abcd7a63..e601f9d70 100644
  	}
  
 diff --git a/src/lxc/tools/lxc_start.c b/src/lxc/tools/lxc_start.c
-index 459b86793..4f2c8afa7 100644
+index 459b8679..4f2c8afa 100644
 --- a/src/lxc/tools/lxc_start.c
 +++ b/src/lxc/tools/lxc_start.c
 @@ -28,6 +28,11 @@
@@ -21168,7 +21168,7 @@ index 459b86793..4f2c8afa7 100644
  	exit(err);
  }
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 88d0f85ee..4e418fbb9 100644
+index 88d0f85e..4e418fbb 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -27,6 +27,8 @@
@@ -21580,7 +21580,7 @@ index 88d0f85ee..4e418fbb9 100644
 +}
 +#endif
 diff --git a/src/lxc/utils.h b/src/lxc/utils.h
-index cf2c04251..39ef5792f 100644
+index cf2c0425..39ef5792 100644
 --- a/src/lxc/utils.h
 +++ b/src/lxc/utils.h
 @@ -25,9 +25,16 @@
@@ -21709,7 +21709,7 @@ index cf2c04251..39ef5792f 100644
  
  #endif /* __LXC_UTILS_H */
 diff --git a/src/lxc/uuid.c b/src/lxc/uuid.c
-index 256225b8f..a5d24bbcb 100644
+index 256225b8..a5d24bbc 100644
 --- a/src/lxc/uuid.c
 +++ b/src/lxc/uuid.c
 @@ -116,7 +116,7 @@ int lxc_id128_write_fd(int fd, lxc_id128_t id)
@@ -21722,7 +21722,7 @@ index 256225b8f..a5d24bbcb 100644
          fd = open(p, O_WRONLY|O_CREAT|O_CLOEXEC|O_NOCTTY|O_TRUNC, 0444);
          if (fd < 0)
 diff --git a/src/tests/Makefile.am b/src/tests/Makefile.am
-index 11bba260a..59905d326 100644
+index 11bba260..59905d32 100644
 --- a/src/tests/Makefile.am
 +++ b/src/tests/Makefile.am
 @@ -30,7 +30,7 @@ lxc_test_parse_config_file_SOURCES = parse_config_file.c \
@@ -21764,7 +21764,7 @@ index 11bba260a..59905d326 100644
  	     may_control.c \
  	     mount_injection.c \
 diff --git a/src/tests/attach.c b/src/tests/attach.c
-index 07e641d56..acb4c89f4 100644
+index 07e641d5..acb4c89f 100644
 --- a/src/tests/attach.c
 +++ b/src/tests/attach.c
 @@ -29,6 +29,7 @@
@@ -21800,7 +21800,7 @@ index 07e641d56..acb4c89f4 100644
  	TSTOUT("%d", (int)syscall(SYS_getpid));
  	return 0;
 diff --git a/src/tests/console.c b/src/tests/console.c
-index c88f4329b..c0ad16033 100644
+index c88f4329..c0ad1603 100644
 --- a/src/tests/console.c
 +++ b/src/tests/console.c
 @@ -37,14 +37,14 @@
@@ -21881,7 +21881,7 @@ index c88f4329b..c0ad16033 100644
  err1:
  	return ret;
 diff --git a/src/tests/containertests.c b/src/tests/containertests.c
-index 0fb6fbdfb..b28bcd56d 100644
+index 0fb6fbdf..b28bcd56 100644
 --- a/src/tests/containertests.c
 +++ b/src/tests/containertests.c
 @@ -135,7 +135,7 @@ int main(int argc, char *argv[])
@@ -21894,7 +21894,7 @@ index 0fb6fbdfb..b28bcd56d 100644
  		goto out;
  	}
 diff --git a/src/tests/lxc-test-no-new-privs b/src/tests/lxc-test-no-new-privs
-index cfcb43bd6..8642992dd 100755
+index cfcb43bd..8642992d 100755
 --- a/src/tests/lxc-test-no-new-privs
 +++ b/src/tests/lxc-test-no-new-privs
 @@ -36,13 +36,11 @@ cleanup() {
@@ -21915,7 +21915,7 @@ index cfcb43bd6..8642992dd 100755
  if type dpkg >/dev/null 2>&1; then
 diff --git a/src/tests/lxc-test-usernsexec b/src/tests/lxc-test-usernsexec
 deleted file mode 100755
-index 0ee48b353..000000000
+index 0ee48b35..00000000
 --- a/src/tests/lxc-test-usernsexec
 +++ /dev/null
 @@ -1,368 +0,0 @@
@@ -22288,7 +22288,7 @@ index 0ee48b353..000000000
 -[ -z "${FAILS}" -a -z "${ERRORS}" ] || exit 1
 -exit 0
 diff --git a/src/tests/lxc_raw_clone.c b/src/tests/lxc_raw_clone.c
-index f72e20ccc..655454f39 100644
+index f72e20cc..655454f3 100644
 --- a/src/tests/lxc_raw_clone.c
 +++ b/src/tests/lxc_raw_clone.c
 @@ -39,7 +39,7 @@
@@ -22301,7 +22301,7 @@ index f72e20ccc..655454f39 100644
  
  int main(int argc, char *argv[])
 diff --git a/templates/lxc-oci.in b/templates/lxc-oci.in
-index dab077191..8017c38c1 100644
+index dab07719..8017c38c 100644
 --- a/templates/lxc-oci.in
 +++ b/templates/lxc-oci.in
 @@ -348,7 +348,8 @@ fi
