@@ -1,7 +1,7 @@
 From 0b8bc902c0c7acb54efb1fd4be5121dbf9a08598 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Wed, 15 Jul 2020 16:09:35 +0800
-Subject: [PATCH 2/2] add mount label for rootfs
+Subject: [PATCH 2/4] add mount label for rootfs
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -1210,5 +1210,5 @@ index 39ef5792..4d1c49ba 100644
  extern int open_devnull(void);
  extern int set_stdfds(int fd);
 -- 
-2.26.2
+2.25.1
 

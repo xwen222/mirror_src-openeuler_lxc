@@ -11,6 +11,7 @@ Source0:        lxc-4.0.3.tar.gz
 Patch9001:      0001-huawei-adapt-to-huawei-4.0.3.patch
 Patch9002:      0002-add-mount-label-for-rootfs.patch 
 Patch9003:      0003-format-code-and-verify-mount-mode.patch
+Patch9004:      0004-Removes-the-definition-of-the-thread-attributes-obje.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
