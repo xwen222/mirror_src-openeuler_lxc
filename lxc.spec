@@ -1,5 +1,4 @@
-%global _release 2020071501
-%global debug_package %{nil}
+%global _release 2020080301
 
 Name:           lxc
 Version:        4.0.3
@@ -86,25 +85,21 @@ touch %{buildroot}%{_datadir}/%{name}/__pycache__/%{name}
 
 for file in $(find %{buildroot}/usr/bin/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
-    strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
 for file in $(find %{buildroot}/usr/sbin/* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
-    strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
 for file in $(find %{buildroot}/usr/libexec/lxc/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
-    strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
-strip --strip-debug %{buildroot}/usr/lib64/liblxc.so
 chrpath -d %{buildroot}/usr/lib64/liblxc.so
-
+chmod +x %{buildroot}/usr/lib64/liblxc.so
 # docs
 mkdir -p %{buildroot}%{_pkgdocdir}/api
 cp -a AUTHORS README %{buildroot}%{_pkgdocdir}
@@ -188,6 +183,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon Aug 03 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020080301
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add debug packages
+
 * Mon Apr 20 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020071501
 - Type:enhancement
 - ID:NA
