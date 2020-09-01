@@ -1,4 +1,4 @@
-%global _release 2020080301
+%global _release 2020090101
 
 Name:           lxc
 Version:        4.0.3
@@ -6,7 +6,7 @@ Release:        %{_release}
 Summary:        Linux Containers userspace tools
 License:        LGPLv2+
 URL:            https://github.com/lxc/lxc
-Source0:        lxc-4.0.3.tar.gz
+Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
 Patch9001:      0001-huawei-adapt-to-huawei-4.0.3.patch
 Patch9002:      0002-add-mount-label-for-rootfs.patch 
 Patch9003:      0003-format-code-and-verify-mount-mode.patch
@@ -183,6 +183,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Wed Sep 02 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020090101
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: modify source0 address 
+
 * Mon Aug 03 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020080301
 - Type:enhancement
 - ID:NA
