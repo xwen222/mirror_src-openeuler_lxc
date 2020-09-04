@@ -1,5 +1,4 @@
-%global _release 2020071501
-%global debug_package %{nil}
+%global _release 2020090101
 
 Name:           lxc
 Version:        4.0.3
@@ -7,8 +6,12 @@ Release:        %{_release}
 Summary:        Linux Containers userspace tools
 License:        LGPLv2+
 URL:            https://github.com/lxc/lxc
-Source0:        lxc-4.0.3.tar.gz
+Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
 Patch9001:      0001-huawei-adapt-to-huawei-4.0.3.patch
+Patch9002:      0002-add-mount-label-for-rootfs.patch 
+Patch9003:      0003-format-code-and-verify-mount-mode.patch
+Patch9004:      0004-Removes-the-definition-of-the-thread-attributes-obje.patch
+Patch9005:      0005-solve-coredump-bug-caused-by-fstype-being-NULL-durin.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -82,24 +85,21 @@ touch %{buildroot}%{_datadir}/%{name}/__pycache__/%{name}
 
 for file in $(find %{buildroot}/usr/bin/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
-    strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
 for file in $(find %{buildroot}/usr/sbin/* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
-    strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
 for file in $(find %{buildroot}/usr/libexec/lxc/lxc-* -type f -exec file {} ';' | grep "\<ELF\>" | grep -vE "*\.static" | awk -F ':' '{print $1}')
 do
-    strip --strip-debug ${file}
     chrpath -d ${file}
 done
 
-strip --strip-debug %{buildroot}/usr/lib64/liblxc.so
 chrpath -d %{buildroot}/usr/lib64/liblxc.so
+chmod +x %{buildroot}/usr/lib64/liblxc.so
 
 # docs
 mkdir -p %{buildroot}%{_pkgdocdir}/api
@@ -184,6 +184,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Sep 04 2020 zhangxiaoyu <zhangxiaoyu58@openeuler.org> - 4.0.3-2020090101
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add patches
+
 * Mon Apr 20 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020071501
 - Type:enhancement
 - ID:NA
