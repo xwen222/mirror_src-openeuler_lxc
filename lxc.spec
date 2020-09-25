@@ -1,4 +1,4 @@
-%global _release 2020091101
+%global _release 2020092501
 
 Name:           lxc
 Version:        4.0.3
@@ -13,6 +13,7 @@ Patch9003:      0003-format-code-and-verify-mount-mode.patch
 Patch9004:      0004-Removes-the-definition-of-the-thread-attributes-obje.patch
 Patch9005:      0005-solve-coredump-bug-caused-by-fstype-being-NULL-durin.patch
 Patch9006:      0006-SIGTERM-do-not-catch-signal-SIGTERM-in-lxc-monitor.patch
+Patch9007:      0007-Using-string-type-instead-of-security_context_t-beca.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -185,6 +186,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Sep 25 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020092501
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: Code optimization
+
 * Fri Sep 11 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020091101
 - Type:enhancement
 - ID:NA
