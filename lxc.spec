@@ -1,4 +1,4 @@
-%global _release 2020092501
+%global _release 2020101001
 
 Name:           lxc
 Version:        4.0.3
@@ -185,6 +185,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Sat Oct 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020101001
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add patchs to series.conf
+
 * Fri Sep 25 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020092501
 - Type:enhancement
 - ID:NA
