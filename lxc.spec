@@ -1,4 +1,4 @@
-%global _release 2020101001
+%global _release 2020110301
 
 Name:           lxc
 Version:        4.0.3
@@ -14,6 +14,8 @@ Patch9004:      0004-Removes-the-definition-of-the-thread-attributes-obje.patch
 Patch9005:      0005-solve-coredump-bug-caused-by-fstype-being-NULL-durin.patch
 Patch9006:      0006-SIGTERM-do-not-catch-signal-SIGTERM-in-lxc-monitor.patch
 Patch9007:      0007-Using-string-type-instead-of-security_context_t-beca.patch
+Patch9008:	0008-hook-pass-correct-mount-dir-as-root-to-hook.patch
+Patch9009:	0009-cgroup-refact-cgroup-manager-to-single-file.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -185,6 +187,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Nov 3 2020 lifeng <lifeng68@openeuler.org> - 4.0.3-2020110301
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: 1. fix hook root dir error and refact cgroup
+
 * Sat Oct 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 4.0.3-2020101001
 - Type:enhancement
 - ID:NA
