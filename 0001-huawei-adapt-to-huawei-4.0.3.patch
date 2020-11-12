@@ -1,7 +1,7 @@
 From 8a62b519510080bb361cdd058d0e7a5edd955a95 Mon Sep 17 00:00:00 2001
 From: lifeng68 <lifeng68@huawei.com>
 Date: Wed, 15 Jul 2020 09:32:32 +0800
-Subject: [PATCH] huawei: adapt to huawei 4.0.3
+Subject: [PATCH 1/9] huawei: adapt to huawei 4.0.3
 
 Signed-off-by: lifeng68 <lifeng68@huawei.com>
 ---
