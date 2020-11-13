@@ -1,7 +1,7 @@
 From 5a8c9b52ad3291feb87c2281e074b2c85c766245 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Fri, 25 Sep 2020 10:21:37 +0800
-Subject: [PATCH 7/9] Using string type instead of security_context_t because
+Subject: [PATCH 07/10] Using string type instead of security_context_t because
  it is deprecated
 
 Signed-off-by: wujing <wujing50@huawei.com>
