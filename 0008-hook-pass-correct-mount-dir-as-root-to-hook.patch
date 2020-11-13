@@ -1,7 +1,7 @@
 From e8d9c6475eb42fdb1775a465353758f2c5418938 Mon Sep 17 00:00:00 2001
 From: lifeng68 <lifeng68@huawei.com>
 Date: Sat, 31 Oct 2020 17:38:04 +0800
-Subject: [PATCH 8/9] hook: pass correct mount dir as root to hook
+Subject: [PATCH 08/10] hook: pass correct mount dir as root to hook
 
 Signed-off-by: lifeng68 <lifeng68@huawei.com>
 ---
