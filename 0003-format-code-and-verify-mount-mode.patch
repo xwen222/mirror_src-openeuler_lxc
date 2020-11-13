@@ -1,7 +1,7 @@
 From c0f37e083c49cfcb9441743a409fdee44d32d7c5 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Thu, 16 Jul 2020 16:39:35 +0800
-Subject: [PATCH 3/9] format code and verify mount mode
+Subject: [PATCH 03/10] format code and verify mount mode
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
