@@ -1,4 +1,4 @@
-%global _release 2020110301
+%global _release 2020111301
 
 Name:           lxc
 Version:        4.0.3
@@ -16,6 +16,7 @@ Patch9006:      0006-SIGTERM-do-not-catch-signal-SIGTERM-in-lxc-monitor.patch
 Patch9007:      0007-Using-string-type-instead-of-security_context_t-beca.patch
 Patch9008:	0008-hook-pass-correct-mount-dir-as-root-to-hook.patch
 Patch9009:	0009-cgroup-refact-cgroup-manager-to-single-file.patch
+Patch9010:	0010-cgfsng-adjust-log-level-from-error-to-warn.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -187,6 +188,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Nov 13 2020 lifeng <lifeng68@openeuler.org> - 4.0.3-2020111301
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: adjust log level from error to warn 
+
 * Tue Nov 3 2020 lifeng <lifeng68@openeuler.org> - 4.0.3-2020110301
 - Type:enhancement
 - ID:NA

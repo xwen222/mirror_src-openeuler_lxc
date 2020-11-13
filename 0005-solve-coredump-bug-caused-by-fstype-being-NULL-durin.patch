@@ -1,7 +1,7 @@
 From 405b048dc82a8695b8a400524787243f3898cbd6 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Tue, 21 Jul 2020 17:30:17 +0800
-Subject: [PATCH 5/9] solve coredump bug caused by fstype being NULL during
+Subject: [PATCH 05/10] solve coredump bug caused by fstype being NULL during
  mount
 
 Signed-off-by: wujing <wujing50@huawei.com>
