@@ -1,7 +1,7 @@
 From b1ef723b4f437aad3c0c0497174bc7d3444426cd Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Mon, 20 Jul 2020 15:30:42 +0800
-Subject: [PATCH 4/9] Removes the definition of the thread attributes object
+Subject: [PATCH 04/10] Removes the definition of the thread attributes object
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
