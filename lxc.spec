@@ -1,4 +1,4 @@
-%global _release 2020111701
+%global _release 2020112701
 
 Name:           lxc
 Version:        4.0.3
@@ -7,17 +7,19 @@ Summary:        Linux Containers userspace tools
 License:        LGPLv2+
 URL:            https://github.com/lxc/lxc
 Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
-Patch9001:      0001-huawei-adapt-to-huawei-4.0.3.patch
-Patch9002:      0002-add-mount-label-for-rootfs.patch 
-Patch9003:      0003-format-code-and-verify-mount-mode.patch
-Patch9004:      0004-Removes-the-definition-of-the-thread-attributes-obje.patch
-Patch9005:      0005-solve-coredump-bug-caused-by-fstype-being-NULL-durin.patch
-Patch9006:      0006-SIGTERM-do-not-catch-signal-SIGTERM-in-lxc-monitor.patch
-Patch9007:      0007-Using-string-type-instead-of-security_context_t-beca.patch
-Patch9008:	0008-hook-pass-correct-mount-dir-as-root-to-hook.patch
-Patch9009:	0009-cgroup-refact-cgroup-manager-to-single-file.patch
-Patch9010:	0010-cgfsng-adjust-log-level-from-error-to-warn.patch
-Patch9011:	0011-rootfs-add-make-private-for-root.path-parent.patch
+
+Patch0001:	0001-huawei-adapt-to-huawei-4.0.3.patch
+Patch0002:	0002-add-mount-label-for-rootfs.patch
+Patch0003:	0003-format-code-and-verify-mount-mode.patch
+Patch0004:	0004-Removes-the-definition-of-the-thread-attributes-obje.patch
+Patch0005:	0005-solve-coredump-bug-caused-by-fstype-being-NULL-durin.patch
+Patch0006:	0006-SIGTERM-do-not-catch-signal-SIGTERM-in-lxc-monitor.patch
+Patch0007:	0007-Using-string-type-instead-of-security_context_t-beca.patch
+Patch0008:	0008-hook-pass-correct-mount-dir-as-root-to-hook.patch
+Patch0009:	0009-cgroup-refact-cgroup-manager-to-single-file.patch
+Patch0010:	0010-cgfsng-adjust-log-level-from-error-to-warn.patch
+Patch0011:	0011-rootfs-add-make-private-for-root.path-parent.patch
+Patch0012:	0012-mount-make-possible-to-bind-mount-proc-and-sys-fs.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -189,6 +191,15 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Nov 27 2020 lifeng <lifeng68@openeuler.org> - 4.0.3-2020112701
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: mount: make possible to bind mount /proc and /sys/fs.
+-	1. add check whether have /proc mounts entry, if has, skip the auto
+-	2. mount cgroup before do mount entrys
+-	3. pass if the mount on top of /proc and the source of the mount is a proc filesystem
+
 * Fri Nov 13 2020 lifeng <lifeng68@openeuler.org> - 4.0.3-2020111701
 - Type:enhancement
 - ID:NA
