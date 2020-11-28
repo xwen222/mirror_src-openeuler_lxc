@@ -1,7 +1,7 @@
 From c0f37e083c49cfcb9441743a409fdee44d32d7c5 Mon Sep 17 00:00:00 2001
 From: wujing <wujing50@huawei.com>
 Date: Thu, 16 Jul 2020 16:39:35 +0800
-Subject: [PATCH 3/5] format code and verify mount mode
+Subject: [PATCH 03/10] format code and verify mount mode
 
 Signed-off-by: wujing <wujing50@huawei.com>
 ---
@@ -12,7 +12,7 @@ Signed-off-by: wujing <wujing50@huawei.com>
  4 files changed, 182 insertions(+), 118 deletions(-)
 
 diff --git a/src/lxc/lsm/apparmor.c b/src/lxc/lsm/apparmor.c
-index f251e5e7..591d37c2 100644
+index f251e5e7e..591d37c27 100644
 --- a/src/lxc/lsm/apparmor.c
 +++ b/src/lxc/lsm/apparmor.c
 @@ -1186,6 +1186,16 @@ static int apparmor_process_label_set(const char *inlabel, struct lxc_conf *conf
@@ -44,7 +44,7 @@ index f251e5e7..591d37c2 100644
  
  struct lsm_drv *lsm_apparmor_drv_init(void)
 diff --git a/src/lxc/lsm/nop.c b/src/lxc/lsm/nop.c
-index 5b345b9a..188945d5 100644
+index 5b345b9a2..188945d51 100644
 --- a/src/lxc/lsm/nop.c
 +++ b/src/lxc/lsm/nop.c
 @@ -24,11 +24,25 @@ static int nop_enabled(void)
@@ -74,7 +74,7 @@ index 5b345b9a..188945d5 100644
  
  struct lsm_drv *lsm_nop_drv_init(void)
 diff --git a/src/lxc/lsm/selinux.c b/src/lxc/lsm/selinux.c
-index 5bc9843e..864b16be 100644
+index 5bc9843e4..864b16be7 100644
 --- a/src/lxc/lsm/selinux.c
 +++ b/src/lxc/lsm/selinux.c
 @@ -106,6 +106,10 @@ static int selinux_file_label_set(const char *path, const char *label)
@@ -371,7 +371,7 @@ index 5bc9843e..864b16be 100644
  
  #endif
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 032176b1..5ec6117f 100644
+index 032176b1b..5ec6117f7 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
 @@ -1126,6 +1126,34 @@ static int receive_mount_options(const char *data, const char *mount_label,

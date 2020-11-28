@@ -1,7 +1,7 @@
 From e21c6474901e3d12560eb389597e88b47fd46be5 Mon Sep 17 00:00:00 2001
 From: lifeng68 <lifeng68@huawei.com>
 Date: Fri, 11 Sep 2020 10:05:04 +0800
-Subject: [PATCH 6/6] SIGTERM: do not catch signal SIGTERM in [lxc monitor]
+Subject: [PATCH 06/10] SIGTERM: do not catch signal SIGTERM in [lxc monitor]
 
 Signed-off-by: lifeng68 <lifeng68@huawei.com>
 ---
