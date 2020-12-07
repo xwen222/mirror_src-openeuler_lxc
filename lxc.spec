@@ -1,4 +1,4 @@
-%global _release 2020112701
+%global _release 2020120701
 
 Name:           lxc
 Version:        4.0.3
@@ -20,6 +20,7 @@ Patch0009:	0009-cgroup-refact-cgroup-manager-to-single-file.patch
 Patch0010:	0010-cgfsng-adjust-log-level-from-error-to-warn.patch
 Patch0011:	0011-rootfs-add-make-private-for-root.path-parent.patch
 Patch0012:	0012-mount-make-possible-to-bind-mount-proc-and-sys-fs.patch
+Patch0013:	0013-use-path-based-unix-domain-sockets-instead-of-abstra.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -191,6 +192,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon Dec 07 2020 wujing <wujing50@huawei.com> - 4.0.3-2020120701
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: use path based unix domain sockets instead of abstract namespace sockets
+
 * Fri Nov 27 2020 lifeng <lifeng68@openeuler.org> - 4.0.3-2020112701
 - Type:enhancement
 - ID:NA
