@@ -1,4 +1,4 @@
-%global _release 2020121501
+%global _release 2020122401
 
 Name:           lxc
 Version:        4.0.3
@@ -22,6 +22,8 @@ Patch0011:	0011-rootfs-add-make-private-for-root.path-parent.patch
 Patch0012:	0012-mount-make-possible-to-bind-mount-proc-and-sys-fs.patch
 Patch0013:	0013-use-path-based-unix-domain-sockets-instead-of-abstra.patch
 Patch0014:	0014-api-add-get-container-metrics-api.patch
+Patch0015:	0015-Streaming-IO-solution-optimization-and-enhancement.patch
+Patch0016:	0016-avoid-using-void-pointers-in-caclulation.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -193,6 +195,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Dec 24 2020 wujing <wujing50@huawei.com> - 4.0.3-2020122401
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: Streaming IO solution optimization and enhancement
+
 * Tue Dec 15 2020 lifeng <lifeng68@huawei.com> - 4.0.3-2020121501
 - Type:enhancement
 - ID:NA
