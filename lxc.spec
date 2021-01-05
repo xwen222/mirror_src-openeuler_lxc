@@ -1,4 +1,4 @@
-%global _release 2020122401
+%global _release 2021010501
 
 Name:           lxc
 Version:        4.0.3
@@ -24,6 +24,7 @@ Patch0013:	0013-use-path-based-unix-domain-sockets-instead-of-abstra.patch
 Patch0014:	0014-api-add-get-container-metrics-api.patch
 Patch0015:	0015-Streaming-IO-solution-optimization-and-enhancement.patch
 Patch0016:	0016-avoid-using-void-pointers-in-caclulation.patch
+Patch0017:	0017-fix-compilation-errors-without-libcap.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -195,6 +196,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Jan 2021 wujing <wujing50@huawei.com> - 4.0.3-2021010501
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: fix compilation errors without libcap 
+
 * Thu Dec 24 2020 wujing <wujing50@huawei.com> - 4.0.3-2020122401
 - Type:enhancement
 - ID:NA
