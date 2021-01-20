@@ -1,4 +1,4 @@
-%global _release 2021010501
+%global _release 2021012001
 
 Name:           lxc
 Version:        4.0.3
@@ -25,6 +25,7 @@ Patch0014:	0014-api-add-get-container-metrics-api.patch
 Patch0015:	0015-Streaming-IO-solution-optimization-and-enhancement.patch
 Patch0016:	0016-avoid-using-void-pointers-in-caclulation.patch
 Patch0017:	0017-fix-compilation-errors-without-libcap.patch
+Patch0018:	0018-IO-fix-io-data-miss-when-exec-with-pipes.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -196,6 +197,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Wed Jan 21 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021012001
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: fix io data miss when exec with pipes
+
 * Tue Jan 2021 wujing <wujing50@huawei.com> - 4.0.3-2021010501
 - Type:enhancement
 - ID:NA
