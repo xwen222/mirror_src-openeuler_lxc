@@ -1,4 +1,4 @@
-%global _release 2021012001
+%global _release 2021012801
 
 Name:           lxc
 Version:        4.0.3
@@ -26,6 +26,7 @@ Patch0015:	0015-Streaming-IO-solution-optimization-and-enhancement.patch
 Patch0016:	0016-avoid-using-void-pointers-in-caclulation.patch
 Patch0017:	0017-fix-compilation-errors-without-libcap.patch
 Patch0018:	0018-IO-fix-io-data-miss-when-exec-with-pipes.patch
+Patch0019:	0019-metrics-add-total_inactive_file-metric-for-memory.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -197,6 +198,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Jan 28 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021012801
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add inactive file total metrics
+
 * Wed Jan 21 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021012001
 - Type:enhancement
 - ID:NA
