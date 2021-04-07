@@ -1,4 +1,4 @@
-%global _release 2021033102
+%global _release 2021040701
 
 Name:           lxc
 Version:        4.0.3
@@ -200,6 +200,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Wed Apr 07 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021040701
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:some patches missing in series.conf
+
 * Thu Mar 11 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021031102
 - Type:enhancement
 - ID:NA
