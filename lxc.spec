@@ -1,4 +1,4 @@
-%global _release 2021012801
+%global _release 2021051301
 
 Name:           lxc
 Version:        4.0.3
@@ -27,6 +27,11 @@ Patch0016:	0016-avoid-using-void-pointers-in-caclulation.patch
 Patch0017:	0017-fix-compilation-errors-without-libcap.patch
 Patch0018:	0018-IO-fix-io-data-miss-when-exec-with-pipes.patch
 Patch0019:	0019-metrics-add-total_inactive_file-metric-for-memory.patch
+Patch0020:	0020-support-cgroup-v2.patch
+Patch0021:	0021-support-isula-exec-workdir.patch
+Patch0022:	0022-print-error-message-if-process-workdir-failed.patch
+Patch0023:	0023-log-support-long-syslog-tag.patch
+Patch0024:	0024-log-adjust-log-level-from-error-to-warn.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -198,6 +203,42 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Mar 13 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021051301
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:adjust log level
+
+* Sat Mar 08 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021050802
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:support long syslog tag
+
+* Sat Mar 08 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021050801
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:print error message if process workdir failed
+
+* Wed Apr 07 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021040701
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:some patches missing in series.conf
+
+* Thu Mar 11 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021031102
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: support isula exec --workdir
+
+* Wed Mar 31 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021033101
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: support cgroup v2
+
 * Thu Jan 28 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021012801
 - Type:enhancement
 - ID:NA
