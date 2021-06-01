@@ -1,4 +1,4 @@
-%global _release 2021051301
+%global _release 2021060101
 
 Name:           lxc
 Version:        4.0.3
@@ -32,6 +32,7 @@ Patch0021:	0021-support-isula-exec-workdir.patch
 Patch0022:	0022-print-error-message-if-process-workdir-failed.patch
 Patch0023:	0023-log-support-long-syslog-tag.patch
 Patch0024:	0024-log-adjust-log-level-from-error-to-warn.patch
+Patch0025:	0025-get-cgroup-data-len-first-and-malloc-read-buff-by-le.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -203,6 +204,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Jun 01 2021 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 4.0.3-2021060101
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:adjust log level
+
 * Thu Mar 13 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021051301
 - Type:bugfix
 - ID:NA
