@@ -1,4 +1,4 @@
-%global _release 2021082601
+%global _release 2021091701
 
 Name:           lxc
 Version:        4.0.3
@@ -35,6 +35,7 @@ Patch0024:	0024-log-adjust-log-level-from-error-to-warn.patch
 Patch0025:	0025-get-cgroup-data-len-first-and-malloc-read-buff-by-le.patch
 Patch0026:	0026-coredump-fix-coredump-when-cgroup-get-return-error.patch
 Patch0027:	0027-add-help-for-new-arguments.patch
+Patch0028:	0028-seccomp-init-and-destroy-notifier.cookie.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -206,6 +207,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Sep 17 2021 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 4.0.3-2021091701
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:seccomp init and destroy notifier.cookie
+
 * Thu Aug 26 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021082601
 - Type:bugfix
 - ID:NA
