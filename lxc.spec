@@ -1,4 +1,4 @@
-%global _release 2021091703
+%global _release 2021092601
 
 Name:           lxc
 Version:        4.0.3
@@ -49,7 +49,7 @@ Requires:       lxc-libs = 4.0.3-%{release}
 
 %package           libs
 Summary:           Runtime library files for %{name}
-Requires:          rsync
+Requires:          rsync libcap libseccomp libselinux
 Requires(post):    systemd
 Requires(preun):   systemd
 Requires(postun):  systemd
@@ -210,6 +210,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Sun Sep 26 2021 chengzeruizhi<chengzeruizhi@huawei.com> - 4.0.3-2021092601
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:add dependencies under require field
+
 * Fri Sep 17 2021 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2021091703
 - Type:bugfix
 - ID:NA
