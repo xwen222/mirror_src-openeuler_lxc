@@ -1,4 +1,4 @@
-%global _release 2021092601
+%global _release 2021102101
 
 Name:           lxc
 Version:        4.0.3
@@ -39,6 +39,7 @@ Patch0028:	0028-seccomp-init-and-destroy-notifier.cookie.patch
 Patch0029:	0029-just-use-origin-loop-if-do-not-have-io.patch
 Patch0030:	0030-conf-fix-a-memory-leak.patch
 Patch0031:	0031-fix-lsm_se_mount_context-memory-leak.patch
+Patch0032:	0032-disable-lxc_keep-with-oci-image.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -210,6 +211,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Oct 21 2021 gaohuatao<gaohuatao@huawei.com> - 4.0.3-2021102101
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:disable lxc_keep
+
 * Sun Sep 26 2021 chengzeruizhi<chengzeruizhi@huawei.com> - 4.0.3-2021092601
 - Type:bugfix
 - ID:NA
