@@ -1,4 +1,4 @@
-%global _release 2021102101
+%global _release 2021111901
 
 Name:           lxc
 Version:        4.0.3
@@ -40,6 +40,7 @@ Patch0029:	0029-just-use-origin-loop-if-do-not-have-io.patch
 Patch0030:	0030-conf-fix-a-memory-leak.patch
 Patch0031:	0031-fix-lsm_se_mount_context-memory-leak.patch
 Patch0032:	0032-disable-lxc_keep-with-oci-image.patch
+Patch0033:	0033-conf-ensure-that-the-idmap-pointer-itself-is-freed.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -211,6 +212,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Nov 19 2021 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2021111901
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:ensure that the idmap pointer itself is freed
+
 * Thu Oct 21 2021 gaohuatao<gaohuatao@huawei.com> - 4.0.3-2021102101
 - Type:bugfix
 - ID:NA
