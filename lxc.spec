@@ -1,4 +1,4 @@
-%global _release 2021112501
+%global _release 2021122701
 
 Name:           lxc
 Version:        4.0.3
@@ -42,6 +42,7 @@ Patch0031:	0031-fix-lsm_se_mount_context-memory-leak.patch
 Patch0032:	0032-disable-lxc_keep-with-oci-image.patch
 Patch0033:	0033-conf-ensure-that-the-idmap-pointer-itself-is-freed.patch
 Patch0034:	0034-cgfsng-fix-cgroup-attach-cgroup-creation.patch
+Patch0035:	0035-adapt-upstream-compiler-settings.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -213,6 +214,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon Dec 27 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021122701
+- Type:improve
+- ID:NA
+- SUG:NA
+- DESC:adapt upstream compiler settings
+
 * Thu Nov 25 2021 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2021112501
 - Type:bugfix
 - ID:NA
