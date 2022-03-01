@@ -1,4 +1,4 @@
-%global _release 2021122701
+%global _release 2022021501
 
 Name:           lxc
 Version:        4.0.3
@@ -43,6 +43,7 @@ Patch0032:	0032-disable-lxc_keep-with-oci-image.patch
 Patch0033:	0033-conf-ensure-that-the-idmap-pointer-itself-is-freed.patch
 Patch0034:	0034-cgfsng-fix-cgroup-attach-cgroup-creation.patch
 Patch0035:	0035-adapt-upstream-compiler-settings.patch
+Patch0036:	0036-compile-in-android-env.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -214,6 +215,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Feb 15 2022 chegJH   <hejunjie10@huawei.com> - 4.0.3-2022021501
+- Type:improve
+- ID:NA
+- SUG:NA
+- DESC:changes for compile in android env
+
 * Mon Dec 27 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021122701
 - Type:improve
 - ID:NA
