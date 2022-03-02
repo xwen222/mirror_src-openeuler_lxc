@@ -1,0 +1,39 @@
+From 178d09524a346cab9ca1f9eb939e35945b7bfbb0 Mon Sep 17 00:00:00 2001
+From: chegJH <hejunjie10@huawei.com>
+Date: Mon, 21 Feb 2022 19:14:56 +0800
+Subject: [PATCH] fix always print and temp len
+
+Signed-off-by: chegJH <hejunjie10@huawei.com>
+---
+ src/lxc/confile_utils.h | 2 +-
+ src/lxc/lxclock.c       | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/lxc/confile_utils.h b/src/lxc/confile_utils.h
+index 62990e9..3655ec4 100644
+--- a/src/lxc/confile_utils.h
++++ b/src/lxc/confile_utils.h
+@@ -13,7 +13,7 @@
+ 		if (str)                                                \
+ 			len = snprintf(str, inlen, ##__VA_ARGS__);      \
+ 		else                                                    \
+-			len = snprintf((char *){""}, 0, ##__VA_ARGS__); \
++			len = 0; \
+ 		if (len < 0) {                                          \
+ 			SYSERROR("failed to create string");            \
+ 			return -1;                                      \
+diff --git a/src/lxc/lxclock.c b/src/lxc/lxclock.c
+index d65c614..9c9b57c 100644
+--- a/src/lxc/lxclock.c
++++ b/src/lxc/lxclock.c
+@@ -177,6 +177,7 @@ struct lxc_lock *lxc_newlock(const char *lxcpath, const char *name)
+ 	}
+ 
+ 	l->u.f.fd = -1;
++	return l;
+ 
+ on_error:
+ 	fprintf(stderr, "Failed to create lock for %s, path %s\n", name, lxcpath);
+-- 
+2.32.0 (Apple Git-132)
+
