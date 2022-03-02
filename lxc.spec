@@ -1,4 +1,4 @@
-%global _release 2022021501
+%global _release 2022022101
 
 Name:           lxc
 Version:        4.0.3
@@ -44,6 +44,7 @@ Patch0033:	0033-conf-ensure-that-the-idmap-pointer-itself-is-freed.patch
 Patch0034:	0034-cgfsng-fix-cgroup-attach-cgroup-creation.patch
 Patch0035:	0035-adapt-upstream-compiler-settings.patch
 Patch0036:	0036-compile-in-android-env.patch
+Patch0037:	0037-fix-always-print-and-temp-len.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -215,6 +216,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon Feb 21 2022 chegJH   <hejunjie10@huawei.com> - 4.0.3-2022022101
+- Type:improv
+- ID:NA
+- SUG:NA
+- DESC: fix alwasy print and len
+
 * Tue Feb 15 2022 chegJH   <hejunjie10@huawei.com> - 4.0.3-2022021501
 - Type:improve
 - ID:NA
