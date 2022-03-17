@@ -1,4 +1,4 @@
-%global _release 2022022101
+%global _release 2022031701
 
 Name:           lxc
 Version:        4.0.3
@@ -45,6 +45,7 @@ Patch0034:	0034-cgfsng-fix-cgroup-attach-cgroup-creation.patch
 Patch0035:	0035-adapt-upstream-compiler-settings.patch
 Patch0036:	0036-compile-in-android-env.patch
 Patch0037:	0037-fix-always-print-and-temp-len.patch
+Patch0038:	0038-just-print-error-when-new-lock-failed.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -216,6 +217,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Mar 17 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022031701
+- Type:improv
+- ID:NA
+- SUG:NA
+- DESC: fix unnecessary print error message
+
 * Mon Feb 21 2022 chegJH   <hejunjie10@huawei.com> - 4.0.3-2022022101
 - Type:improv
 - ID:NA
