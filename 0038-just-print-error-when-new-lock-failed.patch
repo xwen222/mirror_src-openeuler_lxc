@@ -1,0 +1,30 @@
+From 456d154a6e0a34ac8e4474408ea02f2e0ec6e194 Mon Sep 17 00:00:00 2001
+From: haozi007 <liuhao27@huawei.com>
+Date: Thu, 17 Mar 2022 02:39:46 +0000
+Subject: [PATCH] just print error when new lock failed
+
+Signed-off-by: haozi007 <liuhao27@huawei.com>
+---
+ src/lxc/lxclock.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lxc/lxclock.c b/src/lxc/lxclock.c
+index 9c9b57c..7114fc5 100644
+--- a/src/lxc/lxclock.c
++++ b/src/lxc/lxclock.c
+@@ -177,10 +177,10 @@ struct lxc_lock *lxc_newlock(const char *lxcpath, const char *name)
+ 	}
+ 
+ 	l->u.f.fd = -1;
+-	return l;
+ 
+ on_error:
+-	fprintf(stderr, "Failed to create lock for %s, path %s\n", name, lxcpath);
++	if (l == NULL)
++		fprintf(stderr, "Failed to create lock for %s, path %s\n", name, lxcpath);
+ 	return l;
+ }
+ 
+-- 
+2.20.1
+
