@@ -1,0 +1,98 @@
+From b235b7526f452dab2db7f9de71ea27b3dfacde1a Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Sat, 9 Apr 2022 15:15:02 +0800
+Subject: [PATCH] fix bug of memory free
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ src/lxc/conf.c | 27 ++++++++++-----------------
+ 1 file changed, 10 insertions(+), 17 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index 19e193dd..4ef154e6 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -2604,70 +2604,63 @@ static int check_mount_destination(const char *rootfs, const char *dest, const c
+ 	const char **invalid = NULL;
+ 
+ 	for(valid = valid_destinations; *valid != NULL; valid++) {
+-		char *fullpath = NULL;
+-		char *relpath = NULL;
++		__do_free char *fullpath = NULL;
++		__do_free char *relpath = NULL;
+ 		const char *parts[3] = {
+ 			rootfs,
+ 			*valid,
+ 			NULL
+ 		};
+ 		fullpath = lxc_string_join("/", parts, false);
+-		if (!fullpath) {
++		if (fullpath == NULL) {
+ 			ERROR("Out of memory");
+ 			return -1;
+ 		}
+ 		relpath = path_relative(fullpath, dest);
+-		free(fullpath);
+-		if (!relpath)
++		if (relpath == NULL) {
++			ERROR("Failed to get relpath for %s related to %s", dest, fullpath);
+ 			return -1;
++		}
+ 		if (!strcmp(relpath, ".")) {
+-			free(relpath);
+ 			return 0;
+ 		}
+-		free(relpath);
+ 	}
+ 
+ 	for(invalid = invalid_destinations; *invalid != NULL; invalid++) {
+-		char *fullpath = NULL;
+-		char *relpath = NULL;
++		__do_free char *fullpath = NULL;
++		__do_free char *relpath = NULL;
+ 		const char *parts[3] = {
+ 			rootfs,
+ 			*invalid,
+ 			NULL
+ 		};
+ 		fullpath = lxc_string_join("/", parts, false);
+-		if (!fullpath) {
++		if (fullpath == NULL) {
+ 			ERROR("Out of memory");
+ 			return -1;
+ 		}
+ 		relpath = path_relative(fullpath, dest);
+ 		DEBUG("dst path %s get relative path %s with full path %s,src:%s", dest, relpath, fullpath, src);
+-		free(fullpath);
+-		if (!relpath) {
++		if (relpath == NULL) {
+ 			ERROR("Failed to get relpath for %s related to %s", dest, fullpath);
+ 			return -1;
+ 		}
+ 		// pass if the mount path is outside of invalid proc
+ 		if (strncmp(relpath, "..", 2) == 0) {
+-			free(relpath);
+ 			continue;
+ 		}
+ 		if (strcmp(relpath, ".") == 0) {
+ 			if (src == NULL) {
+-				free(relpath);
+ 				continue;
+ 			}
+ 			// pass if the mount on top of /proc and the source of the mount is a proc filesystem
+ 			if (has_fs_type(src, PROC_SUPER_MAGIC)) {
+ 				WARN("src %s is proc allow mount on-top of %s", src, *invalid);
+-				free(relpath);
+ 				continue;
+ 			}
+ 			ERROR("%s cannot be mounted because it is located inside %s", dest, *invalid);
+-			free(relpath);
+ 			return -1;
+ 		}
+-		free(relpath);
+ 	}
+ 
+ 	return 0;
+-- 
+2.35.1
+
