@@ -48,6 +48,7 @@ Patch0037:	0037-fix-always-print-and-temp-len.patch
 Patch0038:	0038-just-print-error-when-new-lock-failed.patch
 Patch0039:	0039-fix-bug-of-memory-free.patch
 Patch0040:	0040-refactor-the-way-to-convert-selinux-label-to-shared.path
+Patch0041:	0041-do-not-free-the-pointer-returned-by-dirname.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
