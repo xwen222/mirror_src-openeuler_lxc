@@ -1,10 +1,10 @@
-%global _release 2022052301
+%global _release 2022052501
 
 Name:           lxc
 Version:        4.0.3
 Release:        %{_release}
 Summary:        Linux Containers userspace tools
-License:        LGPLv2+
+License:        LGPLv2+ and GPLv2 and GPLv3
 URL:            https://github.com/lxc/lxc
 Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
 
@@ -222,6 +222,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Wed May 25 2022 hejunjie<hejunjie10@huawei.com> - 4.0.3-2022052501
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: correct license info
+
 * Mon May 23 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022052301
 - Type:bugfix
 - ID:NA
