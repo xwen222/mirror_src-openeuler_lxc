@@ -1,0 +1,128 @@
+From c080da6dda7a47de8ccb5cc3eabec6e5b2e4c649 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Mon, 23 May 2022 19:00:28 +0800
+Subject: [PATCH] do not operate playload and attach cgroup if no controller
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/lxc/cgroups/cgroup.h        |  1 +
+ src/lxc/cgroups/isulad_cgfsng.c | 48 ++++++++++++++++++++++++++++++++-
+ 2 files changed, 48 insertions(+), 1 deletion(-)
+
+diff --git a/src/lxc/cgroups/cgroup.h b/src/lxc/cgroups/cgroup.h
+index a9048c4..8b18c1e 100644
+--- a/src/lxc/cgroups/cgroup.h
++++ b/src/lxc/cgroups/cgroup.h
+@@ -104,6 +104,7 @@ struct cgroup_ops {
+ 
+ #ifdef HAVE_ISULAD
+ 	int errfd;
++	bool no_controller;
+ #endif
+ 
+ 	/* @hierarchies
+diff --git a/src/lxc/cgroups/isulad_cgfsng.c b/src/lxc/cgroups/isulad_cgfsng.c
+index 576b424..8a9656a 100644
+--- a/src/lxc/cgroups/isulad_cgfsng.c
++++ b/src/lxc/cgroups/isulad_cgfsng.c
+@@ -677,6 +677,13 @@ __cgfsng_ops static bool isulad_cgfsng_payload_destroy(struct cgroup_ops *ops,
+ 		return false;
+ 	}
+ 
++#ifdef HAVE_ISULAD
++	if (ops->no_controller) {
++		DEBUG("no controller found, isgnore isulad_cgfsng_payload_destroy");
++		return true;
++	}
++#endif
++
+ 	if (!ops->hierarchies) {
+ 		return false;
+ 	}
+@@ -934,6 +941,13 @@ __cgfsng_ops static inline bool isulad_cgfsng_payload_create(struct cgroup_ops *
+ 	int i;
+ 	char *container_cgroup = ops->container_cgroup;
+ 
++#ifdef HAVE_ISULAD
++	if (ops->no_controller) {
++		DEBUG("no controller found, isgnore isulad_cgfsng_payload_create");
++		return true;
++	}
++#endif
++
+ 	if (!container_cgroup) {
+ 		ERROR("cgfsng_create container_cgroup is invalid");
+ 		return false;
+@@ -964,6 +978,13 @@ __cgfsng_ops static bool isulad_cgfsng_payload_enter(struct cgroup_ops *ops,
+ 	if (!ops)
+ 		return ret_set_errno(false, ENOENT);
+ 
++#ifdef HAVE_ISULAD
++	if (ops->no_controller) {
++		DEBUG("no controller found, isgnore isulad_cgfsng_payload_enter");
++		return true;
++	}
++#endif
++
+ 	if (!ops->hierarchies)
+ 		return true;
+ 
+@@ -1121,6 +1142,13 @@ __cgfsng_ops void isulad_cgfsng_payload_finalize(struct cgroup_ops *ops)
+ 	if (!ops)
+ 		return;
+ 
++#ifdef HAVE_ISULAD
++	if (ops->no_controller) {
++		DEBUG("no controller found, isgnore isulad_cgfsng_payload_finalize");
++		return;
++	}
++#endif
++
+ 	if (!ops->hierarchies)
+ 		return;
+ 
+@@ -2010,6 +2038,13 @@ __cgfsng_ops static bool isulad_cgfsng_attach(struct cgroup_ops *ops,
+ 	if (!ops)
+ 		return ret_set_errno(false, ENOENT);
+ 
++#ifdef HAVE_ISULAD
++	if (ops->no_controller) {
++		DEBUG("no controller found, isgnore isulad_cgfsng_attach");
++		return true;
++	}
++#endif
++
+ 	if (!ops->hierarchies)
+ 		return true;
+ 
+@@ -2781,6 +2816,13 @@ __cgfsng_ops bool isulad_cgfsng_payload_delegate_controllers(struct cgroup_ops *
+ 	if (!ops)
+ 		return ret_set_errno(false, ENOENT);
+ 
++#ifdef HAVE_ISULAD
++	if (ops->no_controller) {
++		DEBUG("no controller found, isgnore isulad_cgfsng_payload_delegate_controllers");
++		return true;
++	}
++#endif
++
+ 	return __cgfsng_delegate_controllers(ops, ops->container_cgroup);
+ }
+ 
+@@ -3041,8 +3083,12 @@ static int cg_unified_init(struct cgroup_ops *ops, bool relative,
+ 	delegatable = cg_unified_get_controllers(subtree_path);
+ 	if (!delegatable)
+ 		delegatable = cg_unified_make_empty_controller();
+-	if (!delegatable[0])
++	if (!delegatable[0]) {
+ 		TRACE("No controllers are enabled for delegation");
++#ifdef HAVE_ISULAD
++		ops->no_controller = true;
++#endif
++	}
+ 
+ 	/* TODO: If the user requested specific controllers via lxc.cgroup.use
+ 	 * we should verify here. The reason I'm not doing it right is that I'm
+-- 
+2.25.1
+
