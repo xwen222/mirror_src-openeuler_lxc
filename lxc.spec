@@ -1,4 +1,4 @@
-%global _release 2022052101
+%global _release 2022052301
 
 Name:           lxc
 Version:        4.0.3
@@ -50,6 +50,7 @@ Patch0039:	0039-fix-bug-of-memory-free.patch
 Patch0040:	0040-refactor-the-way-to-convert-selinux-label-to-shared.path
 Patch0041:	0041-do-not-free-the-pointer-returned-by-dirname.patch
 Patch0042:	0042-add-x-permission-when-create-directory.patch
+Patch0043:	0043-do-not-operate-playload-and-attach-cgroup-if-no-cont.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -221,6 +222,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon May 23 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022052301
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: do not operate playload and attach cgroup if no controller found
+
 * Sat May 21 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022052101
 - Type:bugfix
 - ID:NA
