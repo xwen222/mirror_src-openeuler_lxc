@@ -336,19 +336,19 @@ make check
 - SUG:NA
 - DESC:adjust log level
 
-* Thu Mar 13 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021051301
+* Sat Mar 13 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021051301
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:adjust log level
 
-* Sat Mar 08 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021050802
+* Mon Mar 08 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021050802
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:support long syslog tag
 
-* Sat Mar 08 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021050801
+* Mon Mar 08 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021050801
 - Type:bugfix
 - ID:NA
 - SUG:NA
