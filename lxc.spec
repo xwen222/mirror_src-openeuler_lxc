@@ -1,4 +1,4 @@
-%global _release 2022052501
+%global _release 2022071501
 
 Name:           lxc
 Version:        4.0.3
@@ -8,49 +8,7 @@ License:        LGPLv2+ and GPLv2 and GPLv3
 URL:            https://github.com/lxc/lxc
 Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
 
-Patch0001:	0001-huawei-adapt-to-huawei-4.0.3.patch
-Patch0002:	0002-add-mount-label-for-rootfs.patch
-Patch0003:	0003-format-code-and-verify-mount-mode.patch
-Patch0004:	0004-Removes-the-definition-of-the-thread-attributes-obje.patch
-Patch0005:	0005-solve-coredump-bug-caused-by-fstype-being-NULL-durin.patch
-Patch0006:	0006-SIGTERM-do-not-catch-signal-SIGTERM-in-lxc-monitor.patch
-Patch0007:	0007-Using-string-type-instead-of-security_context_t-beca.patch
-Patch0008:	0008-hook-pass-correct-mount-dir-as-root-to-hook.patch
-Patch0009:	0009-cgroup-refact-cgroup-manager-to-single-file.patch
-Patch0010:	0010-cgfsng-adjust-log-level-from-error-to-warn.patch
-Patch0011:	0011-rootfs-add-make-private-for-root.path-parent.patch
-Patch0012:	0012-mount-make-possible-to-bind-mount-proc-and-sys-fs.patch
-Patch0013:	0013-use-path-based-unix-domain-sockets-instead-of-abstra.patch
-Patch0014:	0014-api-add-get-container-metrics-api.patch
-Patch0015:	0015-Streaming-IO-solution-optimization-and-enhancement.patch
-Patch0016:	0016-avoid-using-void-pointers-in-caclulation.patch
-Patch0017:	0017-fix-compilation-errors-without-libcap.patch
-Patch0018:	0018-IO-fix-io-data-miss-when-exec-with-pipes.patch
-Patch0019:	0019-metrics-add-total_inactive_file-metric-for-memory.patch
-Patch0020:	0020-support-cgroup-v2.patch
-Patch0021:	0021-support-isula-exec-workdir.patch
-Patch0022:	0022-print-error-message-if-process-workdir-failed.patch
-Patch0023:	0023-log-support-long-syslog-tag.patch
-Patch0024:	0024-log-adjust-log-level-from-error-to-warn.patch
-Patch0025:	0025-get-cgroup-data-len-first-and-malloc-read-buff-by-le.patch
-Patch0026:	0026-coredump-fix-coredump-when-cgroup-get-return-error.patch
-Patch0027:	0027-add-help-for-new-arguments.patch
-Patch0028:	0028-seccomp-init-and-destroy-notifier.cookie.patch
-Patch0029:	0029-just-use-origin-loop-if-do-not-have-io.patch
-Patch0030:	0030-conf-fix-a-memory-leak.patch
-Patch0031:	0031-fix-lsm_se_mount_context-memory-leak.patch
-Patch0032:	0032-disable-lxc_keep-with-oci-image.patch
-Patch0033:	0033-conf-ensure-that-the-idmap-pointer-itself-is-freed.patch
-Patch0034:	0034-cgfsng-fix-cgroup-attach-cgroup-creation.patch
-Patch0035:	0035-adapt-upstream-compiler-settings.patch
-Patch0036:	0036-compile-in-android-env.patch
-Patch0037:	0037-fix-always-print-and-temp-len.patch
-Patch0038:	0038-just-print-error-when-new-lock-failed.patch
-Patch0039:	0039-fix-bug-of-memory-free.patch
-Patch0040:	0040-refactor-the-way-to-convert-selinux-label-to-shared.path
-Patch0041:	0041-do-not-free-the-pointer-returned-by-dirname.patch
-Patch0042:	0042-add-x-permission-when-create-directory.patch
-Patch0043:	0043-do-not-operate-playload-and-attach-cgroup-if-no-cont.patch
+Patch0001:	0001-refactor-patch-code-of-utils-commands-and-so-on.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -222,6 +180,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Jul 15 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022071501
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of utils commands and so on
+
 * Wed May 25 2022 hejunjie<hejunjie10@huawei.com> - 4.0.3-2022052501
 - Type:bugfix
 - ID:NA
