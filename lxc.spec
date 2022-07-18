@@ -1,4 +1,4 @@
-%global _release 2022071501
+%global _release 2022071801
 
 Name:           lxc
 Version:        4.0.3
@@ -9,6 +9,7 @@ URL:            https://github.com/lxc/lxc
 Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
 
 Patch0001:	0001-refactor-patch-code-of-utils-commands-and-so-on.patch
+Patch0002:	0002-refactor-patch-code-of-isulad-for-conf-exec-attach.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -180,6 +181,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon Jul 18 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022071801
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of isulad for conf/exec/attach and so on
+
 * Fri Jul 15 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022071501
 - Type:bugfix
 - ID:NA
