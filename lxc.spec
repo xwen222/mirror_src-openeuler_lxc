@@ -1,4 +1,4 @@
-%global _release 2022071801
+%global _release 2022071901
 
 Name:           lxc
 Version:        4.0.3
@@ -10,6 +10,7 @@ Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
 
 Patch0001:	0001-refactor-patch-code-of-utils-commands-and-so-on.patch
 Patch0002:	0002-refactor-patch-code-of-isulad-for-conf-exec-attach.patch
+Patch0003:	0003-refactor-patch-code-of-isulad-for-selinux-attach.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -181,6 +182,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Jul 19 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022071901
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of isulad for selinux/attach
+
 * Mon Jul 18 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022071801
 - Type:bugfix
 - ID:NA
