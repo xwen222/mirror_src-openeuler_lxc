@@ -7,8 +7,8 @@ Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---
  src/lxc/exec_commands.c    | 471 +++++++++++++++++++++++++++++++++++++
  src/lxc/lsm/selinux.c      | 258 ++++++++++++++++++++
- src/lxc/tools/lxc_attach.c | 415 +++++++++++++++++++++++++++++++-
- 3 files changed, 1143 insertions(+), 1 deletion(-)
+ src/lxc/tools/lxc_attach.c | 413 +++++++++++++++++++++++++++++++-
+ 3 files changed, 1141 insertions(+), 1 deletion(-)
  create mode 100644 src/lxc/exec_commands.c
 
 diff --git a/src/lxc/exec_commands.c b/src/lxc/exec_commands.c
@@ -772,7 +772,7 @@ index dba0ab5..bd4f449 100644
  
  struct lsm_drv *lsm_selinux_drv_init(void)
 diff --git a/src/lxc/tools/lxc_attach.c b/src/lxc/tools/lxc_attach.c
-index a8f493a..58e19aa 100644
+index a8f493a..1a5a241 100644
 --- a/src/lxc/tools/lxc_attach.c
 +++ b/src/lxc/tools/lxc_attach.c
 @@ -72,8 +72,20 @@ static const struct option my_longopts[] = {
@@ -947,7 +947,7 @@ index a8f493a..58e19aa 100644
  	}
  
  	return 0;
-@@ -264,6 +395,287 @@ static int lxc_attach_create_log_file(const char *log_file)
+@@ -264,6 +395,285 @@ static int lxc_attach_create_log_file(const char *log_file)
  	return fd;
  }
  
@@ -1207,11 +1207,9 @@ index a8f493a..58e19aa 100644
 +		attach_options.open_stdin = true;
 +	}
 +
-+#ifdef HAVE_ISULAD
 +	if (my_args.workdir) {
 +		attach_options.initial_cwd = my_args.workdir;
 +	}
-+#endif
 +
 +	/* isulad: add do attach background */
 +	if (attach_options.attach_flags & LXC_ATTACH_TERMINAL)
@@ -1235,7 +1233,7 @@ index a8f493a..58e19aa 100644
  int main(int argc, char *argv[])
  {
  	int ret = -1;
-@@ -377,3 +789,4 @@ out:
+@@ -377,3 +787,4 @@ out:
  
  	exit(EXIT_FAILURE);
  }

@@ -6,19 +6,20 @@ Subject: [PATCH] refactor patch code of utils commands and so on
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
  src/lxc/cgroups/isulad_cgroup2_devices.c | 575 +++++++++++++++++++++++
- src/lxc/commands.c                       | 180 +++++++
+ src/lxc/commands.c                       | 185 +++++++-
  src/lxc/commands.h                       |  10 +
  src/lxc/conf.h                           |  95 ++++
- src/lxc/isulad_utils.c                   | 317 +++++++++++++
+ src/lxc/isulad_utils.c                   | 319 +++++++++++++
  src/lxc/isulad_utils.h                   |  98 ++++
  src/lxc/lsm/lsm.c                        |  20 +
  src/lxc/lxc.h                            |  19 +
  src/lxc/lxccontainer.h                   | 194 ++++++++
+ src/lxc/network.c                        |   8 +
  src/lxc/tools/lxc_ls.c                   |   8 +
  src/lxc/tools/lxc_start.c                | 109 ++++-
- src/lxc/utils.c                          | 174 +++++++
+ src/lxc/utils.c                          | 173 +++++++
  src/lxc/utils.h                          |  11 +
- 13 files changed, 1809 insertions(+), 1 deletion(-)
+ 14 files changed, 1821 insertions(+), 3 deletions(-)
  create mode 100644 src/lxc/cgroups/isulad_cgroup2_devices.c
  create mode 100644 src/lxc/isulad_utils.c
  create mode 100644 src/lxc/isulad_utils.h
@@ -605,7 +606,7 @@ index 0000000..05613c5
 +}
 +#endif
 diff --git a/src/lxc/commands.c b/src/lxc/commands.c
-index b6ae101..ae50cc6 100644
+index b6ae101..c2a5665 100644
 --- a/src/lxc/commands.c
 +++ b/src/lxc/commands.c
 @@ -86,6 +86,10 @@ static const char *lxc_cmd_str(lxc_cmd_t cmd)
@@ -635,7 +636,19 @@ index b6ae101..ae50cc6 100644
  	if (ret < 0)
  		return log_warn_errno(-1,
  				      errno, "Failed to receive response for command \"%s\"",
-@@ -1260,7 +1272,11 @@ int lxc_cmd_serve_state_clients(const char *name, const char *lxcpath,
+@@ -592,8 +604,9 @@ static int lxc_cmd_get_cgroup_callback_do(int fd, struct lxc_cmd_req *req,
+ 		reqdata = NULL;
+ 	}
+ 
+-	get_fn = (limiting_cgroup ? cgroup_ops->get_cgroup
+-				  : cgroup_ops->get_limiting_cgroup);
++	// bugfix in newer version
++	get_fn = (limiting_cgroup ? cgroup_ops->get_limiting_cgroup
++				  : cgroup_ops->get_cgroup);
+ 
+ 	path = get_fn(cgroup_ops, reqdata);
+ 
+@@ -1260,7 +1273,11 @@ int lxc_cmd_serve_state_clients(const char *name, const char *lxcpath,
  
  	ret = lxc_cmd(name, &cmd, &stopped, lxcpath, NULL);
  	if (ret < 0)
@@ -647,7 +660,7 @@ index b6ae101..ae50cc6 100644
  
  	return 0;
  }
-@@ -1475,6 +1491,123 @@ static int lxc_cmd_get_limiting_cgroup2_fd_callback(int fd,
+@@ -1475,6 +1492,123 @@ static int lxc_cmd_get_limiting_cgroup2_fd_callback(int fd,
  	return ret_errno(ENOSYS);
  }
  
@@ -771,7 +784,7 @@ index b6ae101..ae50cc6 100644
  static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
  			   struct lxc_handler *handler,
  			   struct lxc_epoll_descr *descr)
-@@ -1504,10 +1637,18 @@ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
+@@ -1504,10 +1638,18 @@ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
  		[LXC_CMD_GET_INIT_PIDFD]                = lxc_cmd_get_init_pidfd_callback,
  		[LXC_CMD_GET_LIMITING_CGROUP]           = lxc_cmd_get_limiting_cgroup_callback,
  		[LXC_CMD_GET_LIMITING_CGROUP2_FD]       = lxc_cmd_get_limiting_cgroup2_fd_callback,
@@ -790,7 +803,7 @@ index b6ae101..ae50cc6 100644
  
  	return cb[req->cmd](fd, req, handler, descr);
  }
-@@ -1646,6 +1787,44 @@ static int lxc_cmd_accept(int fd, uint32_t events, void *data,
+@@ -1646,6 +1788,44 @@ static int lxc_cmd_accept(int fd, uint32_t events, void *data,
  	return ret;
  }
  
@@ -835,7 +848,7 @@ index b6ae101..ae50cc6 100644
  int lxc_cmd_init(const char *name, const char *lxcpath, const char *suffix)
  {
  	__do_close int fd = -EBADF;
-@@ -1670,6 +1849,7 @@ int lxc_cmd_init(const char *name, const char *lxcpath, const char *suffix)
+@@ -1670,6 +1850,7 @@ int lxc_cmd_init(const char *name, const char *lxcpath, const char *suffix)
  
  	return log_trace(move_fd(fd), "Created abstract unix socket \"%s\"", &path[1]);
  }
@@ -1034,10 +1047,10 @@ index b72afba..0478eb1 100644
  #endif /* __LXC_CONF_H */
 diff --git a/src/lxc/isulad_utils.c b/src/lxc/isulad_utils.c
 new file mode 100644
-index 0000000..47d0ff5
+index 0000000..15d9323
 --- /dev/null
 +++ b/src/lxc/isulad_utils.c
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,319 @@
 +/* SPDX-License-Identifier: LGPL-2.1+ */
 +/******************************************************************************
 + * Copyright (c) Huawei Technologies Co., Ltd. 2020. Allrights reserved
@@ -1051,6 +1064,8 @@ index 0000000..47d0ff5
 +#include <sys/types.h>
 +#include <sys/stat.h>
 +#include <fcntl.h>
++#include <pwd.h>
++#include <ctype.h>
 +
 +#include "isulad_utils.h"
 +#include "log.h"
@@ -1772,6 +1787,28 @@ index b4ec1d6..3680ade 100644
  /*!
   * \brief Add a reference to the specified container.
   *
+diff --git a/src/lxc/network.c b/src/lxc/network.c
+index bca0440..56efa4b 100644
+--- a/src/lxc/network.c
++++ b/src/lxc/network.c
+@@ -3441,9 +3441,17 @@ static int lxc_network_setup_in_child_namespaces_common(struct lxc_netdev *netde
+ 
+ 	/* set the network device up */
+ 	if (netdev->flags & IFF_UP) {
++#ifdef HAVE_ISULAD
++		if (netdev->name[0] != '\0') {
++			err = lxc_netdev_up(netdev->name);
++			if (err)
++				return log_error_errno(-1, -err, "Failed to set network device \"%s\" up", netdev->name);
++		}
++#else
+ 		err = lxc_netdev_up(netdev->name);
+ 		if (err)
+ 			return log_error_errno(-1, -err, "Failed to set network device \"%s\" up", netdev->name);
++#endif
+ 
+ 		/* the network is up, make the loopback up too */
+ 		err = lxc_netdev_up("lo");
 diff --git a/src/lxc/tools/lxc_ls.c b/src/lxc/tools/lxc_ls.c
 index 0abcd7a..7c0b69c 100644
 --- a/src/lxc/tools/lxc_ls.c
@@ -1969,21 +2006,20 @@ index 459b867..3ef5961 100644
  	exit(err);
  }
 diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index 88d0f85..f038dc5 100644
+index 88d0f85..ab351d8 100644
 --- a/src/lxc/utils.c
 +++ b/src/lxc/utils.c
-@@ -27,6 +27,10 @@
+@@ -27,6 +27,9 @@
  #include <sys/types.h>
  #include <sys/wait.h>
  #include <unistd.h>
 +#ifdef HAVE_ISULAD
 +#include <sys/sysmacros.h>
-+#include <pwd.h>
 +#endif
  
  #include "config.h"
  #include "log.h"
-@@ -71,6 +75,9 @@ static int _recursive_rmdir(const char *dirname, dev_t pdev,
+@@ -71,6 +74,9 @@ static int _recursive_rmdir(const char *dirname, dev_t pdev,
  	int ret;
  	struct dirent *direntp;
  	char pathname[PATH_MAX];
@@ -1993,7 +2029,7 @@ index 88d0f85..f038dc5 100644
  
  	dir = opendir(dirname);
  	if (!dir)
-@@ -133,6 +140,11 @@ static int _recursive_rmdir(const char *dirname, dev_t pdev,
+@@ -133,6 +139,11 @@ static int _recursive_rmdir(const char *dirname, dev_t pdev,
  		} else {
  			ret = unlink(pathname);
  			if (ret < 0) {
@@ -2005,7 +2041,7 @@ index 88d0f85..f038dc5 100644
  				__do_close int fd = -EBADF;
  
  				fd = open(pathname, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
-@@ -158,10 +170,18 @@ static int _recursive_rmdir(const char *dirname, dev_t pdev,
+@@ -158,10 +169,18 @@ static int _recursive_rmdir(const char *dirname, dev_t pdev,
  	}
  
  	if (rmdir(dirname) < 0 && !btrfs_try_remove_subvol(dirname) && !hadexclude) {
@@ -2024,7 +2060,7 @@ index 88d0f85..f038dc5 100644
  	return failed ? -1 : 0;
  }
  
-@@ -1008,7 +1028,11 @@ static int open_if_safe(int dirfd, const char *nextpath)
+@@ -1008,7 +1027,11 @@ static int open_if_safe(int dirfd, const char *nextpath)
   *
   * Return an open fd for the path, or <0 on error.
   */
@@ -2036,7 +2072,7 @@ index 88d0f85..f038dc5 100644
  {
  	int curlen = 0, dirfd, fulllen, i;
  	char *dup;
-@@ -1079,6 +1103,65 @@ out:
+@@ -1079,6 +1102,65 @@ out:
  	return dirfd;
  }
  
@@ -2102,7 +2138,7 @@ index 88d0f85..f038dc5 100644
  /*
   * Safely mount a path into a container, ensuring that the mount target
   * is under the container's @rootfs.  (If @rootfs is NULL, then the container
-@@ -1087,14 +1170,22 @@ out:
+@@ -1087,14 +1169,22 @@ out:
   * CAVEAT: This function must not be used for other purposes than container
   * setup before executing the container's init
   */
@@ -2125,7 +2161,7 @@ index 88d0f85..f038dc5 100644
  
  	if (!rootfs)
  		rootfs = "";
-@@ -1137,8 +1228,23 @@ int safe_mount(const char *src, const char *dest, const char *fstype,
+@@ -1137,8 +1227,23 @@ int safe_mount(const char *src, const char *dest, const char *fstype,
  		return -EINVAL;
  	}
  
@@ -2149,7 +2185,7 @@ index 88d0f85..f038dc5 100644
  	if (srcfd != -1)
  		close(srcfd);
  
-@@ -1149,6 +1255,19 @@ int safe_mount(const char *src, const char *dest, const char *fstype,
+@@ -1149,6 +1254,19 @@ int safe_mount(const char *src, const char *dest, const char *fstype,
  		return ret;
  	}
  
@@ -2169,7 +2205,7 @@ index 88d0f85..f038dc5 100644
  	return 0;
  }
  
-@@ -1215,7 +1334,11 @@ domount:
+@@ -1215,7 +1333,11 @@ domount:
  	if (!strcmp(rootfs, ""))
  		ret = mount("proc", path, "proc", 0, NULL);
  	else
@@ -2181,7 +2217,7 @@ index 88d0f85..f038dc5 100644
  	if (ret < 0)
  		return -1;
  
-@@ -1425,6 +1548,11 @@ static int lxc_get_unused_loop_dev(char *name_loop)
+@@ -1425,6 +1547,11 @@ static int lxc_get_unused_loop_dev(char *name_loop)
  {
  	int loop_nr, ret;
  	int fd_ctl = -1, fd_tmp = -1;
@@ -2193,7 +2229,7 @@ index 88d0f85..f038dc5 100644
  
  	fd_ctl = open("/dev/loop-control", O_RDWR | O_CLOEXEC);
  	if (fd_ctl < 0) {
-@@ -1442,8 +1570,37 @@ static int lxc_get_unused_loop_dev(char *name_loop)
+@@ -1442,8 +1569,37 @@ static int lxc_get_unused_loop_dev(char *name_loop)
  	if (ret < 0 || ret >= LO_NAME_SIZE)
  		goto on_error;
  
@@ -2231,7 +2267,7 @@ index 88d0f85..f038dc5 100644
  		/* on Android loop devices are moved under /dev/block, give it a shot */
  		ret = snprintf(name_loop, LO_NAME_SIZE, "/dev/block/loop%d", loop_nr);
                  if (ret < 0 || ret >= LO_NAME_SIZE)
-@@ -1452,6 +1609,7 @@ static int lxc_get_unused_loop_dev(char *name_loop)
+@@ -1452,6 +1608,7 @@ static int lxc_get_unused_loop_dev(char *name_loop)
  		fd_tmp = open(name_loop, O_RDWR | O_CLOEXEC);
  		if (fd_tmp < 0)
  			SYSERROR("Failed to open loop \"%s\"", name_loop);
@@ -2239,7 +2275,7 @@ index 88d0f85..f038dc5 100644
  	}
  
  on_error:
-@@ -1661,6 +1819,7 @@ uint64_t lxc_find_next_power2(uint64_t n)
+@@ -1661,6 +1818,7 @@ uint64_t lxc_find_next_power2(uint64_t n)
  	return n;
  }
  
@@ -2247,7 +2283,7 @@ index 88d0f85..f038dc5 100644
  static int process_dead(/* takes */ int status_fd)
  {
  	__do_close int dupfd = -EBADF;
-@@ -1698,15 +1857,19 @@ static int process_dead(/* takes */ int status_fd)
+@@ -1698,15 +1856,19 @@ static int process_dead(/* takes */ int status_fd)
  
  	return ret;
  }
@@ -2267,7 +2303,7 @@ index 88d0f85..f038dc5 100644
  	/* verify that we haven't been orphaned in the meantime */
  	ppid = (pid_t)syscall(SYS_getppid);
  	if (ppid == 0) { /* parent outside our pidns */
-@@ -1718,6 +1881,7 @@ int lxc_set_death_signal(int signal, pid_t parent, int parent_status_fd)
+@@ -1718,6 +1880,7 @@ int lxc_set_death_signal(int signal, pid_t parent, int parent_status_fd)
  	} else if (ppid != parent) {
  		return raise(SIGKILL);
  	}
@@ -2275,7 +2311,7 @@ index 88d0f85..f038dc5 100644
  
  	if (ret < 0)
  		return -1;
-@@ -1755,8 +1919,18 @@ int lxc_rm_rf(const char *dirname)
+@@ -1755,8 +1918,18 @@ int lxc_rm_rf(const char *dirname)
  	struct dirent *direntp;
  
  	dir = opendir(dirname);
