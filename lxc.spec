@@ -1,4 +1,4 @@
-%global _release 2022071904
+%global _release 2022072101
 
 Name:           lxc
 Version:        4.0.3
@@ -14,6 +14,7 @@ Patch0003:	0003-refactor-patch-code-of-isulad-for-selinux-attach.patch
 Patch0004:	0004-refactor-patch-code-of-lxccontianer-and-so-on.patch
 Patch0005:	0005-refactor-patch-code-of-attach-and-seccomp.patch
 Patch0006:	0006-refactor-patch-about-namespace-log-terminal.patch
+Patch0007:	0007-refactor-patches-on-terminal.c-start.c-and-so-on.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -185,13 +186,19 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
-* Thu Jul 19 2022 wangrunze<wangrunze13@huawei.com> - 4.0.3-202207194
+* Thu Jul 21 2022 chengzeruizhi<chengzeruizhi@huawei.com> - 4.0.3-2022072101
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patches on terminal.c, start.c and others
+
+* Tue Jul 19 2022 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022071904
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC: refactor namespace terminal log 
 
-* Thu Jul 19 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022071903
+* Tue Jul 19 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022071903
 - Type:bugfix
 - ID:NA
 - SUG:NA
