@@ -1,4 +1,4 @@
-%global _release 2022072102
+%global _release 2022072103
 
 Name:           lxc
 Version:        4.0.3
@@ -187,6 +187,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Jul 21 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072102
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix compile error
+
 * Thu Jul 21 2022 chengzeruizhi<chengzeruizhi@huawei.com> - 4.0.3-2022072101
 - Type:bugfix
 - ID:NA

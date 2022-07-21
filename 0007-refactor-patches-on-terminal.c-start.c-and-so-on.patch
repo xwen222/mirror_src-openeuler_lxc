@@ -13,14 +13,14 @@ Signed-off-by: chengzrz <czrzrichard@gmail.com>
  src/lxc/lsm/lsm.h         |   8 +
  src/lxc/lxclock.h         |   4 +
  src/lxc/mainloop.h        |   4 +
- src/lxc/start.c           | 952 ++++++++++++++++++++++++++++++++++++
+ src/lxc/start.c           | 958 ++++++++++++++++++++++++++++++++++++
  src/lxc/storage/btrfs.c   |  11 +
  src/lxc/storage/overlay.c |   8 +
  src/lxc/sync.h            |   4 +
  src/lxc/terminal.c        | 990 ++++++++++++++++++++++++++++++++++++++
  src/tests/Makefile.am     |   4 +
  src/tests/attach.c        |  11 +
- 15 files changed, 2019 insertions(+)
+ 15 files changed, 2025 insertions(+)
 
 diff --git a/hooks/Makefile.am b/hooks/Makefile.am
 index 5ae73d7..ddfd4bc 100644
@@ -166,7 +166,7 @@ index e6ab9a6..aa41a93 100644
 +
  #endif
 diff --git a/src/lxc/start.c b/src/lxc/start.c
-index fd969c4..d83330e 100644
+index fd969c4..f82df34 100644
 --- a/src/lxc/start.c
 +++ b/src/lxc/start.c
 @@ -304,7 +304,11 @@ static int setup_signal_fd(sigset_t *oldmask)
@@ -209,7 +209,17 @@ index fd969c4..d83330e 100644
  
  out_mainloop_console:
  	if (has_console) {
-@@ -671,6 +689,12 @@ struct lxc_handler *lxc_init_handler(struct lxc_handler *old,
+@@ -637,7 +655,9 @@ struct lxc_handler *lxc_init_handler(struct lxc_handler *old,
+ 				     const char *name, struct lxc_conf *conf,
+ 				     const char *lxcpath, bool daemonize)
+ {
++#ifndef HAVE_ISULAD
+ 	int nr_keep_fds = 0;
++#endif
+ 	int ret;
+ 	struct lxc_handler *handler;
+ 
+@@ -671,6 +691,12 @@ struct lxc_handler *lxc_init_handler(struct lxc_handler *old,
  		handler->nsfd[i] = -EBADF;
  
  	handler->name = name;
@@ -222,7 +232,28 @@ index fd969c4..d83330e 100644
  	if (daemonize)
  		handler->transient_pid = lxc_raw_getpid();
  	else
-@@ -721,6 +745,10 @@ int lxc_init(const char *name, struct lxc_handler *handler)
+@@ -691,8 +717,10 @@ struct lxc_handler *lxc_init_handler(struct lxc_handler *old,
+ 		TRACE("Created anonymous pair {%d,%d} of unix sockets",
+ 		      handler->state_socket_pair[0],
+ 		      handler->state_socket_pair[1]);
++#ifndef HAVE_ISULAD
+ 		handler->keep_fds[nr_keep_fds++] = handler->state_socket_pair[0];
+ 		handler->keep_fds[nr_keep_fds++] = handler->state_socket_pair[1];
++#endif
+ 	}
+ 
+ 	if (handler->conf->reboot == REBOOT_NONE) {
+@@ -701,7 +729,9 @@ struct lxc_handler *lxc_init_handler(struct lxc_handler *old,
+ 			ERROR("Failed to set up command socket");
+ 			goto on_error;
+ 		}
++#ifndef HAVE_ISULAD
+ 		handler->keep_fds[nr_keep_fds++] = handler->conf->maincmd_fd;
++#endif
+ 	}
+ 
+ 	TRACE("Unix domain socket %d for command server is ready",
+@@ -721,6 +751,10 @@ int lxc_init(const char *name, struct lxc_handler *handler)
  	int ret;
  	const char *loglevel;
  	struct lxc_conf *conf = handler->conf;
@@ -233,7 +264,7 @@ index fd969c4..d83330e 100644
  
  	handler->monitor_pid = lxc_raw_getpid();
  	status_fd = open("/proc/self/status", O_RDONLY | O_CLOEXEC);
-@@ -810,6 +838,9 @@ int lxc_init(const char *name, struct lxc_handler *handler)
+@@ -810,6 +844,9 @@ int lxc_init(const char *name, struct lxc_handler *handler)
  	ret = lxc_terminal_setup(conf);
  	if (ret < 0) {
  		ERROR("Failed to create console");
@@ -243,7 +274,7 @@ index fd969c4..d83330e 100644
  		goto out_restore_sigmask;
  	}
  	TRACE("Created console");
-@@ -853,6 +884,185 @@ out_restore_sigmask:
+@@ -853,6 +890,185 @@ out_restore_sigmask:
  	return -1;
  }
  
@@ -429,7 +460,7 @@ index fd969c4..d83330e 100644
  void lxc_end(struct lxc_handler *handler)
  {
  	int ret;
-@@ -926,6 +1136,33 @@ void lxc_end(struct lxc_handler *handler)
+@@ -926,6 +1142,33 @@ void lxc_end(struct lxc_handler *handler)
  
  	lsm_process_cleanup(handler->conf, handler->lxcpath);
  
@@ -463,7 +494,7 @@ index fd969c4..d83330e 100644
  	if (cgroup_ops) {
  		cgroup_ops->payload_destroy(cgroup_ops, handler);
  		cgroup_ops->monitor_destroy(cgroup_ops, handler);
-@@ -940,12 +1177,25 @@ void lxc_end(struct lxc_handler *handler)
+@@ -940,12 +1183,25 @@ void lxc_end(struct lxc_handler *handler)
  		 */
  		close_prot_errno_disarm(handler->conf->maincmd_fd);
  		TRACE("Closed command socket");
@@ -489,7 +520,7 @@ index fd969c4..d83330e 100644
  		/* The command socket is closed so no one can acces the command
  		 * socket anymore so there's no need to lock it.
  		 */
-@@ -1042,6 +1292,25 @@ static int do_start(void *data)
+@@ -1042,6 +1298,25 @@ static int do_start(void *data)
  
  	lxc_sync_fini_parent(handler);
  
@@ -515,7 +546,7 @@ index fd969c4..d83330e 100644
  	if (lxc_abstract_unix_recv_fds(data_sock1, &status_fd, 1, NULL, 0) < 0) {
  		ERROR("Failed to receive status file descriptor to child process");
  		goto out_warn_father;
-@@ -1155,7 +1424,11 @@ static int do_start(void *data)
+@@ -1155,7 +1430,11 @@ static int do_start(void *data)
  	 * means that migration won't work, but at least we won't spew output
  	 * where it isn't wanted.
  	 */
@@ -527,7 +558,7 @@ index fd969c4..d83330e 100644
  		char path[PATH_MAX];
  
  		ret = snprintf(path, sizeof(path), "%s/dev/null",
-@@ -1221,6 +1494,9 @@ static int do_start(void *data)
+@@ -1221,6 +1500,9 @@ static int do_start(void *data)
  	/* Setup the container, ip, names, utsname, ... */
  	ret = lxc_setup(handler);
  	if (ret < 0) {
@@ -537,7 +568,7 @@ index fd969c4..d83330e 100644
  		ERROR("Failed to setup container \"%s\"", handler->name);
  		goto out_warn_father;
  	}
-@@ -1243,12 +1519,70 @@ static int do_start(void *data)
+@@ -1243,12 +1525,70 @@ static int do_start(void *data)
  		DEBUG("Set PR_SET_NO_NEW_PRIVS to block execve() gainable privileges");
  	}
  
@@ -608,7 +639,7 @@ index fd969c4..d83330e 100644
  	 if (handler->conf->console.pts >= 0) {
  		 if (handler->daemonize || !handler->conf->is_execute)
  			 ret = set_stdfds(handler->conf->console.pts);
-@@ -1260,6 +1594,7 @@ static int do_start(void *data)
+@@ -1260,6 +1600,7 @@ static int do_start(void *data)
  			goto out_warn_father;
  		 }
  	 }
@@ -616,7 +647,7 @@ index fd969c4..d83330e 100644
  
  	/* If we mounted a temporary proc, then unmount it now. */
  	tmp_proc_unmount(handler->conf);
-@@ -1283,6 +1618,21 @@ static int do_start(void *data)
+@@ -1283,6 +1624,21 @@ static int do_start(void *data)
  
  	close_prot_errno_disarm(handler->sigfd);
  
@@ -638,7 +669,7 @@ index fd969c4..d83330e 100644
  	if (handler->conf->console.pts < 0 && handler->daemonize) {
  		if (devnull_fd < 0) {
  			devnull_fd = open_devnull();
-@@ -1296,12 +1646,25 @@ static int do_start(void *data)
+@@ -1296,12 +1652,25 @@ static int do_start(void *data)
  			goto out_warn_father;
  		}
  	}
@@ -664,7 +695,7 @@ index fd969c4..d83330e 100644
  		ret = chdir(handler->conf->init_cwd);
  		if (ret < 0) {
  			SYSERROR("Could not change directory to \"%s\"",
-@@ -1345,6 +1708,13 @@ static int do_start(void *data)
+@@ -1345,6 +1714,13 @@ static int do_start(void *data)
  		}
  	}
  
@@ -678,7 +709,7 @@ index fd969c4..d83330e 100644
  	/* The container has been setup. We can now switch to an unprivileged
  	 * uid/gid.
  	 */
-@@ -1358,6 +1728,13 @@ static int do_start(void *data)
+@@ -1358,6 +1734,13 @@ static int do_start(void *data)
  	if (new_gid == nsgid)
  		new_gid = LXC_INVALID_GID;
  
@@ -692,7 +723,7 @@ index fd969c4..d83330e 100644
  	/* Make sure that the processes STDIO is correctly owned by the user that we are switching to */
  	ret = fix_stdio_permissions(new_uid);
  	if (ret)
-@@ -1371,8 +1748,16 @@ static int do_start(void *data)
+@@ -1371,8 +1754,16 @@ static int do_start(void *data)
  		#if HAVE_LIBCAP
  		if (lxc_proc_cap_is_set(CAP_SETGID, CAP_EFFECTIVE))
  		#endif
@@ -709,7 +740,7 @@ index fd969c4..d83330e 100644
  
  	if (!lxc_switch_uid_gid(new_uid, new_gid))
  		goto out_warn_father;
-@@ -1383,6 +1768,19 @@ static int do_start(void *data)
+@@ -1383,6 +1774,19 @@ static int do_start(void *data)
  		goto out_warn_father;
  	}
  
@@ -729,7 +760,7 @@ index fd969c4..d83330e 100644
  	if (handler->conf->monitor_signal_pdeath != SIGKILL) {
  		ret = lxc_set_death_signal(handler->conf->monitor_signal_pdeath,
  					   handler->monitor_pid, status_fd);
-@@ -1397,7 +1795,12 @@ static int do_start(void *data)
+@@ -1397,7 +1801,12 @@ static int do_start(void *data)
  	 * After this call, we are in error because this ops should not return
  	 * as it execs.
  	 */
@@ -742,7 +773,7 @@ index fd969c4..d83330e 100644
  
  out_warn_father:
  	/*
-@@ -1529,6 +1932,94 @@ static inline int do_share_ns(void *arg)
+@@ -1529,6 +1938,94 @@ static inline int do_share_ns(void *arg)
  	return 0;
  }
  
@@ -837,7 +868,7 @@ index fd969c4..d83330e 100644
  /* lxc_spawn() performs crucial setup tasks and clone()s the new process which
   * exec()s the requested container binary.
   * Note that lxc_spawn() runs in the parent namespaces. Any operations performed
-@@ -1595,7 +2086,11 @@ static int lxc_spawn(struct lxc_handler *handler)
+@@ -1595,7 +2092,11 @@ static int lxc_spawn(struct lxc_handler *handler)
  	 * it readonly.
  	 * If the container is unprivileged then skip rootfs pinning.
  	 */
@@ -849,7 +880,7 @@ index fd969c4..d83330e 100644
  		handler->pinfd = pin_rootfs(conf->rootfs.path);
  		if (handler->pinfd == -EBADF)
  			INFO("Failed to pin the rootfs for container \"%s\"", handler->name);
-@@ -1640,6 +2135,32 @@ static int lxc_spawn(struct lxc_handler *handler)
+@@ -1640,6 +2141,32 @@ static int lxc_spawn(struct lxc_handler *handler)
  	}
  	TRACE("Cloned child process %d", handler->pid);
  
@@ -882,7 +913,7 @@ index fd969c4..d83330e 100644
  	/* Verify that we can actually make use of pidfds. */
  	if (!lxc_can_use_pidfd(handler->pidfd))
  		close_prot_errno_disarm(handler->pidfd);
-@@ -1652,6 +2173,13 @@ static int lxc_spawn(struct lxc_handler *handler)
+@@ -1652,6 +2179,13 @@ static int lxc_spawn(struct lxc_handler *handler)
  	if (ret < 0)
  		SYSERROR("Failed to set environment variable: LXC_PID=%s", pidstr);
  
@@ -896,7 +927,7 @@ index fd969c4..d83330e 100644
  	for (i = 0; i < LXC_NS_MAX; i++)
  		if (handler->ns_on_clone_flags & ns_info[i].clone_flag)
  			INFO("Cloned %s", ns_info[i].flag_name);
-@@ -1765,7 +2293,11 @@ static int lxc_spawn(struct lxc_handler *handler)
+@@ -1765,7 +2299,11 @@ static int lxc_spawn(struct lxc_handler *handler)
  		goto out_delete_net;
  
  	if (!lxc_list_empty(&conf->limits)) {
@@ -908,7 +939,7 @@ index fd969c4..d83330e 100644
  		if (ret < 0) {
  			ERROR("Failed to setup resource limits");
  			goto out_delete_net;
-@@ -1816,6 +2348,26 @@ static int lxc_spawn(struct lxc_handler *handler)
+@@ -1816,6 +2354,26 @@ static int lxc_spawn(struct lxc_handler *handler)
  		ERROR("Failed to run lxc.hook.start-host");
  		goto out_delete_net;
  	}
@@ -935,7 +966,7 @@ index fd969c4..d83330e 100644
  
  	/* Tell the child to complete its initialization and wait for it to exec
  	 * or return an error. (The child will never return
-@@ -1859,6 +2411,22 @@ static int lxc_spawn(struct lxc_handler *handler)
+@@ -1859,6 +2417,22 @@ static int lxc_spawn(struct lxc_handler *handler)
  	if (ret < 0)
  		goto out_abort;
  
@@ -958,7 +989,7 @@ index fd969c4..d83330e 100644
  	ret = lxc_set_state(name, handler, RUNNING);
  	if (ret < 0) {
  		ERROR("Failed to set state to \"%s\"", lxc_state2str(RUNNING));
-@@ -1883,9 +2451,83 @@ out_sync_fini:
+@@ -1883,9 +2457,83 @@ out_sync_fini:
  	return -1;
  }
  
@@ -1042,7 +1073,7 @@ index fd969c4..d83330e 100644
  	int ret, status;
  	const char *name = handler->name;
  	struct lxc_conf *conf = handler->conf;
-@@ -1901,6 +2543,16 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
+@@ -1901,6 +2549,16 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
  	handler->daemonize = daemonize;
  	cgroup_ops = handler->cgroup_ops;
  
@@ -1059,7 +1090,7 @@ index fd969c4..d83330e 100644
  	if (!attach_block_device(handler->conf)) {
  		ERROR("Failed to attach block device");
  		ret = -1;
-@@ -1959,11 +2611,13 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
+@@ -1959,11 +2617,13 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
  		goto out_delete_network;
  	}
  
@@ -1073,7 +1104,7 @@ index fd969c4..d83330e 100644
  
  	status = lxc_wait_for_pid_status(handler->pid);
  	if (status < 0)
-@@ -1973,6 +2627,21 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
+@@ -1973,6 +2633,21 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
  	 * reboot. This should mean it was an lxc-execute which simply exited.
  	 * In any case, treat it as a 'halt'.
  	 */
@@ -1095,7 +1126,7 @@ index fd969c4..d83330e 100644
  	if (WIFSIGNALED(status)) {
  		switch(WTERMSIG(status)) {
  		case SIGINT: /* halt */
-@@ -1990,6 +2659,7 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
+@@ -1990,6 +2665,7 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
  			break;
  		}
  	}
@@ -1103,7 +1134,7 @@ index fd969c4..d83330e 100644
  
  	ret = lxc_restore_phys_nics_to_netns(handler);
  	if (ret < 0)
-@@ -1997,11 +2667,20 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
+@@ -1997,11 +2673,20 @@ int __lxc_start(struct lxc_handler *handler, struct lxc_operations *ops,
  
  	close_prot_errno_disarm(handler->pinfd);
  
@@ -1124,7 +1155,7 @@ index fd969c4..d83330e 100644
  /* These are not the droids you are looking for. */
  __private_goto1:
  	lxc_delete_network(handler);
-@@ -2032,7 +2711,11 @@ struct start_args {
+@@ -2032,7 +2717,11 @@ struct start_args {
  	char *const *argv;
  };
  
@@ -1136,7 +1167,7 @@ index fd969c4..d83330e 100644
  {
  	struct start_args *arg = data;
  
-@@ -2040,6 +2723,9 @@ static int start(struct lxc_handler *handler, void* data)
+@@ -2040,6 +2729,9 @@ static int start(struct lxc_handler *handler, void* data)
  
  	execvp(arg->argv[0], arg->argv);
  	SYSERROR("Failed to exec \"%s\"", arg->argv[0]);
@@ -1146,7 +1177,7 @@ index fd969c4..d83330e 100644
  	return 0;
  }
  
-@@ -2057,14 +2743,22 @@ static struct lxc_operations start_ops = {
+@@ -2057,14 +2749,22 @@ static struct lxc_operations start_ops = {
  };
  
  int lxc_start(char *const argv[], struct lxc_handler *handler,
@@ -1169,7 +1200,7 @@ index fd969c4..d83330e 100644
  }
  
  static void lxc_destroy_container_on_signal(struct lxc_handler *handler,
-@@ -2136,3 +2830,261 @@ static bool do_destroy_container(struct lxc_handler *handler)
+@@ -2136,3 +2836,261 @@ static bool do_destroy_container(struct lxc_handler *handler)
  
  	return storage_destroy(handler->conf);
  }
@@ -1304,7 +1335,7 @@ index fd969c4..d83330e 100644
 +	return handler;
 +
 +on_error:
-+	lxc_free_handler(handler);
++	lxc_put_handler(handler);
 +
 +	return NULL;
 +}
@@ -1355,7 +1386,7 @@ index fd969c4..d83330e 100644
 +	return handler;
 +
 +on_error:
-+	lxc_free_handler(handler);
++	lxc_put_handler(handler);
 +
 +	return NULL;
 +}
@@ -1401,7 +1432,7 @@ index fd969c4..d83330e 100644
 +	}
 +
 +out:
-+	lxc_free_handler(handler);
++	lxc_put_handler(handler);
 +	return ret;
 +}
 +
@@ -1426,7 +1457,7 @@ index fd969c4..d83330e 100644
 +	}
 +
 +out:
-+	lxc_free_handler(handler);
++	lxc_put_handler(handler);
 +	return ret;
 +}
 +
