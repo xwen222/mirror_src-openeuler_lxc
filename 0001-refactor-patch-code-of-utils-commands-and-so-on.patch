@@ -10,7 +10,7 @@ Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
  src/lxc/commands.h                       |  10 +
  src/lxc/conf.h                           |  95 ++++
  src/lxc/isulad_utils.c                   | 319 +++++++++++++
- src/lxc/isulad_utils.h                   |  98 ++++
+ src/lxc/isulad_utils.h                   |  99 ++++
  src/lxc/lsm/lsm.c                        |  20 +
  src/lxc/lxc.h                            |  19 +
  src/lxc/lxccontainer.h                   | 194 ++++++++
@@ -19,7 +19,7 @@ Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
  src/lxc/tools/lxc_start.c                | 109 ++++-
  src/lxc/utils.c                          | 173 +++++++
  src/lxc/utils.h                          |  11 +
- 14 files changed, 1821 insertions(+), 3 deletions(-)
+ 14 files changed, 1822 insertions(+), 3 deletions(-)
  create mode 100644 src/lxc/cgroups/isulad_cgroup2_devices.c
  create mode 100644 src/lxc/isulad_utils.c
  create mode 100644 src/lxc/isulad_utils.h
@@ -1372,10 +1372,10 @@ index 0000000..15d9323
 +}
 diff --git a/src/lxc/isulad_utils.h b/src/lxc/isulad_utils.h
 new file mode 100644
-index 0000000..7436c40
+index 0000000..345f511
 --- /dev/null
 +++ b/src/lxc/isulad_utils.h
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,99 @@
 +/* SPDX-License-Identifier: LGPL-2.1+ */
 +/******************************************************************************
 + * Copyright (c) Huawei Technologies Co., Ltd. 2020. Allrights reserved
@@ -1387,6 +1387,7 @@ index 0000000..7436c40
 +#define __iSULAD_UTILS_H
 +
 +#include <stdio.h>
++#include <stdbool.h>
 +
 +/* isulad: replace space with SPACE_MAGIC_STR */
 +#define SPACE_MAGIC_STR "[#)"
