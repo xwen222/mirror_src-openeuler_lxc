@@ -5,24 +5,22 @@ Subject: [PATCH] refactor patch about namespace log terminal
 
 Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
 ---
- configure.ac                    | 30 +++++++++-
- src/lxc/Makefile.am             | 46 ++++++++++++++-
- src/lxc/af_unix.c               | 89 +++++++++++++++++++++++++++++
- src/lxc/commands_utils.c        | 57 +++++++++++++++++++
- src/lxc/exec_commands.h         | 77 +++++++++++++++++++++++++
+ configure.ac                    | 30 ++++++++++-
+ src/lxc/Makefile.am             | 44 ++++++++++++++-
+ src/lxc/af_unix.c               | 89 ++++++++++++++++++++++++++++++
+ src/lxc/commands_utils.c        | 57 ++++++++++++++++++++
+ src/lxc/exec_commands.h         | 77 ++++++++++++++++++++++++++
  src/lxc/file_utils.h            |  4 ++
- src/lxc/isulad_utils.c          | 99 +++++++++++++++++++++++++++++++++
- src/lxc/json/read-file.c        | 95 +++++++++++++++++++++++++++++++
+ src/lxc/json/read-file.c        | 95 +++++++++++++++++++++++++++++++++
  src/lxc/log.c                   | 56 +++++++++++++++++++
  src/lxc/path.h                  | 65 ++++++++++++++++++++++
- src/lxc/start.h                 | 32 +++++++++++
- src/lxc/storage/block.c         | 86 ++++++++++++++++++++++++++++
+ src/lxc/start.h                 | 30 +++++++++++
+ src/lxc/storage/block.c         | 86 +++++++++++++++++++++++++++++
  src/lxc/storage/block.h         | 41 ++++++++++++++
- src/lxc/storage/storage_utils.c | 61 +++++++++++++++++++-
+ src/lxc/storage/storage_utils.c | 60 +++++++++++++++++++++
  src/lxc/terminal.h              | 35 ++++++++++++
- 15 files changed, 869 insertions(+), 4 deletions(-)
+ 14 files changed, 766 insertions(+), 3 deletions(-)
  create mode 100644 src/lxc/exec_commands.h
- create mode 100644 src/lxc/isulad_utils.c
  create mode 100644 src/lxc/json/read-file.c
  create mode 100644 src/lxc/path.h
  create mode 100644 src/lxc/storage/block.c
@@ -110,7 +108,7 @@ index 059d57d..ce8854e 100644
  AC_CONFIG_FILES([
  	Makefile
 diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
-index d1e2364..433d938 100644
+index d1e2364..b9a8750 100644
 --- a/src/lxc/Makefile.am
 +++ b/src/lxc/Makefile.am
 @@ -52,6 +52,16 @@ noinst_HEADERS = api_extensions.h \
@@ -138,22 +136,13 @@ index d1e2364..433d938 100644
  		    cgroups/cgroup.c cgroups/cgroup.h \
  		    cgroups/cgroup2_devices.c cgroups/cgroup2_devices.h \
  		    cgroups/cgroup_utils.c cgroups/cgroup_utils.h \
-@@ -135,6 +144,9 @@ liblxc_la_SOURCES = af_unix.c af_unix.h \
- 		    start.c start.h \
- 		    storage/btrfs.c storage/btrfs.h \
- 		    storage/dir.c storage/dir.h \
-+if HAVE_ISULAD
-+			storage/block.c storage/block.h \
-+endif
- 		    storage/loop.c storage/loop.h \
- 		    storage/lvm.c storage/lvm.h \
- 		    storage/nbd.c storage/nbd.h \
-@@ -154,6 +166,21 @@ liblxc_la_SOURCES = af_unix.c af_unix.h \
+@@ -154,6 +163,22 @@ liblxc_la_SOURCES = af_unix.c af_unix.h \
  		    version.h \
  		    $(LSM_SOURCES)
  
 +if HAVE_ISULAD
 +liblxc_la_SOURCES += isulad_utils.c isulad_utils.h \
++			storage/block.c storage/block.h \
 +			path.c path.h \
 +			json/json_common.c json/json_common.h \
 +			json/defs.h json/defs.c \
@@ -170,7 +159,7 @@ index d1e2364..433d938 100644
  if IS_BIONIC
  liblxc_la_SOURCES += ../include/fexecve.c ../include/fexecve.h \
  		     ../include/lxcmntent.c ../include/lxcmntent.h \
-@@ -212,6 +239,10 @@ AM_CFLAGS = -DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
+@@ -212,6 +237,10 @@ AM_CFLAGS = -DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
  	    -I $(top_srcdir)/src/lxc/storage \
  	    -I $(top_srcdir)/src/lxc/cgroups
  
@@ -181,7 +170,7 @@ index d1e2364..433d938 100644
  if ENABLE_APPARMOR
  AM_CFLAGS += -DHAVE_APPARMOR
  endif
-@@ -249,6 +280,10 @@ liblxc_la_CFLAGS += -fsanitize=address \
+@@ -249,6 +278,10 @@ liblxc_la_CFLAGS += -fsanitize=address \
  		    -fno-omit-frame-pointer
  endif
  
@@ -192,7 +181,7 @@ index d1e2364..433d938 100644
  if ENABLE_UBSAN
  liblxc_la_CFLAGS += -fsanitize=undefined
  endif
-@@ -258,6 +293,12 @@ liblxc_la_LDFLAGS = -pthread \
+@@ -258,6 +291,12 @@ liblxc_la_LDFLAGS = -pthread \
  		    -Wl,-soname,liblxc.so.$(firstword $(subst ., ,@LXC_ABI@)) \
  		    -version-info @LXC_ABI_MAJOR@
  
@@ -205,7 +194,7 @@ index d1e2364..433d938 100644
  liblxc_la_LIBADD = $(CAP_LIBS) \
  		   $(OPENSSL_LIBS) \
  		   $(SELINUX_LIBS) \
-@@ -321,7 +362,8 @@ LDADD = liblxc.la \
+@@ -321,7 +360,8 @@ LDADD = liblxc.la \
  	@OPENSSL_LIBS@ \
  	@SECCOMP_LIBS@ \
  	@SELINUX_LIBS@ \
@@ -516,111 +505,6 @@ index f9c8abe..37cd79e 100644
 +#endif
 +
  #endif /* __LXC_FILE_UTILS_H */
-diff --git a/src/lxc/isulad_utils.c b/src/lxc/isulad_utils.c
-new file mode 100644
-index 0000000..b282404
---- /dev/null
-+++ b/src/lxc/isulad_utils.c
-@@ -0,0 +1,99 @@
-+/* SPDX-License-Identifier: LGPL-2.1+ */
-+/******************************************************************************
-+ * Copyright (c) Huawei Technologies Co., Ltd. 2020. Allrights reserved
-+ * Description: isulad utils
-+ * Author: lifeng
-+ * Create: 2020-04-11
-+******************************************************************************/
-+
-+#include <stdlib.h>
-+#include <string.h>
-+#include <sys/types.h>
-+#include <sys/stat.h>
-+#include <fcntl.h>
-+
-+#include "isulad_utils.h"
-+#include "log.h"
-+#include "path.h"
-+#include "file_utils.h"
-+
-+lxc_log_define(isulad_utils, lxc);
-+
-+void *lxc_common_calloc_s(size_t size)
-+{
-+	if (size == 0 || size > SIZE_MAX) {
-+		return NULL;
-+	}
-+
-+	return calloc((size_t)1, size);
-+}
-+
-+int lxc_mem_realloc(void **newptr, size_t newsize, void *oldptr, size_t oldsize)
-+{
-+	void *tmp = NULL;
-+
-+	if (newsize == 0) {
-+		goto err_out;
-+	}
-+
-+	tmp = lxc_common_calloc_s(newsize);
-+	if (tmp == NULL) {
-+		ERROR("Failed to malloc memory");
-+		goto err_out;
-+	}
-+
-+	if (oldptr != NULL) {
-+		memcpy(tmp, oldptr, (newsize < oldsize) ? newsize : oldsize);
-+
-+		memset(oldptr, 0, oldsize);
-+
-+		free(oldptr);
-+	}
-+
-+	*newptr = tmp;
-+	return 0;
-+
-+err_out:
-+	return -1;
-+}
-+
-+char *safe_strdup(const char *src)
-+{
-+	char *dst = NULL;
-+
-+	if (src == NULL) {
-+		return NULL;
-+	}
-+
-+	dst = strdup(src);
-+	if (dst == NULL) {
-+		abort();
-+	}
-+
-+	return dst;
-+}
-+
-+int lxc_open(const char *filename, int flags, mode_t mode)
-+{
-+	char rpath[PATH_MAX] = {0x00};
-+
-+	if (cleanpath(filename, rpath, sizeof(rpath)) == NULL) {
-+		return -1;
-+	}
-+	if (mode) {
-+		return open(rpath, (int)((unsigned int)flags | O_CLOEXEC), mode);
-+	} else {
-+		return open(rpath, (int)((unsigned int)flags | O_CLOEXEC));
-+	}
-+}
-+
-+FILE *lxc_fopen(const char *filename, const char *mode)
-+{
-+	char rpath[PATH_MAX] = {0x00};
-+
-+	if (cleanpath(filename, rpath, sizeof(rpath)) == NULL) {
-+		return NULL;
-+	}
-+
-+	return fopen_cloexec(rpath, mode);
-+}
 diff --git a/src/lxc/json/read-file.c b/src/lxc/json/read-file.c
 new file mode 100644
 index 0000000..34ebeed
@@ -900,7 +784,7 @@ index 0000000..2c60fb9
 +
 +#endif
 diff --git a/src/lxc/start.h b/src/lxc/start.h
-index ece4aac..1d05be6 100644
+index ece4aac..c7a0a55 100644
 --- a/src/lxc/start.h
 +++ b/src/lxc/start.h
 @@ -124,8 +124,17 @@ struct lxc_handler {
@@ -933,26 +817,18 @@ index ece4aac..1d05be6 100644
  	int (*post_start)(struct lxc_handler *, void *);
  };
  
-@@ -147,10 +160,15 @@ extern int lxc_serve_state_clients(const char *name,
- 				   struct lxc_handler *handler,
- 				   lxc_state_t state);
- extern void lxc_abort(struct lxc_handler *handler);
-+#ifdef HAVE_ISULAD
-+extern void lxc_zero_handler(struct lxc_handler *handler);
-+extern void lxc_free_handler(struct lxc_handler *handler);
-+#else
- extern struct lxc_handler *lxc_init_handler(struct lxc_handler *old,
- 					    const char *name,
- 					    struct lxc_conf *conf,
- 					    const char *lxcpath, bool daemonize);
-+#endif
- extern void lxc_put_handler(struct lxc_handler *handler);
- extern int lxc_init(const char *name, struct lxc_handler *handler);
- extern void lxc_end(struct lxc_handler *handler);
-@@ -169,9 +187,23 @@ static inline int inherit_fds(struct lxc_handler *handler, bool closeall)
+@@ -164,14 +177,31 @@ extern void lxc_end(struct lxc_handler *handler);
+  */
+ extern int lxc_check_inherited(struct lxc_conf *conf, bool closeall,
+ 			       int *fds_to_ignore, size_t len_fds);
++#ifndef HAVE_ISULAD
+ static inline int inherit_fds(struct lxc_handler *handler, bool closeall)
+ {
  	return lxc_check_inherited(handler->conf, closeall, handler->keep_fds,
  				   ARRAY_SIZE(handler->keep_fds));
  }
++#endif
++
 +#ifdef HAVE_ISULAD
 +extern int __lxc_start(struct lxc_handler *handler,
 +		struct lxc_operations* ops, void *data, const char *lxcpath,
@@ -1113,7 +989,7 @@ index 0000000..2fa7565
 +
 +#endif /* __LXC_BLK_H */
 diff --git a/src/lxc/storage/storage_utils.c b/src/lxc/storage/storage_utils.c
-index f96bd52..63371ae 100644
+index f96bd52..696c6e5 100644
 --- a/src/lxc/storage/storage_utils.c
 +++ b/src/lxc/storage/storage_utils.c
 @@ -256,10 +256,17 @@ int is_blktype(struct lxc_storage *b)
@@ -1134,7 +1010,7 @@ index f96bd52..63371ae 100644
  	int ret;
  	struct cbarg {
  		const char *rootfs;
-@@ -288,14 +295,40 @@ int mount_unknown_fs(const char *rootfs, const char *target,
+@@ -288,14 +295,41 @@ int mount_unknown_fs(const char *rootfs, const char *target,
  		ret = lxc_file_for_each_line(fsfile[i], find_fstype_cb, &cbarg);
  		if (ret < 0) {
  			ERROR("Failed to parse \"%s\"", fsfile[i]);
@@ -1145,17 +1021,17 @@ index f96bd52..63371ae 100644
  			return -1;
  		}
  
--		if (ret)
 +#ifdef HAVE_ISULAD
 +		if (ret) {
 +			lxc_free_array((void**)mount_errors, free);
 +			mount_errors = NULL;
- 			return 0;
++			return 0;
 +		}
 +#else
-+	if (ret)
-+		return 0;
+ 		if (ret)
+ 			return 0;
 +#endif
++	}
 +
 +#ifdef HAVE_ISULAD
 +	if (mount_errors != NULL) {
@@ -1176,7 +1052,7 @@ index f96bd52..63371ae 100644
  
  	return -1;
  }
-@@ -316,6 +349,11 @@ int find_fstype_cb(char *buffer, void *data)
+@@ -316,6 +350,11 @@ int find_fstype_cb(char *buffer, void *data)
  	char *mntdata = NULL;
  	char *fstype;
  
@@ -1188,7 +1064,7 @@ index f96bd52..63371ae 100644
  	/* we don't try 'nodev' entries */
  	if (strstr(buffer, "nodev"))
  		return 0;
-@@ -327,14 +365,35 @@ int find_fstype_cb(char *buffer, void *data)
+@@ -327,14 +366,35 @@ int find_fstype_cb(char *buffer, void *data)
  	DEBUG("Trying to mount \"%s\"->\"%s\" with FSType \"%s\"", cbarg->rootfs,
  	      cbarg->target, fstype);
  
