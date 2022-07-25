@@ -1,4 +1,4 @@
-%global _release 2022072104
+%global _release 2022072501
 
 Name:           lxc
 Version:        4.0.3
@@ -16,6 +16,7 @@ Patch0005:	0005-refactor-patch-code-of-attach-and-seccomp.patch
 Patch0006:	0006-refactor-patch-about-namespace-log-terminal.patch
 Patch0007:	0007-refactor-patches-on-terminal.c-start.c-and-so-on.patch
 Patch0008:	0008-refactor-patch-code-of-json.patch
+Patch0009:	0009-fix-HOME-env-of-container-unset-error.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -187,6 +188,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon Jul 25 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022072501
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix HOME env unset error
+
 * Thu Jul 21 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072104
 - Type:bugfix
 - ID:NA
