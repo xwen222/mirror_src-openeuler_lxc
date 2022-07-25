@@ -1,4 +1,4 @@
-%global _release 2022072501
+%global _release 2022072502
 
 Name:           lxc
 Version:        4.0.3
@@ -17,6 +17,7 @@ Patch0006:	0006-refactor-patch-about-namespace-log-terminal.patch
 Patch0007:	0007-refactor-patches-on-terminal.c-start.c-and-so-on.patch
 Patch0008:	0008-refactor-patch-code-of-json.patch
 Patch0009:	0009-fix-HOME-env-of-container-unset-error.patch
+Patch0010:	0010-check-yajl-only-when-have-isulad.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -188,6 +189,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Mon Jul 25 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072502
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: check yajl only when have isulad
+
 * Mon Jul 25 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022072501
 - Type:bugfix
 - ID:NA
@@ -236,7 +243,7 @@ make check
 - SUG:NA
 - DESC: refactor patch code of lxccontainer and so on
 
-* Thu Jul 19 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022071901
+* Tue Jul 19 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022071901
 - Type:bugfix
 - ID:NA
 - SUG:NA
