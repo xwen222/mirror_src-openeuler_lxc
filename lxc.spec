@@ -1,4 +1,4 @@
-%global _release 2022072502
+%global _release 2022072601
 
 Name:           lxc
 Version:        4.0.3
@@ -18,6 +18,7 @@ Patch0007:	0007-refactor-patches-on-terminal.c-start.c-and-so-on.patch
 Patch0008:	0008-refactor-patch-code-of-json.patch
 Patch0009:	0009-fix-HOME-env-of-container-unset-error.patch
 Patch0010:	0010-check-yajl-only-when-have-isulad.patch
+Patch0011:	0011-drop-security_context_t.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -189,6 +190,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Jul 26 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072601
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: drop security_context_t
+
 * Mon Jul 25 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072502
 - Type:bugfix
 - ID:NA
