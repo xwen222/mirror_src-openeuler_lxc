@@ -252,19 +252,19 @@ make check
 - SUG:NA
 - DESC:adjust log level
 
-* Thu Mar 13 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021051301
+* Thu May 13 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021051301
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:adjust log level
 
-* Sat Mar 08 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021050802
+* Sat May 08 2021 haozi007 <liuhao27@huawei.com> - 4.0.3-2021050802
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:support long syslog tag
 
-* Sat Mar 08 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021050801
+* Sat May 08 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021050801
 - Type:bugfix
 - ID:NA
 - SUG:NA
@@ -276,17 +276,17 @@ make check
 - SUG:NA
 - DESC:some patches missing in series.conf
 
-* Thu Mar 11 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021031102
-- Type:enhancement
-- ID:NA
-- SUG:NA
-- DESC: support isula exec --workdir
-
 * Wed Mar 31 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021033101
 - Type:enhancement
 - ID:NA
 - SUG:NA
 - DESC: support cgroup v2
+
+* Thu Mar 11 2021 wangfengtu <wangfengtu@huawei.com> - 4.0.3-2021031102
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: support isula exec --workdir
 
 * Thu Jan 28 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021012801
 - Type:enhancement
@@ -294,13 +294,13 @@ make check
 - SUG:NA
 - DESC: add inactive file total metrics
 
-* Wed Jan 21 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021012001
+* Thu Jan 21 2021 lifeng <lifeng68@huawei.com> - 4.0.3-2021012001
 - Type:enhancement
 - ID:NA
 - SUG:NA
 - DESC: fix io data miss when exec with pipes
 
-* Tue Jan 2021 wujing <wujing50@huawei.com> - 4.0.3-2021010501
+* Tue Jan 05 2021 wujing <wujing50@huawei.com> - 4.0.3-2021010501
 - Type:enhancement
 - ID:NA
 - SUG:NA
