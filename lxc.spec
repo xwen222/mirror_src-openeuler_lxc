@@ -1,4 +1,4 @@
-%global _release 2022072601
+%global _release 2022080901
 
 Name:           lxc
 Version:        4.0.3
@@ -19,6 +19,7 @@ Patch0008:	0008-refactor-patch-code-of-json.patch
 Patch0009:	0009-fix-HOME-env-of-container-unset-error.patch
 Patch0010:	0010-check-yajl-only-when-have-isulad.patch
 Patch0011:	0011-drop-security_context_t.patch
+Patch0012:	0012-only-set-user-or-image-set-non-empty-HOME.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -190,6 +191,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Aug 9 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022080901
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: only set user or image set non empty HOME
+
 * Tue Jul 26 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072601
 - Type:bugfix
 - ID:NA

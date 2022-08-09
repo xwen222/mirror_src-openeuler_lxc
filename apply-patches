@@ -33,4 +33,8 @@ do
     patch -p1 -F1 -s < $cwd/$line
 done
 
+git init .
+git add .
+git commit -m "init repo"
+
 cd $cwd
