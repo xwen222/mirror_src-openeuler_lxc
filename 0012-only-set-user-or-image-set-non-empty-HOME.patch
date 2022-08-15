@@ -1,4 +1,4 @@
-From 9752afbac49f7f67a68a247aa1bc17baa5fdb761 Mon Sep 17 00:00:00 2001
+From 7273c6631f692872384cce83cc04b4084ee98f73 Mon Sep 17 00:00:00 2001
 From: haozi007 <liuhao27@huawei.com>
 Date: Tue, 9 Aug 2022 17:30:59 +0800
 Subject: [PATCH] only set user or image set non-empty HOME
@@ -6,8 +6,7 @@ Subject: [PATCH] only set user or image set non-empty HOME
 Signed-off-by: haozi007 <liuhao27@huawei.com>
 ---
  src/lxc/isulad_utils.c | 14 +++++++++++---
- src/lxc/utils.c        |  2 --
- 2 files changed, 11 insertions(+), 5 deletions(-)
+ 1 file changed, 11 insertions(+), 3 deletions(-)
 
 diff --git a/src/lxc/isulad_utils.c b/src/lxc/isulad_utils.c
 index cd7fca8..067e1c9 100644
@@ -46,19 +45,6 @@ index cd7fca8..067e1c9 100644
 -}
 \ No newline at end of file
 +}
-diff --git a/src/lxc/utils.c b/src/lxc/utils.c
-index ab351d8..1adeefa 100644
---- a/src/lxc/utils.c
-+++ b/src/lxc/utils.c
-@@ -19,8 +19,6 @@
- #include <string.h>
- #include <sys/mman.h>
- #include <sys/mount.h>
--/* Needs to be after sys/mount.h header */
--#include <linux/fs.h>
- #include <sys/param.h>
- #include <sys/prctl.h>
- #include <sys/stat.h>
 -- 
 2.25.1
 
