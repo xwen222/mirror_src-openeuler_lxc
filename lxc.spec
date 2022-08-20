@@ -1,4 +1,4 @@
-%global _release 2022081901
+%global _release 2022082001
 
 Name:           lxc
 Version:        4.0.3
@@ -21,6 +21,7 @@ Patch0010:	0010-check-yajl-only-when-have-isulad.patch
 Patch0011:	0011-drop-security_context_t.patch
 Patch0012:	0012-only-set-user-or-image-set-non-empty-HOME.patch
 Patch0013:	0013-return-fail-if-no-args-or-no-rootfs-path-found.patch
+Patch0014:	0014-do-not-check-rootfs.path-it-may-be-null-if-rootfs-is.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -192,6 +193,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Sat Aug 20 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022082001
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: do not check rootfs.path, it may be null if rootfs is "/"
+
 * Fri Aug 19 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022081901
 - Type:bugfix
 - ID:NA

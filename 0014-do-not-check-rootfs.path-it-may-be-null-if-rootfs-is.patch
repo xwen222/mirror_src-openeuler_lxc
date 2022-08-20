@@ -1,0 +1,26 @@
+From 781ccccd4074b3b998e7085729409ed1beacf828 Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Sat, 20 Aug 2022 14:46:36 +0800
+Subject: [PATCH] do not check rootfs.path, it may be null if rootfs is "/"
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ src/lxc/lxccontainer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
+index 2133782..4b669bb 100644
+--- a/src/lxc/lxccontainer.c
++++ b/src/lxc/lxccontainer.c
+@@ -1031,7 +1031,7 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
+ 	}
+ 
+ 	// do not allow using default rootfs path when isulad
+-	if (conf->rootfs.mount == NULL || conf->rootfs.path == NULL) {
++	if (conf->rootfs.mount == NULL) {
+ 		ERROR("Empty rootfs path detected");
+ 		lxc_put_handler(handler);
+ 		return false;
+-- 
+2.25.1
+
