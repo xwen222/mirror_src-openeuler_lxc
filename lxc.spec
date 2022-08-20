@@ -21,7 +21,6 @@ Patch0010:	0010-check-yajl-only-when-have-isulad.patch
 Patch0011:	0011-drop-security_context_t.patch
 Patch0012:	0012-only-set-user-or-image-set-non-empty-HOME.patch
 Patch0013:	0013-return-fail-if-no-args-or-no-rootfs-path-found.patch
-Patch0014:	0014-do-not-check-rootfs.path-it-may-be-null-if-rootfs-is.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)

@@ -1,4 +1,4 @@
-From ee2a2242a009627fe6edd89f4624d8eb6dd1756c Mon Sep 17 00:00:00 2001
+From a2aff3425a6f35bdb9f83880a1545b89606bf7c9 Mon Sep 17 00:00:00 2001
 From: WangFengTu <wangfengtu@huawei.com>
 Date: Fri, 19 Aug 2022 14:32:22 +0800
 Subject: [PATCH] return fail if no args or no rootfs path found
@@ -9,7 +9,7 @@ Signed-off-by: WangFengTu <wangfengtu@huawei.com>
  1 file changed, 14 insertions(+)
 
 diff --git a/src/lxc/lxccontainer.c b/src/lxc/lxccontainer.c
-index 3f75184..2133782 100644
+index 3f75184..4b669bb 100644
 --- a/src/lxc/lxccontainer.c
 +++ b/src/lxc/lxccontainer.c
 @@ -1030,6 +1030,20 @@ static bool do_lxcapi_start(struct lxc_container *c, int useinit, char * const a
@@ -17,7 +17,7 @@ index 3f75184..2133782 100644
  	}
  
 +	// do not allow using default rootfs path when isulad
-+	if (conf->rootfs.mount == NULL || conf->rootfs.path == NULL) {
++	if (conf->rootfs.mount == NULL) {
 +		ERROR("Empty rootfs path detected");
 +		lxc_put_handler(handler);
 +		return false;
