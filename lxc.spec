@@ -450,7 +450,7 @@ make check
 - SUG:NA
 - DESC: fix io data miss when exec with pipes
 
-* Tue Jan 2021 05 wujing <wujing50@huawei.com> - 4.0.3-2021010501
+* Tue Jan 05 2021 wujing <wujing50@huawei.com> - 4.0.3-2021010501
 - Type:enhancement
 - ID:NA
 - SUG:NA
