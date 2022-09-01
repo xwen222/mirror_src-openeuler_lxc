@@ -1,4 +1,4 @@
-%global _release 2022081201
+%global _release 2022083101
 
 Name:           lxc
 Version:        4.0.3
@@ -47,12 +47,13 @@ Patch0036:	0036-compile-in-android-env.patch
 Patch0037:	0037-fix-always-print-and-temp-len.patch
 Patch0038:	0038-just-print-error-when-new-lock-failed.patch
 Patch0039:	0039-fix-bug-of-memory-free.patch
-Patch0040:	0040-refactor-the-way-to-convert-selinux-label-to-shared.path
+Patch0040:	0040-refactor-the-way-to-convert-selinux-label-to-shared.patch
 Patch0041:	0041-do-not-free-the-pointer-returned-by-dirname.patch
 Patch0042:	0042-add-x-permission-when-create-directory.patch
 Patch0043:	0043-do-not-operate-playload-and-attach-cgroup-if-no-cont.patch
 Patch0044:	0044-fix-HOME-env-unset-error.patch
 Patch0045:	0045-only-set-user-or-image-set-non-empty-HOME.patch
+Patch0046:	0046-return-fail-if-no-args-or-no-rootfs-path-found.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -224,6 +225,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Wed Aug 31 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022083101
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: return fail if no args or no rootfs path found
+
 * Fri Aug 12 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022081201
 - Type:bugfix
 - ID:NA
