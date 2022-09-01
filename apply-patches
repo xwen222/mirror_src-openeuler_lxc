@@ -35,6 +35,8 @@ done
 
 git init .
 git add .
+git config --local user.name "isuladci"
+git config --local user.email "isulad@ci.com"
 git commit -m "init repo"
 
 cd $cwd

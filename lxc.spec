@@ -1,4 +1,4 @@
-%global _release 2022082001
+%global _release 2022090101
 
 Name:           lxc
 Version:        4.0.3
@@ -192,6 +192,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Thu Sep 1 2022 zhongtao<zhongtao17@huawei.com> - 4.0.3-2022090101
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add git config in apply-patches
+
 * Sat Aug 20 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022082001
 - Type:bugfix
 - ID:NA
