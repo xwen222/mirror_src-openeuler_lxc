@@ -1,4 +1,4 @@
-%global _release 2022090101
+%global _release 2022090201
 
 Name:           lxc
 Version:        4.0.3
@@ -21,6 +21,7 @@ Patch0010:	0010-check-yajl-only-when-have-isulad.patch
 Patch0011:	0011-drop-security_context_t.patch
 Patch0012:	0012-only-set-user-or-image-set-non-empty-HOME.patch
 Patch0013:	0013-return-fail-if-no-args-or-no-rootfs-path-found.patch
+Patch0014:      0014-fix-tools-using-option-give-error-message.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -192,6 +193,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Fri Sep 2 2022 Neil.wrz<wangrunze13@huawei.com> - 4.0.3-2022090201
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix tools using -? option give error 
+
 * Thu Sep 1 2022 zhongtao<zhongtao17@huawei.com> - 4.0.3-2022090101
 - Type:bugfix
 - ID:NA
