@@ -1,4 +1,4 @@
-%global _release 2022090201
+%global _release 2022092001
 
 Name:           lxc
 Version:        4.0.3
@@ -55,6 +55,7 @@ Patch0044:	0044-fix-HOME-env-unset-error.patch
 Patch0045:	0045-only-set-user-or-image-set-non-empty-HOME.patch
 Patch0046:	0046-return-fail-if-no-args-or-no-rootfs-path-found.patch
 Patch0047:      0047-fix-tools-with-option-give-error-message.patch    
+Patch0048:      0048-fix-do-mask-paths-after-parent-mounted.patch 
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -226,6 +227,12 @@ make check
 %{_mandir}/*/man7/%{name}*
 
 %changelog
+* Tue Sep 20 2022 Neil.wrz<wangrunze13@huawei.com> - 4.0.3-2022092001
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: do mask paths after parent mounted 
+
 * Fri Sep 02 2022 Neil.wrz<wangrunze13@huawei.com> - 4.0.3-2022090201
 - Type:bugfix
 - ID:NA
