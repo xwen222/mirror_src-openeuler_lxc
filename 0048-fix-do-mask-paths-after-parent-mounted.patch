@@ -1,0 +1,45 @@
+From d349251fa2e05b111b230a78f782c2552095adf5 Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Tue, 20 Sep 2022 02:09:16 -0700
+Subject: [PATCH] fix do mask paths after parent mounted
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ src/lxc/conf.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/src/lxc/conf.c b/src/lxc/conf.c
+index cd9e818..7f98811 100644
+--- a/src/lxc/conf.c
++++ b/src/lxc/conf.c
+@@ -5164,13 +5164,6 @@ int lxc_setup(struct lxc_handler *handler)
+ 	}
+ 
+ #ifdef HAVE_ISULAD
+-	// isulad: setup rootfs masked paths
+-	if (!lxc_list_empty(&lxc_conf->rootfs.maskedpaths)) {
+-		if (setup_rootfs_maskedpaths(&lxc_conf->rootfs.maskedpaths)) {
+-			return log_error(-1, "failed to setup maskedpaths");
+-		}
+-	}
+-
+ 	// isulad: setup rootfs ro paths
+ 	if (!lxc_list_empty(&lxc_conf->rootfs.ropaths)) {
+ 		if (setup_rootfs_ropaths(&lxc_conf->rootfs.ropaths)) {
+@@ -5178,6 +5171,13 @@ int lxc_setup(struct lxc_handler *handler)
+ 		}
+ 	}
+ 
++	// isulad: setup rootfs masked paths
++	if (!lxc_list_empty(&lxc_conf->rootfs.maskedpaths)) {
++		if (setup_rootfs_maskedpaths(&lxc_conf->rootfs.maskedpaths)) {
++			return log_error(-1, "failed to setup maskedpaths");
++		}
++	}
++
+ 	//isulad: system container, remount /proc/sys/xxx by mount_list
+ 	if (lxc_conf->systemd != NULL && strcmp(lxc_conf->systemd, "true") == 0) {
+ 		if (!lxc_list_empty(&lxc_conf->mount_list)) {
+-- 
+2.25.1
+
