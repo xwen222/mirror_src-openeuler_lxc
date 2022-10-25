@@ -1,4 +1,4 @@
-%global _release 2022101701
+%global _release 2022102401
 
 Name:           lxc
 Version:        4.0.3
@@ -57,6 +57,7 @@ Patch0046:	0046-return-fail-if-no-args-or-no-rootfs-path-found.patch
 Patch0047:	0047-fix-tools-with-option-give-error-message.patch
 Patch0048:	0048-fix-do-mask-paths-after-parent-mounted.patch
 Patch0049:	0049-skip-kill-cgroup-processes-if-no-hierarchies.patch
+Patch0050:      0050-lxc-Add-sw64-architecture.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -143,12 +144,20 @@ do
     chrpath -d ${file}
 done
 
+%ifarch sw_64
+chrpath -d %{buildroot}/usr/lib/liblxc.so
+chmod +x %{buildroot}/usr/lib/liblxc.so
+%else
 chrpath -d %{buildroot}/usr/lib64/liblxc.so
 chmod +x %{buildroot}/usr/lib64/liblxc.so
+%endif
 # docs
 mkdir -p %{buildroot}%{_pkgdocdir}/api
+%ifarch sw_64
+%else
 cp -a AUTHORS README %{buildroot}%{_pkgdocdir}
 cp -a doc/api/html/* %{buildroot}%{_pkgdocdir}/api/
+%endif
 
 # cache dir
 mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
@@ -193,8 +202,11 @@ make check
 %config(noreplace) %{_sysconfdir}/sysconfig/*
 
 %dir %{_pkgdocdir}
+%ifarch sw_64
+%else
 %{_pkgdocdir}/AUTHORS
 %{_pkgdocdir}/README
+%endif
 %license COPYING
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}@.service
@@ -220,14 +232,23 @@ make check
 %files help
 %dir %{_pkgdocdir}
 %{_pkgdocdir}/*
+%ifarch sw_64
+%else
 %{_mandir}/man1/%{name}*
 %{_mandir}/*/man1/%{name}*
 %{_mandir}/man5/%{name}*
 %{_mandir}/man7/%{name}*
 %{_mandir}/*/man5/%{name}*
 %{_mandir}/*/man7/%{name}*
+%endif
 
 %changelog
+* Mon Oct 24 2022 wuzx<wuzx1226@qq.com> - 4.0.3-2022102401
+- Type:feature
+- CVE:NA
+- SUG:NA
+- DESC:Add sw64 architecture
+
 * Mon Oct 17 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022101701
 - Type:bugfix
 - ID:NA
