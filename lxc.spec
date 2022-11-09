@@ -1,4 +1,4 @@
-%global _release 2022102401
+%global _release 2022102402
 
 Name:           lxc
 Version:        4.0.3
@@ -169,11 +169,6 @@ make check
 %config(noreplace) %{_sysconfdir}/sysconfig/*
 
 %dir %{_pkgdocdir}
-%ifarch sw_64
-%else
-%{_pkgdocdir}/AUTHORS
-%{_pkgdocdir}/README
-%endif
 %license COPYING
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}@.service
@@ -210,6 +205,12 @@ make check
 %endif
 
 %changelog
+* Wed Nov 9 2022 hejunjie<hejunjie10@huawei.com> - 4.0.3-2022102402
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove duplicated README and AUTHORS cross lxc-lib and lxc-help
+
 * Mon Oct 24 2022 wuzx<wuzx1226@qq.com> - 4.0.3-2022102401
 - Type:feature
 - CVE:NA
