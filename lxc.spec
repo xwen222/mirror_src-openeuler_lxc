@@ -1,4 +1,4 @@
-%global _release 2022102402
+%global _release 2022102403
 
 Name:           lxc
 Version:        4.0.3
@@ -57,7 +57,8 @@ Patch0046:	0046-return-fail-if-no-args-or-no-rootfs-path-found.patch
 Patch0047:	0047-fix-tools-with-option-give-error-message.patch
 Patch0048:	0048-fix-do-mask-paths-after-parent-mounted.patch
 Patch0049:	0049-skip-kill-cgroup-processes-if-no-hierarchies.patch
-Patch0050:      0050-lxc-Add-sw64-architecture.patch
+Patch0050:	0050-lxc-Add-sw64-architecture.patch
+Patch0051:	0051-add-macro-to-adapt-musl-libc.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -238,6 +239,12 @@ make check
 %endif
 
 %changelog
+* Thu Nov 24 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102403
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add macro to adapt musl libc
+
 * Mon Oct 24 2022 wuzx<wuzx1226@qq.com> - 4.0.3-2022102401
 - Type:feature
 - CVE:NA
