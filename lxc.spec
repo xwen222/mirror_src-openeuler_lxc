@@ -1,4 +1,4 @@
-%global _release 2022102402
+%global _release 2022102403
 
 Name:           lxc
 Version:        4.0.3
@@ -25,6 +25,7 @@ Patch0014:	0014-fix-tools-using-option-give-error-message.patch
 Patch0015:	0015-fix-do-mask-pathes-after-parent-mounted.patch
 Patch0016:	0016-skip-kill-cgroup-processes-if-no-hierarchies.patch
 Patch0017:	0017-lxc-Add-sw64-architecture.patch
+Patch0018:	0018-add-macro-to-adapt-musl-libc.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -205,6 +206,12 @@ make check
 %endif
 
 %changelog
+* Thu Nov 24 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102403
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add macro to adapt musl libc
+
 * Wed Nov 9 2022 hejunjie<hejunjie10@huawei.com> - 4.0.3-2022102402
 - Type:bugfix
 - ID:NA
@@ -223,7 +230,7 @@ make check
 - SUG:NA
 - DESC: update version to 4.0.3-2022101701
 
-* The Sep 22 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022092201
+* Thu Sep 22 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022092201
 - Type:bugfix
 - ID:NA
 - SUG:NA
