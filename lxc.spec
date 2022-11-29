@@ -1,4 +1,4 @@
-%global _release 2022102401
+%global _release 2022102402
 
 Name:           lxc
 Version:        4.0.3
@@ -202,11 +202,6 @@ make check
 %config(noreplace) %{_sysconfdir}/sysconfig/*
 
 %dir %{_pkgdocdir}
-%ifarch sw_64
-%else
-%{_pkgdocdir}/AUTHORS
-%{_pkgdocdir}/README
-%endif
 %license COPYING
 %{_unitdir}/%{name}.service
 %{_unitdir}/%{name}@.service
