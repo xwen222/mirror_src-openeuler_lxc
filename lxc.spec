@@ -1,4 +1,4 @@
-%global _release 2022102403
+%global _release 2022102404
 
 Name:           lxc
 Version:        4.0.3
@@ -59,6 +59,7 @@ Patch0048:	0048-fix-do-mask-paths-after-parent-mounted.patch
 Patch0049:	0049-skip-kill-cgroup-processes-if-no-hierarchies.patch
 Patch0050:	0050-lxc-Add-sw64-architecture.patch
 Patch0051:	0051-add-macro-to-adapt-musl-libc.patch
+Patch0052:	0052-add-lxc-attach-add-gids-option.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -239,6 +240,12 @@ make check
 %endif
 
 %changelog
+* Fri Dec 02 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102404
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add lxc-attach add-gids option
+
 * Thu Nov 24 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102403
 - Type:bugfix
 - ID:NA
