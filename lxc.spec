@@ -1,4 +1,4 @@
-%global _release 2022102404
+%global _release 2022102405
 
 Name:           lxc
 Version:        4.0.3
@@ -27,6 +27,7 @@ Patch0016:	0016-skip-kill-cgroup-processes-if-no-hierarchies.patch
 Patch0017:	0017-lxc-Add-sw64-architecture.patch
 Patch0018:	0018-add-macro-to-adapt-musl-libc.patch
 Patch0019:	0019-add-lxc-attach-add-gids-option.patch
+Patch0020:	0020-add-sscanf-adapation-code-for-musl.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -207,6 +208,12 @@ make check
 %endif
 
 %changelog
+* Thu Dec 08 2022 zhongtao<zhongtao17@huawei.com> - 4.0.3-2022102405
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add sscanf adapation code for musl
+
 * Fri Dec 02 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102404
 - Type:bugfix
 - ID:NA
