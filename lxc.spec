@@ -1,4 +1,4 @@
-%global _release 2022102405
+%global _release 2022102406
 
 Name:           lxc
 Version:        4.0.3
@@ -61,6 +61,7 @@ Patch0050:	0050-lxc-Add-sw64-architecture.patch
 Patch0051:	0051-add-macro-to-adapt-musl-libc.patch
 Patch0052:	0052-add-lxc-attach-add-gids-option.patch
 Patch0053:	0053-change-the-suffi-parameter-in-lxc-attach-help-output.patch
+Patch0054:	0054-rollback-strprint-code-modified.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -241,6 +242,12 @@ make check
 %endif
 
 %changelog
+* Mon Dec 26 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102406
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: rollback strprint code modified
+
 * Fri Dec 16 2022 huangsong<huangsong14@huawei.com> - 4.0.3-2022102405
 - Type:bugfix
 - ID:NA
