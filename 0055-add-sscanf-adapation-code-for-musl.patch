@@ -1,0 +1,31 @@
+From 04399ce74d89f7260474e915a978d31d62367889 Mon Sep 17 00:00:00 2001
+From: zhongtao <zhongtao17@huawei.com>
+Date: Wed, 4 Jan 2023 13:17:34 +0800
+Subject: [PATCH] add sscanf adapation code for musl
+
+Signed-off-by: zhongtao <zhongtao17@huawei.com>
+---
+ src/lxc/utils.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/lxc/utils.c b/src/lxc/utils.c
+index ed66935..3838f69 100644
+--- a/src/lxc/utils.c
++++ b/src/lxc/utils.c
+@@ -2134,7 +2134,13 @@ static proc_t *lxc_stat2proc(const char *S)
+     (void)memset(P, 0x00, sizeof(proc_t));
+ 
+     /* parse these two strings separately, skipping the leading "(". */
++	/* https://www.openwall.com/lists/musl/2013/11/15/5: musl's sscanf("%15c",cmd) 
++	   requires exactly 15 characters; anything shorter is a matching failure. */
++#ifdef __MUSL__
++    num = sscanf(S, "%d (%15s", &P->pid, P->cmd);   /* comm[16] in kernel */
++#else
+     num = sscanf(S, "%d (%15c", &P->pid, P->cmd);   /* comm[16] in kernel */
++#endif
+     if (num != 2) {
+         ERROR("Call sscanf error: %s", errno ? strerror(errno) : "");
+         free(P);
+-- 
+2.25.1
+
