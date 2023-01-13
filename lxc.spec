@@ -1,4 +1,4 @@
-%global _release 2022102407
+%global _release 2022102408
 
 Name:           lxc
 Version:        4.0.3
@@ -63,6 +63,7 @@ Patch0052:	0052-add-lxc-attach-add-gids-option.patch
 Patch0053:	0053-change-the-suffi-parameter-in-lxc-attach-help-output.patch
 Patch0054:	0054-rollback-strprint-code-modified.patch
 Patch0055:	0055-add-sscanf-adapation-code-for-musl.patch
+Patch0056:	0056-fix-cve-CVE-2022-47952-log-leaks-root-information.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -243,6 +244,12 @@ make check
 %endif
 
 %changelog
+* Fri Jan 13 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102408
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix cve CVE-2022-47952 log leaks root information
+
 * Wed Jan 04 2023 zhongtao<zhongtao17@huawei.com> - 4.0.3-2022102407
 - Type:bugfix
 - ID:NA
