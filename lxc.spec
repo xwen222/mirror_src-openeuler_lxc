@@ -1,4 +1,4 @@
-%global _release 2022102409
+%global _release 2022102410
 
 Name:           lxc
 Version:        4.0.3
@@ -65,6 +65,7 @@ Patch0054:	0054-rollback-strprint-code-modified.patch
 Patch0055:	0055-add-sscanf-adapation-code-for-musl.patch
 Patch0056:	0056-fix-cve-CVE-2022-47952-log-leaks-root-information.patch
 Patch0057:	0057-fix-lxc-write-error-message.patch
+Patch0058:	0058-add-loongarch64-support-for-lxc.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -245,6 +246,12 @@ make check
 %endif
 
 %changelog
+* Thu Feb 09 2023 Wenlong Zhang<zhangwenlong@loongson.cn> - 4.0.3-2022102410
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add loongarch64 support for lxc
+
 * Wed Feb 08 2023 huangsong<huangsong14@huawei.com> - 4.0.3-2022102409
 - Type:bugfix
 - ID:NA
