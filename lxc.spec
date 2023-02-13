@@ -1,4 +1,4 @@
-%global _release 2022102407
+%global _release 2022102408
 
 Name:           lxc
 Version:        4.0.3
@@ -145,7 +145,7 @@ rm -rf %{buildroot}%{_libdir}/liblxc.la
 rm -rf %{buildroot}%{_sbindir}/init.%{name}.static
 rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %check
-make check
+%make_build check
 
 %post
 
@@ -210,6 +210,12 @@ make check
 %endif
 
 %changelog
+* Mon Feb 13 2023 jiangxinyu <jiangxinyu@kylinos.cn> - 4.0.3-2022102408
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:optimize test command
+
 * Fri Jan 13 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102407
 - Type:bugfix
 - ID:NA
