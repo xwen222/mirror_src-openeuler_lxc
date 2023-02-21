@@ -1,0 +1,55 @@
+From f90f99c6e8213512fed3b5c55337dee3c1a7e13d Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Tue, 21 Feb 2023 00:28:05 -0800
+Subject: [PATCH] yajl
+
+---
+ configure.ac        | 6 +++---
+ src/lxc/Makefile.am | 6 ++++--
+ 2 files changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 7766638..98e4700 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -120,9 +120,6 @@ AM_CONDITIONAL([DISTRO_UBUNTU], [test "x$with_distro" = "xubuntu"])
+ 
+ AC_CONFIG_LINKS([config/etc/default.conf:config/etc/${distroconf}])
+ 
+-# Check yajl
+-PKG_CHECK_MODULES([YAJL], [yajl >= 2],[],[AC_MSG_ERROR([You must install yajl >= 2])])
+-
+ # Check for init system type
+ AC_MSG_CHECKING([for init system type])
+ AC_ARG_WITH([init-script],
+@@ -818,6 +815,9 @@ AM_CONDITIONAL([HAVE_ISULAD], [test "x$adapt_isulad" = "xyes"])
+ if test "x$adapt_isulad" = "xyes"; then
+ 	AC_DEFINE([HAVE_ISULAD], 1, [adapt to iSulad])
+ 	AC_MSG_RESULT([yes])
++
++    # Check yajl
++    PKG_CHECK_MODULES([YAJL], [yajl >= 2],[],[AC_MSG_ERROR([You must install yajl >= 2])])
+ else
+ 	AC_MSG_RESULT([no])
+ fi
+diff --git a/src/lxc/Makefile.am b/src/lxc/Makefile.am
+index 2686e24..7373916 100644
+--- a/src/lxc/Makefile.am
++++ b/src/lxc/Makefile.am
+@@ -361,9 +361,11 @@ LDADD = liblxc.la \
+ 	@OPENSSL_LIBS@ \
+ 	@SECCOMP_LIBS@ \
+ 	@SELINUX_LIBS@ \
+-	@DLOG_LIBS@ \
+-	@YAJL_LIBS@
++	@DLOG_LIBS@
+ 
++if HAVE_ISULAD
++	LDADD += @YAJL_LIBS@
++endif
+ if ENABLE_TOOLS
+ lxc_attach_SOURCES = tools/lxc_attach.c \
+ 		     rexec.c rexec.h \
+-- 
+2.25.1
+
