@@ -1,4 +1,4 @@
-%global _release 2022102408
+%global _release 2022102409
 
 Name:           lxc
 Version:        4.0.3
@@ -30,6 +30,7 @@ Patch0019:	0019-add-lxc-attach-add-gids-option.patch
 Patch0020:	0020-add-sscanf-adapation-code-for-musl.patch
 Patch0021:	0021-change-the-suffi-parameter-in-lxc-attach-help-output.patch
 Patch0022:	0022-fix-cve-CVE-2022-47952-log-leaks-root-information.patch
+Patch0023:	0023-remove-process-inheritable-capability.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -210,6 +211,12 @@ rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %endif
 
 %changelog
+* Fri Feb 17 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102409
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove process inheritable capabilities
+
 * Mon Feb 13 2023 jiangxinyu <jiangxinyu@kylinos.cn> - 4.0.3-2022102408
 - Type:enhancement
 - ID:NA

@@ -16,15 +16,18 @@
 
 set -ex
 
-pkg=lxc-4.0.3
+dir_name=$(tar -tzf *.tar.gz | head -1 | cut -f1 -d"/")
+if [ -e $dir_name ]; then
+    echo "directory $dir_name exist, please remove it"
+    exit 1
+fi
+
+tar -xzvf $dir_name.tar.gz
+
 cwd=$PWD
-src=$cwd/lxc-4.0.3
+cd $cwd/$dir_name
 
-tar -xzvf $pkg.tar.gz
-
-cd $src
-
-cat $cwd/series.conf | while read line
+grep -E "Patch[0-9]{4}:\s*[0-9]{4}-.*\.patch" $cwd/lxc.spec | awk '{print $2}' | while read line
 do
     if [[ $line == '' || $line =~ ^\s*# ]]; then
         continue
@@ -38,5 +41,7 @@ git add .
 git config --local user.name "isuladci"
 git config --local user.email "isulad@ci.com"
 git commit -m "init repo"
+git config --local --unset user.name
+git config --local --unset user.email
 
 cd $cwd
