@@ -1,4 +1,4 @@
-%global _release 2022102410
+%global _release 2022102411
 
 Name:           lxc
 Version:        4.0.3
@@ -66,6 +66,7 @@ Patch0055:	0055-add-sscanf-adapation-code-for-musl.patch
 Patch0056:	0056-fix-cve-CVE-2022-47952-log-leaks-root-information.patch
 Patch0057:	0057-fix-lxc-write-error-message.patch
 Patch0058:	0058-add-loongarch64-support-for-lxc.patch
+Patch0059:	0059-remove-process-inheritable-capability.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -246,6 +247,12 @@ make check
 %endif
 
 %changelog
+* Tue Feb 21 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102411
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove process inheritable capabilities
+
 * Thu Feb 09 2023 Wenlong Zhang<zhangwenlong@loongson.cn> - 4.0.3-2022102410
 - Type:bugfix
 - ID:NA
