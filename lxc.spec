@@ -1,4 +1,4 @@
-%global _release 2022102411
+%global _release 2022102412
 
 Name:           lxc
 Version:        4.0.3
@@ -32,6 +32,7 @@ Patch0021:	0021-change-the-suffi-parameter-in-lxc-attach-help-output.patch
 Patch0022:	0022-fix-cve-CVE-2022-47952-log-leaks-root-information.patch
 Patch0023:	0023-fix-lxc-write-error-message.patch
 Patch0024:	0024-remove-process-inheritable-capability.patch
+Patch0025:	0025-fix-ops-hierarchies-cause-coredump.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -218,6 +219,12 @@ rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %endif
 
 %changelog
+* Wed Feb 22 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102412
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix ops hierarchies cause coredump 
+
 * Wed Feb 22 2023 misaka00251 <liuxin@iscas.ac.cn> - 4.0.3-2022102411
 - Type:enhancement
 - ID:NA
