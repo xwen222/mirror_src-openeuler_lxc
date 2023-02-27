@@ -1,4 +1,4 @@
-%global _release 2022102412
+%global _release 2022102413
 
 Name:           lxc
 Version:        4.0.3
@@ -68,6 +68,7 @@ Patch0057:	0057-fix-lxc-write-error-message.patch
 Patch0058:	0058-add-loongarch64-support-for-lxc.patch
 Patch0059:	0059-remove-process-inheritable-capability.patch
 Patch0060:	0060-check-yajl-only-when-have-isulad.patch
+Patch0061:	0061-fix-ops-hierarchies-cause-coredump.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -248,6 +249,12 @@ make check
 %endif
 
 %changelog
+* Thu Feb 23 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102413
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix null ops hierarchies cause coredump
+
 * Tue Feb 21 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102412
 - Type:bugfix
 - ID:NA
