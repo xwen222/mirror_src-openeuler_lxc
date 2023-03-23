@@ -1,4 +1,4 @@
-%global _release 2022102413
+%global _release 2022102414
 
 Name:           lxc
 Version:        4.0.3
@@ -8,72 +8,41 @@ License:        LGPLv2+ and GPLv2 and GPLv3
 URL:            https://github.com/lxc/lxc
 Source0:        https://linuxcontainers.org/downloads/lxc/lxc-4.0.3.tar.gz
 
-Patch0001:	0001-huawei-adapt-to-huawei-4.0.3.patch
-Patch0002:	0002-add-mount-label-for-rootfs.patch
-Patch0003:	0003-format-code-and-verify-mount-mode.patch
-Patch0004:	0004-Removes-the-definition-of-the-thread-attributes-obje.patch
-Patch0005:	0005-solve-coredump-bug-caused-by-fstype-being-NULL-durin.patch
-Patch0006:	0006-SIGTERM-do-not-catch-signal-SIGTERM-in-lxc-monitor.patch
-Patch0007:	0007-Using-string-type-instead-of-security_context_t-beca.patch
-Patch0008:	0008-hook-pass-correct-mount-dir-as-root-to-hook.patch
-Patch0009:	0009-cgroup-refact-cgroup-manager-to-single-file.patch
-Patch0010:	0010-cgfsng-adjust-log-level-from-error-to-warn.patch
-Patch0011:	0011-rootfs-add-make-private-for-root.path-parent.patch
-Patch0012:	0012-mount-make-possible-to-bind-mount-proc-and-sys-fs.patch
-Patch0013:	0013-use-path-based-unix-domain-sockets-instead-of-abstra.patch
-Patch0014:	0014-api-add-get-container-metrics-api.patch
-Patch0015:	0015-Streaming-IO-solution-optimization-and-enhancement.patch
-Patch0016:	0016-avoid-using-void-pointers-in-caclulation.patch
-Patch0017:	0017-fix-compilation-errors-without-libcap.patch
-Patch0018:	0018-IO-fix-io-data-miss-when-exec-with-pipes.patch
-Patch0019:	0019-metrics-add-total_inactive_file-metric-for-memory.patch
-Patch0020:	0020-support-cgroup-v2.patch
-Patch0021:	0021-support-isula-exec-workdir.patch
-Patch0022:	0022-print-error-message-if-process-workdir-failed.patch
-Patch0023:	0023-log-support-long-syslog-tag.patch
-Patch0024:	0024-log-adjust-log-level-from-error-to-warn.patch
-Patch0025:	0025-get-cgroup-data-len-first-and-malloc-read-buff-by-le.patch
-Patch0026:	0026-coredump-fix-coredump-when-cgroup-get-return-error.patch
-Patch0027:	0027-add-help-for-new-arguments.patch
-Patch0028:	0028-seccomp-init-and-destroy-notifier.cookie.patch
-Patch0029:	0029-just-use-origin-loop-if-do-not-have-io.patch
-Patch0030:	0030-conf-fix-a-memory-leak.patch
-Patch0031:	0031-fix-lsm_se_mount_context-memory-leak.patch
-Patch0032:	0032-disable-lxc_keep-with-oci-image.patch
-Patch0033:	0033-conf-ensure-that-the-idmap-pointer-itself-is-freed.patch
-Patch0034:	0034-cgfsng-fix-cgroup-attach-cgroup-creation.patch
-Patch0035:	0035-adapt-upstream-compiler-settings.patch
-Patch0036:	0036-compile-in-android-env.patch
-Patch0037:	0037-fix-always-print-and-temp-len.patch
-Patch0038:	0038-just-print-error-when-new-lock-failed.patch
-Patch0039:	0039-fix-bug-of-memory-free.patch
-Patch0040:	0040-refactor-the-way-to-convert-selinux-label-to-shared.patch
-Patch0041:	0041-do-not-free-the-pointer-returned-by-dirname.patch
-Patch0042:	0042-add-x-permission-when-create-directory.patch
-Patch0043:	0043-do-not-operate-playload-and-attach-cgroup-if-no-cont.patch
-Patch0044:	0044-fix-HOME-env-unset-error.patch
-Patch0045:	0045-only-set-user-or-image-set-non-empty-HOME.patch
-Patch0046:	0046-return-fail-if-no-args-or-no-rootfs-path-found.patch
-Patch0047:	0047-fix-tools-with-option-give-error-message.patch
-Patch0048:	0048-fix-do-mask-paths-after-parent-mounted.patch
-Patch0049:	0049-skip-kill-cgroup-processes-if-no-hierarchies.patch
-Patch0050:	0050-lxc-Add-sw64-architecture.patch
-Patch0051:	0051-add-macro-to-adapt-musl-libc.patch
-Patch0052:	0052-add-lxc-attach-add-gids-option.patch
-Patch0053:	0053-change-the-suffi-parameter-in-lxc-attach-help-output.patch
-Patch0054:	0054-rollback-strprint-code-modified.patch
-Patch0055:	0055-add-sscanf-adapation-code-for-musl.patch
-Patch0056:	0056-fix-cve-CVE-2022-47952-log-leaks-root-information.patch
-Patch0057:	0057-fix-lxc-write-error-message.patch
-Patch0058:	0058-add-loongarch64-support-for-lxc.patch
-Patch0059:	0059-remove-process-inheritable-capability.patch
-Patch0060:	0060-check-yajl-only-when-have-isulad.patch
-Patch0061:	0061-fix-ops-hierarchies-cause-coredump.patch
+Patch0001:	0001-refactor-patch-code-of-utils-commands-and-so-on.patch
+Patch0002:	0002-refactor-patch-code-of-isulad-for-conf-exec-attach.patch
+Patch0003:	0003-refactor-patch-code-of-isulad-for-selinux-attach.patch
+Patch0004:	0004-refactor-patch-code-of-lxccontianer-and-so-on.patch
+Patch0005:	0005-refactor-patch-code-of-attach-and-seccomp.patch
+Patch0006:	0006-refactor-patch-about-namespace-log-terminal.patch
+Patch0007:	0007-refactor-patches-on-terminal.c-start.c-and-so-on.patch
+Patch0008:	0008-refactor-patch-code-of-json.patch
+Patch0009:	0009-fix-HOME-env-of-container-unset-error.patch
+Patch0010:	0010-check-yajl-only-when-have-isulad.patch
+Patch0011:	0011-drop-security_context_t.patch
+Patch0012:	0012-only-set-user-or-image-set-non-empty-HOME.patch
+Patch0013:	0013-return-fail-if-no-args-or-no-rootfs-path-found.patch
+Patch0014:	0014-fix-tools-using-option-give-error-message.patch
+Patch0015:	0015-fix-do-mask-pathes-after-parent-mounted.patch
+Patch0016:	0016-skip-kill-cgroup-processes-if-no-hierarchies.patch
+Patch0017:	0017-lxc-Add-sw64-architecture.patch
+Patch0018:	0018-add-macro-to-adapt-musl-libc.patch
+Patch0019:	0019-add-lxc-attach-add-gids-option.patch
+Patch0020:	0020-add-sscanf-adapation-code-for-musl.patch
+Patch0021:	0021-change-the-suffi-parameter-in-lxc-attach-help-output.patch
+Patch0022:	0022-fix-cve-CVE-2022-47952-log-leaks-root-information.patch
+Patch0023:	0023-fix-lxc-write-error-message.patch
+Patch0024:	0024-remove-process-inheritable-capability.patch
+Patch0025:	0025-fix-ops-hierarchies-cause-coredump.patch
+Patch0026:	0026-meminfo-cri-1.25.patch
+Patch0027:	0027-add-loongarch64-support-for-lxc.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
 BuildRequires:  libcap libcap-devel libselinux-devel yajl yajl-devel
 BuildRequires:  pkgconfig(bash-completion)
+%ifarch riscv64
+BuildRequires:  libatomic_ops
+%endif
 
 Requires:       lxc-libs = 4.0.3-%{release}
 
@@ -126,6 +95,9 @@ This package contains documentation for lxc for creating containers.
 %autosetup -n lxc-4.0.3 -Sgit -p1
 
 %build
+%ifarch riscv64
+export LDFLAGS="%{build_ldflags} -latomic -pthread"
+%endif
 %configure --enable-doc --enable-api-docs \
            --disable-silent-rules --docdir=%{_pkgdocdir} --disable-rpath \
            --disable-static --disable-apparmor --enable-selinux \
@@ -184,7 +156,7 @@ rm -rf %{buildroot}%{_libdir}/liblxc.la
 rm -rf %{buildroot}%{_sbindir}/init.%{name}.static
 rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %check
-make check
+%make_build check
 
 %post
 
@@ -249,59 +221,65 @@ make check
 %endif
 
 %changelog
-* Thu Feb 23 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102413
+* Sat Mar 2023 Wenlong Zhang<zhangwenlong@loongson.cn> - 4.0.3-2022102414
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add loongarch64 support for lxc
+
+* Mon Feb 27 2023 Ilya.kuksenok<ilya.kuksenok@huawei.com> - 4.0.3-2022102413
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: Add meminfo required for CRI-1.25 
+
+* Wed Feb 22 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102412
 - Type:bugfix
 - ID:NA
 - SUG:NA
-- DESC: fix null ops hierarchies cause coredump
+- DESC: fix ops hierarchies cause coredump 
 
-* Tue Feb 21 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102412
-- Type:bugfix
+* Wed Feb 22 2023 misaka00251 <liuxin@iscas.ac.cn> - 4.0.3-2022102411
+- Type:enhancement
 - ID:NA
 - SUG:NA
-- DESC: do not check yajl when not have isulad
+- DESC: fix RISC-V build errors
 
-* Tue Feb 21 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102411
+* Fri Feb 17 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102410
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC: remove process inheritable capabilities
 
-* Thu Feb 09 2023 Wenlong Zhang<zhangwenlong@loongson.cn> - 4.0.3-2022102410
-- Type:bugfix
+* Mon Feb 13 2023 jiangxinyu <jiangxinyu@kylinos.cn> - 4.0.3-2022102409
+- Type:enhancement
 - ID:NA
 - SUG:NA
-- DESC: add loongarch64 support for lxc
+- DESC:optimize test command
 
-* Wed Feb 08 2023 huangsong<huangsong14@huawei.com> - 4.0.3-2022102409
+* Wed Feb 08 2023 huangsong<huangsong14@huawei.com> - 4.0.3-2022102408
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC: fix lxc write error message
 
-* Fri Jan 13 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102408
+* Fri Jan 13 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102407
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC: fix cve CVE-2022-47952 log leaks root information
 
-* Wed Jan 04 2023 zhongtao<zhongtao17@huawei.com> - 4.0.3-2022102407
-- Type:bugfix
-- ID:NA
-- SUG:NA
-- DESC: add sscanf adapation code for musl
-
-* Mon Dec 26 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102406
-- Type:bugfix
-- ID:NA
-- SUG:NA
-- DESC: rollback strprint code modified
-
-* Fri Dec 16 2022 huangsong<huangsong14@huawei.com> - 4.0.3-2022102405
+* Fri Dec 16 2022 huangsong<huangsong14@huawei.com> - 4.0.3-2022102406
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC: change the suffi parameter in lxc attach --help output
+
+* Thu Dec 08 2022 zhongtao<zhongtao17@huawei.com> - 4.0.3-2022102405
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add sscanf adapation code for musl
 
 * Fri Dec 02 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102404
 - Type:bugfix
@@ -315,6 +293,12 @@ make check
 - SUG:NA
 - DESC: add macro to adapt musl libc
 
+* Wed Nov 9 2022 hejunjie<hejunjie10@huawei.com> - 4.0.3-2022102402
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove duplicated README and AUTHORS cross lxc-lib and lxc-help
+
 * Mon Oct 24 2022 wuzx<wuzx1226@qq.com> - 4.0.3-2022102401
 - Type:feature
 - CVE:NA
@@ -327,7 +311,7 @@ make check
 - SUG:NA
 - DESC: update version to 4.0.3-2022101701
 
-* Tue Oct 11 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022101101
+* Thu Sep 22 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022092201
 - Type:bugfix
 - ID:NA
 - SUG:NA
@@ -337,31 +321,115 @@ make check
 - Type:bugfix
 - ID:NA
 - SUG:NA
-- DESC: do mask paths after parent mounted
+- DESC: do mask pathes after parent mounted 
 
-* Fri Sep 02 2022 Neil.wrz<wangrunze13@huawei.com> - 4.0.3-2022090201
+* Fri Sep 2 2022 Neil.wrz<wangrunze13@huawei.com> - 4.0.3-2022090201
 - Type:bugfix
 - ID:NA
 - SUG:NA
-- DESC: fix tools using -? option give error
+- DESC: fix tools using -? option give error 
 
-* Wed Aug 31 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022083101
+* Thu Sep 1 2022 zhongtao<zhongtao17@huawei.com> - 4.0.3-2022090101
 - Type:bugfix
 - ID:NA
 - SUG:NA
-- DESC: return fail if no args or no rootfs path founds
+- DESC: add git config in apply-patches
 
-* Fri Aug 12 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022081201
+* Sat Aug 20 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022082001
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: do not check rootfs.path, it may be null if rootfs is "/"
+
+* Fri Aug 19 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022081901
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: return fail if no args or no rootfs path found
+
+* Tue Aug 9 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022080901
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC: only set user or image set non empty HOME
+
+* Tue Jul 26 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072601
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: drop security_context_t
+
+* Mon Jul 25 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072502
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: check yajl only when have isulad
 
 * Mon Jul 25 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022072501
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC: fix HOME env unset error
+
+* Thu Jul 21 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072104
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: add header to fix compile error with have isulad
+
+* Thu Jul 21 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022072103
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix compile error
+
+* Thu Jul 21 2022 chengzeruizhi<chengzeruizhi@huawei.com> - 4.0.3-2022072102
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of json
+
+* Thu Jul 21 2022 chengzeruizhi<chengzeruizhi@huawei.com> - 4.0.3-2022072101
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patches on terminal.c, start.c and others
+
+* Tue Jul 19 2022 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022071904
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor namespace terminal log 
+
+* Tue Jul 19 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022071903
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of attach and seccomp
+
+* Tue Jul 19 2022 wangfengtu<wangfengtu@huawei.com> - 4.0.3-2022071902
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of lxccontainer and so on
+
+* Tue Jul 19 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022071901
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of isulad for selinux/attach
+
+* Mon Jul 18 2022 haozi007<liuhao27@huawei.com> - 4.0.3-2022071801
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of isulad for conf/exec/attach and so on
+
+* Fri Jul 15 2022 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022071501
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: refactor patch code of utils commands and so on
 
 * Wed May 25 2022 hejunjie<hejunjie10@huawei.com> - 4.0.3-2022052501
 - Type:bugfix
