@@ -1,4 +1,4 @@
-%global _release 2022102413
+%global _release 2022102414
 
 Name:           lxc
 Version:        4.0.3
@@ -69,6 +69,7 @@ Patch0058:	0058-add-loongarch64-support-for-lxc.patch
 Patch0059:	0059-remove-process-inheritable-capability.patch
 Patch0060:	0060-check-yajl-only-when-have-isulad.patch
 Patch0061:	0061-fix-ops-hierarchies-cause-coredump.patch
+Patch0062:	0062-use-ocihooks-env-after-getenv.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -249,6 +250,12 @@ make check
 %endif
 
 %changelog
+* Fri Mar 31 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102414
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: use ocihooks env after getenv
+
 * Thu Feb 23 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102413
 - Type:bugfix
 - ID:NA
