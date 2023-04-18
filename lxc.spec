@@ -1,4 +1,4 @@
-%global _release 2022102414
+%global _release 2022102415
 
 Name:           lxc
 Version:        4.0.3
@@ -70,6 +70,7 @@ Patch0059:	0059-remove-process-inheritable-capability.patch
 Patch0060:	0060-check-yajl-only-when-have-isulad.patch
 Patch0061:	0061-fix-ops-hierarchies-cause-coredump.patch
 Patch0062:	0062-use-ocihooks-env-after-getenv.patch
+Patch0063:	0063-fix-lxc-attach-stuck-when-disable-isulad.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -250,6 +251,12 @@ make check
 %endif
 
 %changelog
+* Tue Apr 18 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102415
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix lxc attach stuck when disable isulad
+
 * Fri Mar 31 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102414
 - Type:bugfix
 - ID:NA

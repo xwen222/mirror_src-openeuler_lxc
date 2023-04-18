@@ -1,0 +1,44 @@
+From 8c605f2ab25387e75f8f0114ead645de73ed4e0e Mon Sep 17 00:00:00 2001
+From: "Neil.wrz" <wangrunze13@huawei.com>
+Date: Mon, 17 Apr 2023 23:28:14 -0700
+Subject: [PATCH] fix lxc-attach stuck when diable isulad
+
+Signed-off-by: Neil.wrz <wangrunze13@huawei.com>
+---
+ src/lxc/attach.c   | 4 ++++
+ src/lxc/terminal.c | 3 +++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/src/lxc/attach.c b/src/lxc/attach.c
+index 568dfe1..765f1ee 100644
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -1765,7 +1765,11 @@ int lxc_attach(struct lxc_container *container, lxc_attach_exec_t exec_function,
+ 		}
+ 	#endif
+ 		if (options->attach_flags & LXC_ATTACH_TERMINAL) {
++#ifdef HAVE_ISULAD
+ 			ret = isulad_safe_mainloop(&descr, -1);
++#else
++			ret = lxc_mainloop(&descr, -1);
++#endif
+ 			if (ret < 0) {
+ 				ret_parent = -1;
+ 				to_cleanup_pid = attached_pid;
+diff --git a/src/lxc/terminal.c b/src/lxc/terminal.c
+index 5d83691..2d55717 100644
+--- a/src/lxc/terminal.c
++++ b/src/lxc/terminal.c
+@@ -1304,6 +1304,9 @@ static int lxc_terminal_peer_default(struct lxc_terminal *terminal)
+ 		DEBUG("Not have a controlling terminal");
+ 		return 0;
+ 	}
++#else 
++    else
++        path = "/dev/tty";
+ #endif
+ 
+ 	terminal->peer = lxc_unpriv(open(path, O_RDWR | O_CLOEXEC));
+-- 
+2.25.1
+
