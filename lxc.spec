@@ -1,4 +1,4 @@
-%global _release 2022102416
+%global _release 2022102417
 
 Name:           lxc
 Version:        4.0.3
@@ -37,6 +37,7 @@ Patch0026:	0026-meminfo-cri-1.25.patch
 Patch0027:	0027-add-loongarch64-support-for-lxc.patch
 Patch0028:	0028-use-ocihooks-env-after-getenv.patch
 Patch0029:	0029-fix-mixed-use-of-signed-and-unsigned-type.patch
+Patch0030:	0030-remove-unused-meminfo-stats.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -223,6 +224,12 @@ rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %endif
 
 %changelog
+* Fri Apr 21 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102417
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: remove unused meminfo stats
+
 * Mon Apr 17 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102416
 - Type:bugfix
 - ID:NA
