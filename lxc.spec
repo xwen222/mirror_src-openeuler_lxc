@@ -1,4 +1,4 @@
-%global _release 2022102415
+%global _release 2022102416
 
 Name:           lxc
 Version:        4.0.3
@@ -71,6 +71,7 @@ Patch0060:	0060-check-yajl-only-when-have-isulad.patch
 Patch0061:	0061-fix-ops-hierarchies-cause-coredump.patch
 Patch0062:	0062-use-ocihooks-env-after-getenv.patch
 Patch0063:	0063-fix-lxc-attach-stuck-when-disable-isulad.patch
+Patch0064:	0064-fix-mixed-use-of-signed-and-unsigned-type.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -251,6 +252,12 @@ make check
 %endif
 
 %changelog
+* Mon Apr 24 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102416
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix mixed use of signed and unsigned type
+
 * Tue Apr 18 2023 wangrunze<wangrunze13@huawei.com> - 4.0.3-2022102415
 - Type:bugfix
 - ID:NA
