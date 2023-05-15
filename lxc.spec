@@ -1,4 +1,4 @@
-%global _release 2022102417
+%global _release 2022102418
 
 Name:           lxc
 Version:        4.0.3
@@ -38,6 +38,7 @@ Patch0027:	0027-add-loongarch64-support-for-lxc.patch
 Patch0028:	0028-use-ocihooks-env-after-getenv.patch
 Patch0029:	0029-fix-mixed-use-of-signed-and-unsigned-type.patch
 Patch0030:	0030-remove-unused-meminfo-stats.patch
+Patch0031:	0031-lxc-attach-Fix-lost-return-codes-of-spawned-processe.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -224,6 +225,12 @@ rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %endif
 
 %changelog
+* Thu May 04 2023 Jian Zhang<zhang_jian7@hoperun.com> - 4.0.3-2022102418
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix lost return codes of spawned processe
+
 * Fri Apr 21 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102417
 - Type:bugfix
 - ID:NA
