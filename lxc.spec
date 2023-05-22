@@ -1,4 +1,4 @@
-%global _release 2022102418
+%global _release 2022102419
 
 Name:           lxc
 Version:        4.0.3
@@ -39,6 +39,7 @@ Patch0028:	0028-use-ocihooks-env-after-getenv.patch
 Patch0029:	0029-fix-mixed-use-of-signed-and-unsigned-type.patch
 Patch0030:	0030-remove-unused-meminfo-stats.patch
 Patch0031:	0031-lxc-attach-Fix-lost-return-codes-of-spawned-processe.patch
+Patch0032:	0032-fix-load-bpf-failed.patch
 
 BuildRequires:  systemd-units git libtool graphviz docbook2X doxygen chrpath
 BuildRequires:  pkgconfig(libseccomp)
@@ -225,6 +226,12 @@ rm -rf %{buildroot}%{_sysconfdir}/default/%{name}
 %endif
 
 %changelog
+* Sat May 06 2023 zhangxiaoyu<zhangxiaoyu58@huawei.com> - 4.0.3-2022102419
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix load bpf failed
+
 * Thu May 04 2023 Jian Zhang<zhang_jian7@hoperun.com> - 4.0.3-2022102418
 - Type:bugfix
 - ID:NA
